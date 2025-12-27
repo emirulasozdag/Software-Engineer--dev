@@ -1,59 +1,43 @@
-# Adaptive Learning Backend (Modular FastAPI)
+# Personalized Learning Content Backend
 
-Bu klasör, **AI-Powered Adaptive Curriculum** projesi için modüler bir backend iskeleti sağlar.
+This is the backend for the Personalized Learning Content project, built with FastAPI.
 
-## Kurulum
+## Prerequisites
 
-1) Sanal ortam (opsiyonel ama önerilir)
+- Python 3.8 or higher
 
-- Windows (PowerShell):
-  - `python -m venv .venv`
-  - `.\.venv\Scripts\Activate.ps1`
+## Setup
 
-2) Bağımlılıklar
+1.  **Create a virtual environment:**
 
-- `pip install -r requirements.txt`
+    ```bash
+    python -m venv venv
+    ```
 
-3) Ortam değişkenleri
+2.  **Activate the virtual environment:**
 
-- `.env.example` dosyasını `.env` olarak kopyalayın ve `JWT_SECRET` değerini değiştirin.
+    -   **Windows:**
+        ```bash
+        .\venv\Scripts\activate
+        ```
+    -   **macOS/Linux:**
+        ```bash
+        source venv/bin/activate
+        ```
 
-## Çalıştırma
+3.  **Install dependencies:**
 
-- `uvicorn app.main:app --reload --host 127.0.0.1 --port 8000`
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-- OpenAPI/Swagger:
-  - `http://127.0.0.1:8000/docs`
+## Running the Application
 
-## Modüller (MVP)
+To run the backend server, use the following command:
 
-- Auth: `/auth/*` (register/login/email verification/forgot+reset password)
-- Users: `/users/me`
-- Placement test: `/tests/placement/*`
-- AI Content (mock): `/ai/content/*`
-- Chatbot (mock): `/chatbot/message`
-- Progress: `/progress/*`
-- Feedback: `/feedback/*`
+```bash
+uvicorn app.main:app --reload
+```
 
-## Hızlı deneme akışı
-
-1) Register
-- `POST /auth/register`
-  - Not: MVP’de doğrulama token’ı `dev_only_email_verification_token` alanında dönüyor.
-
-2) Verify email
-- `POST /auth/verify-email`
-
-3) Login
-- `POST /auth/login` → `access_token`
-
-4) AI content üret
-- `POST /ai/content/generate` (Authorization: Bearer ...)
-
-5) İçeriği tamamlandı işaretle
-- `POST /progress/complete`
-
-## Notlar
-
-- AI entegrasyonu şu an **MockAIProvider** ile çalışır. Sonraki adımda gerçek API (OpenAI/Azure/Google vb.) için `AIProvider` implementasyonu eklenebilir.
-- DB varsayılan olarak SQLite: `backend/app.db`
+The API will be available at `http://127.0.0.1:8000`.
+You can access the interactive API documentation at `http://127.0.0.1:8000/docs`.

@@ -944,3 +944,745 @@ o 3a. If the chatbot receives a question it does not understand, it
 sends a "Could you please rephrase your question?" message.
 
 
+Classes:
+
+1. Core User & Roles
+User
+
+Attributes
+
+userId: int
+
+name: String
+
+email: String
+
+password: String
+
+role: UserRole
+
+isVerified: boolean
+
+createdAt: Date
+
+lastLogin: Date
+
+Methods
+
+register()
+
+login()
+
+logout()
+
+verifyEmail(token: String)
+
+resetPassword(newPassword: String)
+
+updateProfile()
+
+Student (inherits User)
+
+Attributes
+
+level: LanguageLevel
+
+dailyStreak: int
+
+totalPoints: int
+
+enrollmentDate: Date
+
+Methods
+
+takePlacementTest()
+
+viewProgress()
+
+viewResults()
+
+submitFeedback()
+
+startChatbot()
+
+Teacher (inherits User)
+
+Attributes
+
+department: String
+
+specialization: String
+
+Methods
+
+assignHomework()
+
+viewStudentProgress()
+
+createContent()
+
+sendAnnouncement()
+
+collaborateWithAI()
+
+Admin (inherits User)
+
+Attributes
+
+adminLevel: int
+
+permissions: String[]
+
+Methods
+
+manageUsers()
+
+changeUserRole(userId: int, role: UserRole)
+
+viewSystemPerformance()
+
+enableMaintenanceMode()
+
+viewSystemLogs()
+
+2. Learning & Assessment
+Test
+
+Attributes
+
+testId: int
+
+title: String
+
+description: String
+
+duration: int
+
+maxScore: int
+
+createdAt: Date
+
+Methods
+
+start()
+
+submit()
+
+calculateScore(): int
+
+PlacementTest
+
+(Specialized test composed of multiple modules)
+
+WritingTest
+
+Attributes
+
+topic: String
+
+minWords: int
+
+maxWords: int
+
+Methods
+
+submitText(text: String)
+
+evaluateWriting(): int
+
+SpeakingTest
+
+Attributes
+
+sampleSentence: String
+
+audioFile: String
+
+pronunciationCriteria: String[]
+
+Methods
+
+displaySample()
+
+recordAudio()
+
+analyzeAccuracy(): double
+
+ListeningTest
+
+Attributes
+
+audioFiles: String[]
+
+questions: Question[]
+
+Methods
+
+playAudio()
+
+submitAnswers()
+
+ReadingTest
+
+Attributes
+
+passages: String[]
+
+questions: Question[]
+
+Methods
+
+displayPassage()
+
+submitAnswers()
+
+TestResult
+
+Attributes
+
+resultId: int
+
+studentId: int
+
+testId: int
+
+score: int
+
+level: LanguageLevel
+
+completedAt: Date
+
+strengths: String[]
+
+weaknesses: String[]
+
+Methods
+
+getScoreBreakdown(): Map
+
+generateReport(): String
+
+SpeakingResult
+
+Attributes
+
+sessionId: int
+
+audioData: byte[]
+
+accuracyScore: double
+
+pronunciationFeedback: String
+
+completedAt: Date
+
+Methods
+
+getFeedback(): String
+
+3. Content & Curriculum
+Content
+
+Attributes
+
+contentId: int
+
+title: String
+
+body: String
+
+contentType: ContentType
+
+level: LanguageLevel
+
+createdBy: int
+
+createdAt: Date
+
+isDraft: boolean
+
+Methods
+
+display()
+
+edit(newBody: String)
+
+publish()
+
+LessonPlan
+
+Attributes
+
+planId: int
+
+studentId: int
+
+topics: Topic[]
+
+recommendedLevel: LanguageLevel
+
+createdAt: Date
+
+updatedAt: Date
+
+Methods
+
+isGeneral(): boolean
+
+getTopics(): Topic[]
+
+updatePlan(topics: Topic[])
+
+Topic
+
+Attributes
+
+topicId: int
+
+name: String
+
+category: String
+
+difficulty: LanguageLevel
+
+priority: int
+
+Exercise
+
+Attributes
+
+exerciseId: int
+
+type: String
+
+instructions: String
+
+questions: Question[]
+
+maxScore: int
+
+Methods
+
+start()
+
+submit()
+
+getScore(): int
+
+Question
+
+Attributes
+
+questionId: int
+
+text: String
+
+options: String[]
+
+correctAnswer: String
+
+points: int
+
+Methods
+
+validateAnswer(answer: String): boolean
+
+TestModule
+
+Attributes
+
+moduleId: int
+
+moduleType: String
+
+questions: Question[]
+
+score: int
+
+Methods
+
+loadQuestions()
+
+submitModule()
+
+4. Assignments & Feedback
+Assignment
+
+Attributes
+
+assignmentId: int
+
+teacherId: int
+
+title: String
+
+description: String
+
+dueDate: Date
+
+assignmentType: String
+
+Methods
+
+create()
+
+assignToStudents(ids: int[])
+
+updateDueDate(newDate: Date)
+
+StudentAssignment
+
+Attributes
+
+studentAssignmentId: int
+
+assignmentId: int
+
+studentId: int
+
+status: AssignmentStatus
+
+submittedAt: Date
+
+score: int
+
+Methods
+
+submit()
+
+grade(score: int)
+
+Feedback
+
+Attributes
+
+feedbackId: int
+
+studentId: int
+
+testResultId: int
+
+feedbackList: String[]
+
+generatedAt: Date
+
+Methods
+
+displayFeedback()
+
+5. Progress & Communication
+Progress
+
+Attributes
+
+progressId: int
+
+studentId: int
+
+completedLessons: int
+
+completedTests: int
+
+correctAnswersRate: double
+
+lastUpdated: Date
+
+Methods
+
+getCompletionRate(): double
+
+getWeeklyProgress(): Map
+
+ProgressSnapshot
+
+Attributes
+
+snapshotId: int
+
+studentId: int
+
+snapshotDate: Date
+
+progressData: String
+
+Methods
+
+getSnapshot(): Progress
+
+ChatSession
+
+Attributes
+
+sessionId: int
+
+studentId: int
+
+startedAt: Date
+
+endedAt: Date
+
+messages: ChatMessage[]
+
+Methods
+
+addMessage(message: ChatMessage)
+
+endSession()
+
+ChatMessage
+
+Attributes
+
+messageId: int
+
+sessionId: int
+
+sender: String
+
+content: String
+
+timestamp: Date
+
+Methods
+
+display()
+
+Message
+
+Attributes
+
+messageId: int
+
+senderId: int
+
+recipientId: int
+
+subject: String
+
+body: String
+
+read: boolean
+
+sentAt: Date
+
+Methods
+
+send()
+
+markAsRead()
+
+Announcement
+
+Attributes
+
+announcementId: int
+
+teacherId: int
+
+title: String
+
+content: String
+
+createdAt: Date
+
+Methods
+
+publish()
+
+getRecipients(): User[]
+
+6. Rewards & System
+Reward
+
+Attributes
+
+rewardId: int
+
+name: String
+
+description: String
+
+points: int
+
+badgeIcon: String
+
+Methods
+
+awardTo(studentId: int)
+
+SystemPerformance
+
+Attributes
+
+performanceId: int
+
+cpuUsage: double
+
+memoryUsage: double
+
+activeUsers: int
+
+recordedAt: Date
+
+Methods
+
+getStatistics(): Map
+
+MaintenanceLog
+
+Attributes
+
+logId: int
+
+adminId: int
+
+startTime: Date
+
+endTime: Date
+
+reason: String
+
+Methods
+
+startMaintenance()
+
+endMaintenance()
+
+7. Enums
+UserRole
+
+STUDENT
+
+TEACHER
+
+ADMIN
+
+LanguageLevel
+
+A1
+
+A2
+
+B1
+
+B2
+
+C1
+
+C2
+
+ContentType
+
+LESSON
+
+EXERCISE
+
+ROLEPLAY
+
+VOCABULARY
+
+GRAMMAR
+
+AssignmentStatus
+
+PENDING
+
+SUBMITTED
+
+GRADED
+
+LATE
+
+UI layer
+ChatbotUI
+AIContentGenerationUI
+AnnouncementUI
+MessagingUI
+AdminDashboardUI
+AssignmentUI
+StudentAssignmentUI
+RewardUI
+FeedbackUI
+DataExportUI
+StudentProgressUI
+TeacherProgressUI
+LearningContentUI
+PersonalPlanUI
+TestResultsUI
+PlacementTestUI
+WritingTestUI
+ReadingTestUI
+ListeningTestUI
+SpeakingTestUI
+PasswordRecoveryUI
+RegistrationUI
+Controller layer
+ChatbotController
+AIContentController
+AnnouncementController
+MessageController
+AdminController
+AssignmentController
+RewardController
+AutomaticFeedbackController
+DataExportController
+ProgressTrackingController
+ContentUpdateController
+ContentDeliveryController
+StudentAnalysisController
+TestResultController
+PlacementTestController
+WritingTestController
+ReadingTestController
+ListeningTestController
+SpeakingTestController
+AuthController
+Service layer
+ChatbotService
+AIContentService
+AnnouncementService
+MessageService
+AdminService
+AssignmentService
+RewardService
+FeedbackService
+DataExportService
+ProgressTrackingService
+GraphService
+ContentUpdateService
+ContentDeliveryService
+StudentAnalysisService
+TestResultService
+PlacementTestService
+WritingTestService
+ReadingTestService
+ListeningTestService
+SpeakingTestService
+AuthService
+Repository layer
+ChatSessionRepository
+LessonContentRepository
+AnnouncementRepository
+MessageRepository
+SystemPerformanceRepository
+SystemLogRepository
+StudentAssignmentRepository
+AssignmentRepository
+StudentRewardRepository
+RewardRepository
+FeedbackRepository
+UserRepository
+CachedProgressRepository
+ProgressDataRepository
+StudentProfileRepository
+ContentRepository
+LessonPlanRepository
+TestResultRepository
+TestRepository
+SpeakingResultRepository
+External services
+Chatbot
+NotificationService
+AIAnalysisEngine
+AIContentEngine
+VoiceRecognitionService
