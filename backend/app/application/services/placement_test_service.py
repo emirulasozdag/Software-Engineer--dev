@@ -1,17 +1,522 @@
 from __future__ import annotations
 
-from typing import Any
+import json
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Literal
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.domain.enums import LanguageLevel
+from app.infrastructure.db.models.results import TestResultDB
+from app.infrastructure.db.models.tests import PlacementTestDB, QuestionDB, TestDB, TestModuleDB
+from app.infrastructure.db.models.user import StudentDB
+
+
+ModuleType = Literal["reading", "writing", "listening", "speaking"]
+
+
+@dataclass(frozen=True)
+class PlacementTestModuleView:
+    moduleType: ModuleType
+    moduleId: int
+
+
+@dataclass(frozen=True)
+class PlacementTestStartView:
+    testId: int
+    modules: list[PlacementTestModuleView]
+
+
+@dataclass(frozen=True)
+class PlacementModuleResultView:
+    moduleType: ModuleType
+    level: LanguageLevel
+    score: int
+    feedback: str
+
+
+@dataclass(frozen=True)
+class PlacementTestResultView:
+    id: int
+    studentId: int
+    overallLevel: LanguageLevel
+    readingLevel: LanguageLevel
+    writingLevel: LanguageLevel
+    listeningLevel: LanguageLevel
+    speakingLevel: LanguageLevel
+    completedAt: datetime
 
 
 class PlacementTestService:
-    def initializeTest(self, studentId: int) -> Any:
-        pass
+    def __init__(self, db: Session):
+        self.db = db
 
-    def evaluateModule(self, moduleId: int, answers: Any) -> int:
-        pass
+    def initializeTest(self, userId: int) -> PlacementTestStartView:
+        """UC3: start placement test.
 
-    def calculateFinalLevel(self, scores: Any) -> Any:
-        pass
+        Creates a new test attempt with 4 modules, seeded questions, and placeholder media.
+        """
+        student = self._require_student(userId)
+        seed = self._ensure_seed_questions()
 
-    def saveTestProgress(self, studentId: int, progress: Any) -> None:
-        pass
+        test = TestDB(
+            title="Placement Test",
+            description="CEFR placement assessment (dummy seed)",
+            duration=60,
+            max_score=12,
+            test_type="placement",
+        )
+        self.db.add(test)
+        self.db.commit()
+        self.db.refresh(test)
+
+        modules: dict[ModuleType, TestModuleDB] = {}
+        for module_type in ("reading", "writing", "listening", "speaking"):
+            question_ids = [q.id for q in seed[module_type]]
+            module = TestModuleDB(
+                module_type=module_type,
+                questions_json=json.dumps({"question_ids": question_ids}),
+                score=0,
+            )
+            self.db.add(module)
+            self.db.commit()
+            self.db.refresh(module)
+            modules[module_type] = module
+
+        placement = PlacementTestDB(
+            test_id=test.id,
+            reading_module_id=modules["reading"].id,
+            writing_module_id=modules["writing"].id,
+            listening_module_id=modules["listening"].id,
+            speaking_module_id=modules["speaking"].id,
+        )
+        self.db.add(placement)
+        self.db.commit()
+
+        return PlacementTestStartView(
+            testId=int(test.id),
+            modules=[
+                PlacementTestModuleView(moduleType="reading", moduleId=int(modules["reading"].id)),
+                PlacementTestModuleView(moduleType="writing", moduleId=int(modules["writing"].id)),
+                PlacementTestModuleView(moduleType="listening", moduleId=int(modules["listening"].id)),
+                PlacementTestModuleView(moduleType="speaking", moduleId=int(modules["speaking"].id)),
+            ],
+        )
+
+    def getModuleQuestions(self, testId: int, moduleType: ModuleType) -> list[QuestionDB]:
+        module = self._get_module_for_test(testId, moduleType)
+        payload = self._parse_questions_json(module.questions_json)
+        question_ids: list[int] = [int(qid) for qid in payload.get("question_ids", [])]
+        if not question_ids:
+            return []
+        rows = list(self.db.scalars(select(QuestionDB).where(QuestionDB.id.in_(question_ids))).all())
+        by_id = {q.id: q for q in rows}
+        return [by_id[qid] for qid in question_ids if qid in by_id]
+
+    def submitModule(self, userId: int, testId: int, moduleType: ModuleType, submissions: list[dict[str, str]]) -> PlacementModuleResultView:
+        """UC4–UC5: submit a module."""
+        _ = self._require_student(userId)
+        module = self._get_module_for_test(testId, moduleType)
+        questions = self.getModuleQuestions(testId, moduleType)
+        correct_by_id = {str(q.id): (q.correct_answer or "").strip() for q in questions}
+        points_by_id = {str(q.id): int(q.points or 0) for q in questions}
+
+        score = 0
+        for sub in submissions:
+            qid = str(sub.get("questionId") or "")
+            ans = (sub.get("answer") or "").strip()
+            correct = correct_by_id.get(qid)
+            if not correct:
+                continue
+            # For open-ended modules, score stays 0 for now (dummy).
+            if moduleType in ("writing", "speaking"):
+                continue
+            if ans.lower() == correct.strip().lower():
+                score += points_by_id.get(qid, 0)
+
+        # Don't overwrite any speaking score computed via audio upload.
+        if moduleType not in ("writing", "speaking"):
+            module.score = int(score)
+        payload = self._parse_questions_json(module.questions_json)
+        payload["submissions"] = submissions
+        module.questions_json = json.dumps(payload)
+        self.db.commit()
+
+        final_score = int(module.score) if moduleType in ("writing", "speaking") else int(score)
+        level = self._level_for_module_score(moduleType, final_score)
+        feedback = self._dummy_feedback(moduleType, level, final_score)
+        return PlacementModuleResultView(moduleType=moduleType, level=level, score=final_score, feedback=feedback)
+
+    def submitSpeakingAudio(
+        self,
+        userId: int,
+        testId: int,
+        questionId: str,
+        audioBytes: bytes,
+        contentType: str | None,
+    ) -> PlacementModuleResultView:
+        """Client uploads audio for speaking module; dummy speech recognition for now."""
+        _ = self._require_student(userId)
+        module = self._get_module_for_test(testId, "speaking")
+        payload = self._parse_questions_json(module.questions_json)
+
+        # Dummy speech recognition: accept any non-empty bytes and return a fake transcript.
+        audio_len = len(audioBytes or b"")
+        ok = audio_len > 0
+        transcript = "(dummy transcript)" if ok else "(no audio received)"
+        analysis = {
+            "questionId": str(questionId),
+            "receivedBytes": audio_len,
+            "contentType": contentType,
+            "transcript": transcript,
+            "pronunciationScore": 0.72 if ok else 0.0,
+        }
+        items = payload.get("speaking_audio", [])
+        if not isinstance(items, list):
+            items = []
+        # Replace prior upload for same questionId
+        items = [it for it in items if not (isinstance(it, dict) and str(it.get("questionId")) == str(questionId))]
+        items.append(analysis)
+        payload["speaking_audio"] = items
+        module.questions_json = json.dumps(payload)
+
+        # Dummy scoring: 1 point per uploaded question up to 3.
+        module.score = min(3, len(items))
+        self.db.commit()
+
+        level = self._level_for_module_score("speaking", int(module.score))
+        feedback = f"Dummy speech recognition: {len(items)} recording(s) received. Last transcript: {transcript}"
+        return PlacementModuleResultView(moduleType="speaking", level=level, score=int(module.score), feedback=feedback)
+
+    def completeTest(self, userId: int, testId: int) -> PlacementTestResultView:
+        """UC6: dummy LLM analysis + insert into test_results."""
+        student = self._require_student(userId)
+        placement = self.db.scalar(select(PlacementTestDB).where(PlacementTestDB.test_id == testId))
+        if not placement:
+            raise ValueError("Placement test not found")
+
+        reading = self.db.get(TestModuleDB, placement.reading_module_id) if placement.reading_module_id else None
+        writing = self.db.get(TestModuleDB, placement.writing_module_id) if placement.writing_module_id else None
+        listening = self.db.get(TestModuleDB, placement.listening_module_id) if placement.listening_module_id else None
+        speaking = self.db.get(TestModuleDB, placement.speaking_module_id) if placement.speaking_module_id else None
+
+        reading_score = int(reading.score) if reading else 0
+        writing_score = int(writing.score) if writing else 0
+        listening_score = int(listening.score) if listening else 0
+        speaking_score = int(speaking.score) if speaking else 0
+        total_score = reading_score + writing_score + listening_score + speaking_score
+
+        reading_level = self._level_for_module_score("reading", reading_score)
+        writing_level = self._level_for_module_score("writing", writing_score)
+        listening_level = self._level_for_module_score("listening", listening_score)
+        speaking_level = self._level_for_module_score("speaking", speaking_score)
+        overall = self._level_for_total_score(total_score)
+
+        existing = self.db.scalar(
+            select(TestResultDB).where(
+                TestResultDB.student_id == student.id,
+                TestResultDB.test_id == testId,
+            )
+        )
+        if existing:
+            # If an existing row is missing per-module levels, fill them once.
+            changed = False
+            if getattr(existing, "reading_level", None) is None:
+                existing.reading_level = reading_level
+                changed = True
+            if getattr(existing, "writing_level", None) is None:
+                existing.writing_level = writing_level
+                changed = True
+            if getattr(existing, "listening_level", None) is None:
+                existing.listening_level = listening_level
+                changed = True
+            if getattr(existing, "speaking_level", None) is None:
+                existing.speaking_level = speaking_level
+                changed = True
+            if changed:
+                self.db.commit()
+            return self._to_result_view(existing, student.id)
+
+        strengths = self._dummy_strengths(reading_score, listening_score, speaking_score, writing_score)
+        weaknesses = self._dummy_weaknesses(reading_score, listening_score, speaking_score, writing_score)
+
+        result = TestResultDB(
+            student_id=student.id,
+            test_id=int(testId),
+            score=int(total_score),
+            level=overall,
+            reading_level=reading_level,
+            writing_level=writing_level,
+            listening_level=listening_level,
+            speaking_level=speaking_level,
+            completed_at=datetime.utcnow(),
+            strengths_json=json.dumps(strengths),
+            weaknesses_json=json.dumps(weaknesses),
+        )
+        self.db.add(result)
+        self.db.commit()
+        self.db.refresh(result)
+
+        return PlacementTestResultView(
+            id=int(result.id),
+            studentId=int(student.id),
+            overallLevel=overall,
+            readingLevel=reading_level,
+            writingLevel=writing_level,
+            listeningLevel=listening_level,
+            speakingLevel=speaking_level,
+            completedAt=result.completed_at,
+        )
+
+    def getPlacementResult(self, userId: int, testId: int) -> PlacementTestResultView:
+        student = self._require_student(userId)
+        result = self.db.scalar(select(TestResultDB).where(TestResultDB.student_id == student.id, TestResultDB.test_id == testId))
+        if not result:
+            raise ValueError("Result not found")
+        return self._to_result_view(result, student.id)
+
+    def listMyPlacementResults(self, userId: int) -> list[TestResultDB]:
+        student = self._require_student(userId)
+        # Keep it simple: return all results for this student.
+        return list(self.db.scalars(select(TestResultDB).where(TestResultDB.student_id == student.id).order_by(TestResultDB.completed_at.desc())).all())
+
+    def _to_result_view(self, result: TestResultDB, student_id: int) -> PlacementTestResultView:
+        overall = result.level or LanguageLevel.A1
+
+        reading_level = getattr(result, "reading_level", None)
+        writing_level = getattr(result, "writing_level", None)
+        listening_level = getattr(result, "listening_level", None)
+        speaking_level = getattr(result, "speaking_level", None)
+
+        # Fallback: if per-module levels are missing, derive once from module scores.
+        if not all([reading_level, writing_level, listening_level, speaking_level]):
+            placement = self.db.scalar(select(PlacementTestDB).where(PlacementTestDB.test_id == int(result.test_id)))
+            reading_score = writing_score = listening_score = speaking_score = 0
+            if placement:
+                for mtype, mid in (
+                    ("reading", placement.reading_module_id),
+                    ("writing", placement.writing_module_id),
+                    ("listening", placement.listening_module_id),
+                    ("speaking", placement.speaking_module_id),
+                ):
+                    if not mid:
+                        continue
+                    m = self.db.get(TestModuleDB, mid)
+                    if not m:
+                        continue
+                    if mtype == "reading":
+                        reading_score = int(m.score)
+                    elif mtype == "writing":
+                        writing_score = int(m.score)
+                    elif mtype == "listening":
+                        listening_score = int(m.score)
+                    elif mtype == "speaking":
+                        speaking_score = int(m.score)
+            reading_level = reading_level or self._level_for_module_score("reading", reading_score)
+            writing_level = writing_level or self._level_for_module_score("writing", writing_score)
+            listening_level = listening_level or self._level_for_module_score("listening", listening_score)
+            speaking_level = speaking_level or self._level_for_module_score("speaking", speaking_score)
+
+        return PlacementTestResultView(
+            id=int(result.id),
+            studentId=int(student_id),
+            overallLevel=overall,
+            readingLevel=reading_level or LanguageLevel.A1,
+            writingLevel=writing_level or LanguageLevel.A1,
+            listeningLevel=listening_level or LanguageLevel.A1,
+            speakingLevel=speaking_level or LanguageLevel.A1,
+            completedAt=result.completed_at,
+        )
+
+    def _require_student(self, userId: int) -> StudentDB:
+        student = self.db.scalar(select(StudentDB).where(StudentDB.user_id == int(userId)))
+        if not student:
+            raise ValueError("Student profile not found")
+        return student
+
+    def _get_module_for_test(self, testId: int, moduleType: ModuleType) -> TestModuleDB:
+        placement = self.db.scalar(select(PlacementTestDB).where(PlacementTestDB.test_id == int(testId)))
+        if not placement:
+            raise ValueError("Placement test not found")
+        module_id: int | None
+        if moduleType == "reading":
+            module_id = placement.reading_module_id
+        elif moduleType == "writing":
+            module_id = placement.writing_module_id
+        elif moduleType == "listening":
+            module_id = placement.listening_module_id
+        elif moduleType == "speaking":
+            module_id = placement.speaking_module_id
+        else:
+            raise ValueError("Invalid module")
+        if not module_id:
+            raise ValueError("Module not configured")
+        module = self.db.get(TestModuleDB, module_id)
+        if not module:
+            raise ValueError("Module not found")
+        return module
+
+    def _parse_questions_json(self, raw: str | None) -> dict[str, Any]:
+        if not raw:
+            return {}
+        try:
+            obj = json.loads(raw)
+            return obj if isinstance(obj, dict) else {"question_ids": obj}
+        except Exception:
+            return {}
+
+    def _ensure_seed_questions(self) -> dict[ModuleType, list[QuestionDB]]:
+        """Create deterministic seed questions if missing."""
+        seed_defs: dict[ModuleType, list[dict[str, Any]]] = {
+            "reading": [
+                {
+                    "text": "[SEED][READING] Choose the best meaning of: 'efficient'",
+                    "options": ["fast and organized", "very expensive", "confusing", "unfriendly"],
+                    "correct": "fast and organized",
+                },
+                {
+                    "text": "[SEED][READING] Pick the correct sentence:",
+                    "options": [
+                        "She don't like tea.",
+                        "She doesn't like tea.",
+                        "She doesn't likes tea.",
+                        "She not like tea.",
+                    ],
+                    "correct": "She doesn't like tea.",
+                },
+                {
+                    "text": "[SEED][READING] In a short email, which greeting is most formal?",
+                    "options": ["Hey!", "Hi", "Dear Mr. Smith,", "Yo"],
+                    "correct": "Dear Mr. Smith,",
+                },
+            ],
+            "listening": [
+                {
+                    "text": "[SEED][LISTENING] (Audio: silence.wav) What number do you hear? (dummy)",
+                    "options": ["One", "Two", "Three", "Four"],
+                    "correct": "Two",
+                },
+                {
+                    "text": "[SEED][LISTENING] (Audio: silence.wav) Which word is stressed? (dummy)",
+                    "options": ["record (noun)", "record (verb)", "both", "neither"],
+                    "correct": "record (noun)",
+                },
+                {
+                    "text": "[SEED][LISTENING] (Audio: silence.wav) What is the speaker asking for? (dummy)",
+                    "options": ["directions", "a refund", "a menu", "help with homework"],
+                    "correct": "a menu",
+                },
+            ],
+            "writing": [
+                {
+                    "text": "[SEED][WRITING] Write 2-3 sentences about your daily routine.",
+                    "options": None,
+                    "correct": "N/A",
+                },
+                {
+                    "text": "[SEED][WRITING] Write a short opinion: Is studying online effective? Why?",
+                    "options": None,
+                    "correct": "N/A",
+                },
+                {
+                    "text": "[SEED][WRITING] Write a short email asking for an appointment.",
+                    "options": None,
+                    "correct": "N/A",
+                },
+            ],
+            "speaking": [
+                {
+                    "text": "[SEED][SPEAKING] Record yourself introducing yourself in 15 seconds (dummy).",
+                    "options": None,
+                    "correct": "N/A",
+                },
+                {
+                    "text": "[SEED][SPEAKING] Describe a hobby you enjoy (dummy).",
+                    "options": None,
+                    "correct": "N/A",
+                },
+                {
+                    "text": "[SEED][SPEAKING] Explain your favorite movie in 2-3 sentences (dummy).",
+                    "options": None,
+                    "correct": "N/A",
+                },
+            ],
+        }
+
+        out: dict[ModuleType, list[QuestionDB]] = {"reading": [], "writing": [], "listening": [], "speaking": []}
+        for module_type, questions in seed_defs.items():
+            for qdef in questions:
+                text = qdef["text"]
+                existing = self.db.scalar(select(QuestionDB).where(QuestionDB.text == text))
+                if existing:
+                    out[module_type].append(existing)
+                    continue
+                model = QuestionDB(
+                    text=text,
+                    options_json=json.dumps(qdef["options"]) if qdef.get("options") else None,
+                    correct_answer=qdef["correct"],
+                    points=1,
+                )
+                self.db.add(model)
+                self.db.commit()
+                self.db.refresh(model)
+                out[module_type].append(model)
+        return out
+
+    def _level_for_module_score(self, moduleType: ModuleType, score: int) -> LanguageLevel:
+        # Per-module max is currently 3 points.
+        if moduleType in ("writing", "speaking"):
+            # Dummy mapping for open-ended modules.
+            if score <= 0:
+                return LanguageLevel.A1
+            if score == 1:
+                return LanguageLevel.A2
+            if score == 2:
+                return LanguageLevel.B1
+            return LanguageLevel.B2
+        if score <= 0:
+            return LanguageLevel.A1
+        if score == 1:
+            return LanguageLevel.A2
+        if score == 2:
+            return LanguageLevel.B1
+        return LanguageLevel.B2
+
+    def _level_for_total_score(self, total: int) -> LanguageLevel:
+        # Total max is currently 12 points.
+        if total <= 2:
+            return LanguageLevel.A1
+        if total <= 4:
+            return LanguageLevel.A2
+        if total <= 6:
+            return LanguageLevel.B1
+        if total <= 8:
+            return LanguageLevel.B2
+        if total <= 10:
+            return LanguageLevel.C1
+        return LanguageLevel.C2
+
+    def _dummy_feedback(self, moduleType: ModuleType, level: LanguageLevel, score: int) -> str:
+        return f"Dummy analysis: {moduleType} score={score}, estimated={level.value}."
+
+    def _dummy_strengths(self, reading: int, listening: int, speaking: int, writing: int) -> list[str]:
+        strengths: list[tuple[str, int]] = [
+            ("Reading", reading),
+            ("Listening", listening),
+            ("Speaking", speaking),
+            ("Writing", writing),
+        ]
+        strengths.sort(key=lambda x: x[1], reverse=True)
+        return [f"{strengths[0][0]}" if strengths else "General"]
+
+    def _dummy_weaknesses(self, reading: int, listening: int, speaking: int, writing: int) -> list[str]:
+        weaknesses: list[tuple[str, int]] = [
+            ("Reading", reading),
+            ("Listening", listening),
+            ("Speaking", speaking),
+            ("Writing", writing),
+        ]
+        weaknesses.sort(key=lambda x: x[1])
+        return [f"{weaknesses[0][0]}" if weaknesses else "General"]
