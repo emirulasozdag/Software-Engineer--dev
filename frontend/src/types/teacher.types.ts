@@ -29,5 +29,3 @@ export interface TeacherDirective {
   focusAreas: string[];
   instructions: string;
 }
-
-export type { LanguageLevel } from './test.types';

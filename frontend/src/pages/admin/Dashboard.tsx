@@ -47,95 +47,114 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1 className="page-title">Admin Dashboard</h1>
-        <button className="button button-secondary" onClick={logout}>Logout</button>
-      </div>
-
-      <div className="card">
-        <h2>Welcome, {user?.name}!</h2>
-        <p>Email: {user?.email}</p>
-        <p>Role: {user?.role}</p>
-      </div>
-
-      {error && (
-        <div className="card" style={{ borderLeft: '4px solid #e74c3c' }}>
-          <strong>Error:</strong> {error}
-        </div>
-      )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-        <Link to="/admin/users" style={{ textDecoration: 'none' }}>
-          <div className="card" style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
-            <h3>User Management</h3>
-            <p>Manage all user accounts</p>
+      <div className="card dash-hero">
+        <div className="hero-row">
+          <div>
+            <h1 className="hero-title">Admin Dashboard</h1>
+            <div className="hero-sub">System overview, users, and feedback management.</div>
+            <div className="action-meta" style={{ marginTop: 12 }}>
+              <span className="pill">Name: {user?.name}</span>
+              <span className="pill">Email: {user?.email}</span>
+              <span className="pill">Role: {user?.role}</span>
+            </div>
           </div>
-        </Link>
-
-        <Link to="/admin/stats" style={{ textDecoration: 'none' }}>
-          <div className="card" style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
-            <h3>System Statistics</h3>
-            <p>View system performance metrics</p>
-          </div>
-        </Link>
-
-        <Link to="/admin/feedback" style={{ textDecoration: 'none' }}>
-          <div className="card" style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
-            <h3>Feedback Management</h3>
-            <p>Review user feedback and bug reports</p>
-          </div>
-        </Link>
-      </div>
-
-      <div className="card">
-        <h2>Quick Stats</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginTop: '20px' }}>
-          <div style={{ padding: '15px', background: '#3498db', color: 'white', borderRadius: '4px' }}>
-            <h3 style={{ color: 'white' }}>Total Users</h3>
-            <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{stats?.totalUsers ?? (isLoading ? '...' : 0)}</p>
-          </div>
-          <div style={{ padding: '15px', background: '#2ecc71', color: 'white', borderRadius: '4px' }}>
-            <h3 style={{ color: 'white' }}>Active Students</h3>
-            <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{stats?.totalStudents ?? (isLoading ? '...' : 0)}</p>
-          </div>
-          <div style={{ padding: '15px', background: '#e74c3c', color: 'white', borderRadius: '4px' }}>
-            <h3 style={{ color: 'white' }}>Teachers</h3>
-            <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{stats?.totalTeachers ?? (isLoading ? '...' : 0)}</p>
-          </div>
-          <div style={{ padding: '15px', background: '#f39c12', color: 'white', borderRadius: '4px' }}>
-            <h3 style={{ color: 'white' }}>Uptime</h3>
-            <p style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
-              {stats?.maintenanceEnabled ? 'Maintenance enabled' : 'Running'}
-            </p>
+          <div className="hero-actions">
+            <button className="button button-primary" onClick={logout}>
+              Logout
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="card">
-        <h2>Maintenance Mode</h2>
-        <p>
-          Current Status:{' '}
-          <strong style={{ color: maintenance?.enabled ? '#e67e22' : '#2ecc71' }}>
-            {maintenance?.enabled ? 'ENABLED' : 'DISABLED'}
-          </strong>
-        </p>
-        <label className="form-label" style={{ marginTop: '10px' }}>Reason (optional)</label>
-        <input
-          className="input"
-          value={maintenanceReason}
-          onChange={(e) => setMaintenanceReason(e.target.value)}
-          placeholder="e.g., Scheduled update at 21:00"
-        />
-        <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
-          <button className="button button-primary" disabled={isLoading} onClick={() => setMaintenanceEnabled(true)}>
-            Enable Maintenance
-          </button>
-          <button className="button button-secondary" disabled={isLoading} onClick={() => setMaintenanceEnabled(false)}>
-            Disable Maintenance
-          </button>
-          <button className="button button-secondary" disabled={isLoading} onClick={refresh}>
-            Refresh
-          </button>
+      <div className="dash-grid">
+        <Link to="/admin/users" style={{ textDecoration: 'none' }} className="col-4">
+          <div className="card click-card action-card">
+            <span className="action-icon">UM</span>
+            <div>
+              <h3 className="action-title">User Management</h3>
+              <div className="action-desc">Manage user accounts and roles.</div>
+              <div className="action-meta">
+                <span className="pill">CRUD</span>
+                <span className="pill">Roles</span>
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        <Link to="/admin/stats" style={{ textDecoration: 'none' }} className="col-4">
+          <div className="card click-card action-card">
+            <span className="action-icon green">SS</span>
+            <div>
+              <h3 className="action-title">System Statistics</h3>
+              <div className="action-desc">View system-level metrics and status.</div>
+              <div className="action-meta">
+                <span className="pill">Metrics</span>
+                <span className="pill">Health</span>
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        <Link to="/admin/feedback" style={{ textDecoration: 'none' }} className="col-4">
+          <div className="card click-card action-card">
+            <span className="action-icon amber">FB</span>
+            <div>
+              <h3 className="action-title">Feedback Management</h3>
+              <div className="action-desc">Review user feedback and bug reports.</div>
+              <div className="action-meta">
+                <span className="pill">Triage</span>
+                <span className="pill">Notes</span>
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        <div className="card col-8">
+          <div className="toolbar">
+            <div>
+              <h2 style={{ marginBottom: 6 }}>Quick Stats</h2>
+              <div className="text-muted">Demo numbers (replace with API later)</div>
+            </div>
+            <span className="pill">Overview</span>
+          </div>
+          <div className="divider" />
+          <div className="kpis">
+            <div className="kpi">
+              <div className="label">Total Users</div>
+              <div className="value">1,247</div>
+            </div>
+            <div className="kpi">
+              <div className="label">Active Students</div>
+              <div className="value">892</div>
+            </div>
+            <div className="kpi">
+              <div className="label">Teachers</div>
+              <div className="value">45</div>
+            </div>
+            <div className="kpi">
+              <div className="label">Uptime</div>
+              <div className="value">99.8%</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card col-4">
+          <div className="toolbar">
+            <div>
+              <h2 style={{ marginBottom: 6 }}>Maintenance</h2>
+              <div className="text-muted">Admin controls (demo)</div>
+            </div>
+            <span className="pill">Status: Active</span>
+          </div>
+          <div className="divider" />
+          <div className="actions">
+            <button className="button button-primary" type="button">
+              Enable Maintenance
+            </button>
+            <button className="button button-secondary" type="button">
+              Schedule Update
+            </button>
+          </div>
         </div>
       </div>
     </div>

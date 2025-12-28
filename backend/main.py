@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +23,12 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
+
+    logging.getLogger("uvicorn.error").info(
+        "AI provider configured: ai_provider=%s google_model=%s",
+        getattr(settings, "ai_provider", None),
+        getattr(settings, "google_genai_model", None),
+    )
 
     app = FastAPI(
         title=settings.app_name,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
@@ -12,6 +13,9 @@ from app.domain.enums import LanguageLevel
 from app.infrastructure.db.models.results import TestResultDB
 from app.infrastructure.db.models.tests import PlacementTestDB, QuestionDB, TestDB, TestModuleDB
 from app.infrastructure.db.models.user import StudentDB
+
+
+logger = logging.getLogger(__name__)
 
 
 ModuleType = Literal["reading", "writing", "listening", "speaking"]
@@ -191,7 +195,10 @@ class PlacementTestService:
         return PlacementModuleResultView(moduleType="speaking", level=level, score=int(module.score), feedback=feedback)
 
     def completeTest(self, userId: int, testId: int) -> PlacementTestResultView:
-        """UC6: dummy LLM analysis + insert into test_results."""
+        """UC6: analyze results + insert into test_results.
+
+        Writing module analysis is performed via the configured LLM provider.
+        """
         student = self._require_student(userId)
         placement = self.db.scalar(select(PlacementTestDB).where(PlacementTestDB.test_id == testId))
         if not placement:
@@ -213,6 +220,11 @@ class PlacementTestService:
         listening_level = self._level_for_module_score("listening", listening_score)
         speaking_level = self._level_for_module_score("speaking", speaking_score)
         overall = self._level_for_total_score(total_score)
+
+        # LLM writing analysis (best-effort; falls back silently).
+        llm_writing = self._analyze_writing_with_llm(testId=testId, writing_module=writing)
+        if llm_writing and llm_writing.get("writing_level"):
+            writing_level = llm_writing["writing_level"]
 
         existing = self.db.scalar(
             select(TestResultDB).where(
@@ -241,6 +253,13 @@ class PlacementTestService:
 
         strengths = self._dummy_strengths(reading_score, listening_score, speaking_score, writing_score)
         weaknesses = self._dummy_weaknesses(reading_score, listening_score, speaking_score, writing_score)
+        if llm_writing:
+            # Keep stored shapes compatible with existing routes that expect list[str].
+            strengths.extend([t for t in llm_writing.get("strengths", []) if isinstance(t, str) and t.strip()])
+            weaknesses.extend([t for t in llm_writing.get("weaknesses", []) if isinstance(t, str) and t.strip()])
+            # Deduplicate while preserving order.
+            strengths = list(dict.fromkeys([s.strip() for s in strengths if isinstance(s, str) and s.strip()]))
+            weaknesses = list(dict.fromkeys([w.strip() for w in weaknesses if isinstance(w, str) and w.strip()]))
 
         result = TestResultDB(
             student_id=student.id,
@@ -520,3 +539,158 @@ class PlacementTestService:
         ]
         weaknesses.sort(key=lambda x: x[1])
         return [f"{weaknesses[0][0]}" if weaknesses else "General"]
+
+    def _analyze_writing_with_llm(self, *, testId: int, writing_module: TestModuleDB | None) -> dict[str, Any] | None:
+        """Analyze writing submissions and return best-effort structured output.
+
+        Returns a dict like:
+        {
+          "writing_level": LanguageLevel,
+          "strengths": list[str],
+          "weaknesses": list[str],
+        }
+        """
+        if not writing_module or not writing_module.questions_json:
+            return None
+        payload = self._parse_questions_json(writing_module.questions_json)
+        subs = payload.get("submissions")
+        if not isinstance(subs, list) or len(subs) == 0:
+            return None
+
+        # Pull question text so the LLM sees prompt + answer.
+        questions = self.getModuleQuestions(int(testId), "writing")
+        q_by_id: dict[str, str] = {str(q.id): str(q.text) for q in questions}
+        pairs: list[str] = []
+        for sub in subs:
+            if not isinstance(sub, dict):
+                continue
+            qid = str(sub.get("questionId") or "").strip()
+            ans = str(sub.get("answer") or "").strip()
+            if not qid or not ans:
+                continue
+            qtext = q_by_id.get(qid, "(unknown question)")
+            pairs.append(f"Question: {qtext}\nAnswer: {ans}")
+        if not pairs:
+            return None
+
+        prompt = (
+            "You are an English writing assessor. Grade the student's writing using CEFR (A1, A2, B1, B2, C1, C2). "
+            "Return ONLY valid JSON with the following schema:\n"
+            "{\n"
+            "  \"cefr_level\": \"A1|A2|B1|B2|C1|C2\",\n"
+            "  \"strength_tags\": [\"...\"],\n"
+            "  \"weakness_tags\": [\"...\"]\n"
+            "}\n"
+            "Use short tags suitable for learning topics (e.g., 'writing: coherence', 'grammar: verb tenses', 'vocabulary: collocations'). Do not use markdown such as ``` or any other formatting, return valid JSON only.\n\n"
+            "Student submissions:\n\n"
+            + "\n\n".join(pairs)
+        )
+
+        try:
+            from app.config.settings import get_settings
+            from app.infrastructure.external.llm import LLMChatRequest, LLMMessage, get_llm_client
+
+            settings = get_settings()
+            client = get_llm_client(settings)
+            provider = str(getattr(settings, "ai_provider", "mock") or "mock")
+            logger.info(
+                "PlacementTest writing LLM analysis started (testId=%s, provider=%s, submissions=%s)",
+                int(testId),
+                provider,
+                len(pairs),
+            )
+            resp = client.generate(
+                LLMChatRequest(
+                    messages=[
+                        LLMMessage(role="system", content="You are a strict JSON generator."),
+                        LLMMessage(role="user", content=prompt),
+                    ],
+                    # allow override via settings defaults
+                    model=getattr(settings, "google_genai_model", None),
+                    temperature=float(getattr(settings, "google_genai_temperature", 0.2)),
+                    max_output_tokens=int(getattr(settings, "google_genai_max_output_tokens", 512)),
+                )
+            )
+            raw_text = (resp.text or "").strip()
+            if raw_text:
+                logger.info(
+                    "PlacementTest writing LLM raw response (testId=%s): %s",
+                    int(testId),
+                    raw_text[:2000],
+                )
+            else:
+                logger.warning(
+                    "PlacementTest writing LLM returned empty text (testId=%s)",
+                    int(testId),
+                )
+            data = self._extract_json_object(raw_text)
+            if not isinstance(data, dict):
+                head = raw_text[:800]
+                tail = raw_text[-800:] if len(raw_text) > 800 else ""
+                logger.warning(
+                    "PlacementTest writing LLM response was not JSON object (testId=%s, provider=%s, len=%s, endswith_brace=%s). head=%r tail=%r",
+                    int(testId),
+                    provider,
+                    len(raw_text),
+                    raw_text.rstrip().endswith("}"),
+                    head,
+                    tail,
+                )
+                return None
+            logger.info(
+                "PlacementTest writing LLM parsed JSON (testId=%s): %s",
+                int(testId),
+                json.dumps(data, ensure_ascii=False)[:2000],
+            )
+            level_str = str(data.get("cefr_level") or "").strip().upper()
+            writing_level: LanguageLevel | None = None
+            try:
+                if level_str:
+                    writing_level = LanguageLevel(level_str)
+            except Exception:
+                writing_level = None
+
+            strengths = data.get("strength_tags")
+            weaknesses = data.get("weakness_tags")
+            strength_list = [s.strip() for s in strengths if isinstance(s, str) and s.strip()] if isinstance(strengths, list) else []
+            weak_list = [w.strip() for w in weaknesses if isinstance(w, str) and w.strip()] if isinstance(weaknesses, list) else []
+
+            out: dict[str, Any] = {"strengths": strength_list[:5], "weaknesses": weak_list[:5]}
+            if writing_level:
+                out["writing_level"] = writing_level
+            logger.info(
+                "PlacementTest writing LLM final extracted output (testId=%s): %s",
+                int(testId),
+                str(
+                    {
+                        "writing_level": writing_level.value if writing_level else None,
+                        "strengths": out.get("strengths", []),
+                        "weaknesses": out.get("weaknesses", []),
+                    }
+                )[:2000],
+            )
+            return out
+        except Exception:
+            logger.exception("PlacementTest writing LLM analysis failed (testId=%s)", int(testId))
+            return None
+
+    def _extract_json_object(self, text: str) -> Any:
+        """Best-effort extraction of a JSON object from an LLM response."""
+        if not text:
+            return None
+        # Fast path: full string is JSON.
+        try:
+            return json.loads(text)
+        except Exception:
+            pass
+
+        # Try to locate the first top-level {...} block.
+        start = text.find("{")
+        end = text.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            return None
+        candidate = text[start : end + 1]
+        try:
+            return json.loads(candidate)
+        except Exception:
+            return None

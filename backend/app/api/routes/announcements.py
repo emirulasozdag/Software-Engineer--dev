@@ -63,6 +63,8 @@ def _to_response(db: Session, a: AnnouncementDB) -> AnnouncementResponse:
 @router.get("", response_model=list[AnnouncementResponse])
 def list_announcements(user=Depends(get_current_user), db: Session = Depends(get_db)) -> list[AnnouncementResponse]:
 	anns = list(db.scalars(select(AnnouncementDB).order_by(AnnouncementDB.created_at.desc())).all())
+	if user.role == UserRole.ADMIN:
+		return [_to_response(db, a) for a in anns]
 	out: list[AnnouncementResponse] = []
 	for a in anns:
 		target, recipients = _parse_recipient_group(a.recipient_group_json)
@@ -87,16 +89,13 @@ def list_announcements(user=Depends(get_current_user), db: Session = Depends(get
 @router.post("", response_model=AnnouncementResponse, status_code=status.HTTP_201_CREATED)
 def create_announcement(
 	payload: CreateAnnouncementRequest,
-	user=Depends(require_role(UserRole.TEACHER, UserRole.ADMIN)),
+	user=Depends(require_role(UserRole.TEACHER)),
 	db: Session = Depends(get_db),
 ) -> AnnouncementResponse:
 	# Determine teacher_id (teacher row is required by schema)
 	teacher = db.scalar(select(TeacherDB).where(TeacherDB.user_id == user.userId))
 	if not teacher:
-		if user.role == UserRole.TEACHER:
-			raise HTTPException(status_code=400, detail="Teacher profile not found")
-		# admin can post announcements with a synthetic teacher record is not allowed; keep it strict
-		raise HTTPException(status_code=400, detail="Only teachers can create announcements in this demo")
+		raise HTTPException(status_code=400, detail="Teacher profile not found")
 
 	target = payload.targetAudience
 	recipients: list[int] | None = None

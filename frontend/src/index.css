@@ -119,6 +119,78 @@ code {
   cursor: not-allowed;
 }
 
+/* Sizes */
+.button-sm {
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  border-radius: 10px;
+}
+.input-sm {
+  padding: 8px 10px;
+  font-size: 0.95rem;
+  margin-bottom: 0;
+}
+
+/* Centered empty/error pages */
+.center-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.center-card {
+  width: 100%;
+  max-width: 520px;
+  text-align: center;
+}
+.big-code {
+  font-size: 4rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--primary);
+}
+.big-code.danger {
+  color: var(--danger);
+}
+
+/* Tables */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table thead tr {
+  border-bottom: 2px solid var(--border);
+}
+.table tbody tr {
+  border-bottom: 1px solid rgba(16, 24, 40, 0.08);
+}
+.table tbody tr:hover {
+  background: rgba(16, 24, 40, 0.03);
+}
+.table th,
+.table td {
+  text-align: left;
+  padding: 10px;
+  vertical-align: top;
+}
+.table th {
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+/* Simple placeholder blocks */
+.placeholder {
+  height: 300px;
+  background: rgba(16, 24, 40, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
 .input {
   width: 100%;
   padding: 10px;
@@ -566,4 +638,120 @@ details > summary::-webkit-details-marker {
 .chat-input {
   display: flex;
   gap: 10px;
+}
+
+/* =========================================================
+   Dashboards (Student / Teacher)
+   ========================================================= */
+.dash-hero {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(34, 197, 94, 0.10));
+  border: 1px solid var(--border);
+}
+.dash-hero .hero-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.dash-hero .hero-title {
+  font-size: 2.2rem;
+  letter-spacing: -0.02em;
+  font-weight: 900;
+  margin: 0;
+}
+.dash-hero .hero-sub {
+  margin-top: 8px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.dash-hero .hero-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+/* Make dashboard tiles align neatly (same height per row) */
+.dash-grid a {
+  display: block;
+  height: 100%;
+}
+.dash-grid .card {
+  margin-bottom: 0;
+  height: 100%;
+}
+.dash-grid a > .card {
+  height: 100%;
+}
+.col-4 { grid-column: span 4; }
+.col-6 { grid-column: span 6; }
+.col-8 { grid-column: span 8; }
+.col-12 { grid-column: span 12; }
+@media (max-width: 900px) {
+  .col-4, .col-6, .col-8 { grid-column: span 12; }
+}
+
+.click-card {
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+.click-card:hover {
+  transform: translateY(-2px);
+}
+
+.action-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  height: 100%;
+}
+.action-card > div {
+  flex: 1;
+  min-width: 0;
+}
+.action-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  background: rgba(37, 99, 235, 0.14);
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  color: #1e3a8a;
+  flex: 0 0 auto;
+}
+.action-icon.green {
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.22);
+  color: #166534;
+}
+.action-icon.amber {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.22);
+  color: #92400e;
+}
+.action-title {
+  font-weight: 900;
+  font-size: 1.05rem;
+  margin: 0;
+}
+.action-desc {
+  margin-top: 6px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.action-meta {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }

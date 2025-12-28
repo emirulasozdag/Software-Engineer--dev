@@ -8,7 +8,7 @@ const RegisterPage: React.FC = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'student' as 'student' | 'teacher',
+    role: 'student' as 'student' | 'teacher' | 'admin',
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -107,10 +107,11 @@ const RegisterPage: React.FC = () => {
             <select
               className="input"
               value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as 'student' | 'teacher' })}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value as 'student' | 'teacher' | 'admin' })}
             >
               <option value="student">Student</option>
               <option value="teacher">Teacher</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
           {error && <p className="error-message">{error}</p>}

@@ -55,18 +55,20 @@ def get_messages(user=Depends(get_current_user), db: Session = Depends(get_db)) 
 def get_contacts(user=Depends(get_current_user), db: Session = Depends(get_db)) -> list[ContactResponse]:
 	# UC18: student <-> teacher communication; provide reasonable recipients list
 	if user.role == UserRole.STUDENT:
-		target_role = UserRole.TEACHER
+		target_roles = (UserRole.TEACHER, UserRole.ADMIN)
 	elif user.role == UserRole.TEACHER:
-		target_role = UserRole.STUDENT
+		target_roles = (UserRole.STUDENT, UserRole.ADMIN)
 	else:
 		# admin can message anyone
-		target_role = None
+		target_roles = None
 
 	q = select(UserDB)
-	if target_role:
-		q = q.where(UserDB.role == target_role)
+	if target_roles:
+		q = q.where(UserDB.role.in_(list(target_roles)))
 
 	users = list(db.scalars(q.order_by(UserDB.name.asc())).all())
+	# Do not return the current user as a contact.
+	users = [u for u in users if int(u.id) != int(user.userId)]
 	return [ContactResponse(id=str(u.id), name=u.name, role=u.role.value.lower()) for u in users]
 
 

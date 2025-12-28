@@ -84,6 +84,17 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse
 	return LoginResponse(access_token=token, user=_to_public_user(user))
 
 
+@router.post("/refresh", response_model=LoginResponse)
+def refresh_access_token(user=Depends(get_current_user)) -> LoginResponse:
+	"""Issue a new access token for an authenticated user.
+
+	Note: This project uses stateless tokens (no refresh token store).
+	This endpoint exists to match the frontend expectation of a refresh call.
+	"""
+	new_token = token_manager.issue_access_token(user.userId)
+	return LoginResponse(access_token=new_token, user=_to_public_user(user))
+
+
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)) -> ForgotPasswordResponse:
 	_controller = AuthController(AuthService(SqlAlchemyUserRepository(db), NotificationService()))
