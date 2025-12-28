@@ -1,15 +1,30 @@
 from __future__ import annotations
 
+from app.application.services.content_update_service import ContentUpdateService
 
 class ContentUpdateController:
-    def checkProgressStatus(self, studentId: int):
-        pass
+	def __init__(self, service: ContentUpdateService | None = None):
+		self.service = service or ContentUpdateService()
 
-    def updateContent(self, studentId: int):
-        pass
+	def checkProgressStatus(self, studentId: int):
+		# Progress module is owned by teammates; UC9 passes progress in request.
+		return None
 
-    def displayRationale(self, studentId: int, reason: str):
-        pass
+	def updateContent(
+		self,
+		studentId: int,
+		*,
+		progress_correct_rate: float,
+		planTopics: list[str] | None = None,
+	):
+		return self.service.recommend_update(
+			studentId,
+			progress_correct_rate=progress_correct_rate,
+			planTopics=planTopics,
+		)
 
-    def rejectUpdate(self, studentId: int):
-        pass
+	def displayRationale(self, studentId: int, reason: str):
+		return {"studentId": studentId, "rationale": reason}
+
+	def rejectUpdate(self, studentId: int):
+		return {"rejected": True, "studentId": studentId}

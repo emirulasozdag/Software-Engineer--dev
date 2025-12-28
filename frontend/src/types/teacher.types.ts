@@ -1,3 +1,5 @@
+import type { LanguageLevel } from './test.types';
+
 export interface Assignment {
   id: string;
   teacherId: string;

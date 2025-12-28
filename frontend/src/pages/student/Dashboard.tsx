@@ -33,6 +33,13 @@ const StudentDashboard: React.FC = () => {
           </div>
         </Link>
 
+        <Link to="/student/ai-content-delivery" style={{ textDecoration: 'none' }}>
+          <div className="card" style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
+            <h3>AI Content Delivery</h3>
+            <p>Generate and update content with “why selected” rationale</p>
+          </div>
+        </Link>
+
         <Link to="/student/progress" style={{ textDecoration: 'none' }}>
           <div className="card" style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
             <h3>My Progress</h3>
