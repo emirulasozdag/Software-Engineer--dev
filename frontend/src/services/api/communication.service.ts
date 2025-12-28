@@ -3,6 +3,7 @@ import {
   Message,
   Announcement,
   ChatMessage,
+  Contact,
   Notification,
 } from '@/types/communication.types';
 
@@ -12,6 +13,14 @@ export const communicationService = {
    */
   getMessages: async (): Promise<Message[]> => {
     const response = await apiClient.get('/api/messaging');
+    return response.data;
+  },
+
+  /**
+   * Get allowed contacts (basic UC18 recipient list)
+   */
+  getContacts: async (): Promise<Contact[]> => {
+    const response = await apiClient.get('/api/messaging/contacts');
     return response.data;
   },
 
@@ -76,6 +85,14 @@ export const communicationService = {
    */
   sendChatbotMessage: async (message: string): Promise<ChatMessage> => {
     const response = await apiClient.post('/api/chatbot', { message });
+    return response.data;
+  },
+
+  /**
+   * Start a new chat session (student only)
+   */
+  startNewChatSession: async (): Promise<{ sessionId: string; message: string }> => {
+    const response = await apiClient.post('/api/chatbot/new-session');
     return response.data;
   },
 

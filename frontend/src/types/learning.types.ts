@@ -1,14 +1,25 @@
 import { LanguageLevel } from './test.types';
 
 export interface LearningPlan {
-  id: string;
-  studentId: string;
-  currentLevel: LanguageLevel;
+  planId: number;
+  studentId: number;
+  recommendedLevel: LanguageLevel;
+  isGeneral: boolean;
   strengths: string[];
   weaknesses: string[];
-  recommendedContent: ContentItem[];
+  topics: TopicRecommendation[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TopicRecommendation {
+  topicId?: number | null;
+  name: string;
+  category: string;
+  difficulty: LanguageLevel;
+  priority: number;
+  reason: string;
+  evidence?: string[];
 }
 
 export interface ContentItem {
