@@ -1,3 +1,5 @@
+from app.infrastructure.db.models.user_model import UserModel
+
 """ORM models package.
 
 Import all models here so Base.metadata sees them when creating tables.

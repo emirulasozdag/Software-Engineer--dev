@@ -22,5 +22,11 @@ class Settings(BaseSettings):
 	# SQLite database (relative to backend/)
 	database_url: str = Field(default="sqlite:///./app.db")
 
+	# Security (dev defaults; override with .env in real deployment)
+	secret_key: str = Field(default="dev-secret-change-me")
+	access_token_exp_minutes: int = Field(default=60 * 24)  # 1 day
+	action_token_exp_minutes: int = Field(default=30)  # verify/reset tokens
+
+@lru_cache
 def get_settings() -> Settings:
 	return Settings()

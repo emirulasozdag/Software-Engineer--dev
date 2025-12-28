@@ -6,17 +6,16 @@ from datetime import datetime
 from app.domain.enums import LanguageLevel, UserRole
 from app.domain.models.user_hierarchy import Admin, Student, Teacher, User
 from app.infrastructure.external.notification_service import NotificationService
-from app.infrastructure.repositories.memory_user_repository import MemoryUserRepository
 from app.infrastructure.security.passwords import password_hasher
 from app.infrastructure.security.tokens import token_manager
 
 class AuthService:
 	def __init__(
 		self,
-		user_repo: MemoryUserRepository | None = None,
+		user_repo,
 		notification_service: NotificationService | None = None,
 	):
-		self.user_repo = user_repo or MemoryUserRepository()
+		self.user_repo = user_repo
 		self.notification_service = notification_service or NotificationService()
 
 	def createUser(self, name: str, email: str, password: str, role: UserRole = UserRole.STUDENT) -> User:

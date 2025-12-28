@@ -4,8 +4,8 @@ from app.domain.enums import UserRole
 from app.application.services.auth_service import AuthService
 
 class AuthController:
-    def __init__(self, auth_service: AuthService | None = None):
-        self.auth_service = auth_service or AuthService()
+    def __init__(self, auth_service: AuthService):
+        self.auth_service = auth_service
 
     def register(self, name: str, email: str, password: str, role: UserRole = UserRole.STUDENT):
         return self.auth_service.createUser(name=name, email=email, password=password, role=role)

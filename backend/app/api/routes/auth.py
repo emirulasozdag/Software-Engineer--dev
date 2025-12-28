@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 from app.api.deps.auth import get_current_user
 from app.api.schemas.auth import (
@@ -17,9 +18,12 @@ from app.api.schemas.auth import (
 	VerifyEmailResponse,
 )
 from app.application.controllers.auth_controller import AuthController
+from app.application.services.auth_service import AuthService
+from app.infrastructure.db.session import get_db
+from app.infrastructure.external.notification_service import NotificationService
+from app.infrastructure.repositories.sqlalchemy_user_repository import SqlAlchemyUserRepository
 
 router = APIRouter()
-_controller = AuthController()
 
 
 def _to_public_user(user) -> UserPublic:
@@ -33,7 +37,8 @@ def _to_public_user(user) -> UserPublic:
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest) -> RegisterResponse:
+def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> RegisterResponse:
+	_controller = AuthController(AuthService(SqlAlchemyUserRepository(db), NotificationService()))
 	try:
 		user = _controller.register(
 			name=payload.name,
@@ -51,13 +56,15 @@ def register(payload: RegisterRequest) -> RegisterResponse:
 
 
 @router.post("/verify-email", response_model=VerifyEmailResponse)
-def verify_email(payload: VerifyEmailRequest) -> VerifyEmailResponse:
+def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)) -> VerifyEmailResponse:
+	_controller = AuthController(AuthService(SqlAlchemyUserRepository(db), NotificationService()))
 	ok = _controller.verifyEmail(payload.token)
 	return VerifyEmailResponse(verified=bool(ok))
 
 
 @router.post("/login", response_model=LoginResponse)
-def login(payload: LoginRequest) -> LoginResponse:
+def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse:
+	_controller = AuthController(AuthService(SqlAlchemyUserRepository(db), NotificationService()))
 	try:
 		token = _controller.login(email=payload.email, password=payload.password)
 	except ValueError as e:
@@ -69,13 +76,15 @@ def login(payload: LoginRequest) -> LoginResponse:
 
 
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
-def forgot_password(payload: ForgotPasswordRequest) -> ForgotPasswordResponse:
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)) -> ForgotPasswordResponse:
+	_controller = AuthController(AuthService(SqlAlchemyUserRepository(db), NotificationService()))
 	_controller.requestPasswordReset(payload.email)
 	return ForgotPasswordResponse(message="If the email exists, a reset token was sent (check server logs).")
 
 
 @router.post("/reset-password", response_model=ResetPasswordResponse)
-def reset_password(payload: ResetPasswordRequest) -> ResetPasswordResponse:
+def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)) -> ResetPasswordResponse:
+	_controller = AuthController(AuthService(SqlAlchemyUserRepository(db), NotificationService()))
 	ok = _controller.resetPassword(token=payload.token, newPassword=payload.new_password)
 	return ResetPasswordResponse(updated=bool(ok))
 
