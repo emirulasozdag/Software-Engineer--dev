@@ -119,6 +119,78 @@ code {
   cursor: not-allowed;
 }
 
+/* Sizes */
+.button-sm {
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  border-radius: 10px;
+}
+.input-sm {
+  padding: 8px 10px;
+  font-size: 0.95rem;
+  margin-bottom: 0;
+}
+
+/* Centered empty/error pages */
+.center-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.center-card {
+  width: 100%;
+  max-width: 520px;
+  text-align: center;
+}
+.big-code {
+  font-size: 4rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--primary);
+}
+.big-code.danger {
+  color: var(--danger);
+}
+
+/* Tables */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table thead tr {
+  border-bottom: 2px solid var(--border);
+}
+.table tbody tr {
+  border-bottom: 1px solid rgba(16, 24, 40, 0.08);
+}
+.table tbody tr:hover {
+  background: rgba(16, 24, 40, 0.03);
+}
+.table th,
+.table td {
+  text-align: left;
+  padding: 10px;
+  vertical-align: top;
+}
+.table th {
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+/* Simple placeholder blocks */
+.placeholder {
+  height: 300px;
+  background: rgba(16, 24, 40, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
 .input {
   width: 100%;
   padding: 10px;
