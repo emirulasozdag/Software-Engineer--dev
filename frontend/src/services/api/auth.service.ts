@@ -8,12 +8,53 @@ import {
   User,
 } from '@/types/auth.types';
 
+type BackendUserPublic = {
+  userId: number;
+  name: string;
+  email: string;
+  role: 'STUDENT' | 'TEACHER' | 'ADMIN';
+  isVerified: boolean;
+};
+
+type BackendLoginResponse = {
+  access_token: string;
+  token_type: string;
+  user: BackendUserPublic;
+};
+
+type BackendRegisterResponse = {
+  user: BackendUserPublic;
+  message: string;
+  verification_token?: string | null;
+};
+
+type BackendVerifyEmailResponse = {
+  verified: boolean;
+};
+
+function mapRoleToBackend(role: RegisterRequest['role']): BackendUserPublic['role'] {
+  if (role === 'student') return 'STUDENT';
+  if (role === 'teacher') return 'TEACHER';
+  return 'STUDENT';
+}
+
+function mapUserFromBackend(u: BackendUserPublic): User {
+  return {
+    id: String(u.userId),
+    email: u.email,
+    name: u.name,
+    role: u.role.toLowerCase() as User['role'],
+    isEmailVerified: Boolean(u.isVerified),
+  };
+}
+
 export const authService = {
   /**
    * Register a new user account
    */
-  register: async (data: RegisterRequest): Promise<AuthResponse> => {
-    const response = await apiClient.post<AuthResponse>('/api/auth/register', data);
+  register: async (data: RegisterRequest): Promise<BackendRegisterResponse> => {
+    const payload = { ...data, role: mapRoleToBackend(data.role) };
+    const response = await apiClient.post<BackendRegisterResponse>('/api/auth/register', payload);
     return response.data;
   },
 
@@ -21,8 +62,12 @@ export const authService = {
    * Login with email and password
    */
   login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await apiClient.post<AuthResponse>('/api/auth/login', data);
-    return response.data;
+    const response = await apiClient.post<BackendLoginResponse>('/api/auth/login', data);
+    return {
+      access_token: response.data.access_token,
+      token_type: response.data.token_type,
+      user: mapUserFromBackend(response.data.user),
+    };
   },
 
   /**
@@ -38,8 +83,8 @@ export const authService = {
    * Verify email with token
    */
   verifyEmail: async (token: string): Promise<{ message: string }> => {
-    const response = await apiClient.post(`/api/auth/verify-email/${token}`);
-    return response.data;
+    const response = await apiClient.post<BackendVerifyEmailResponse>('/api/auth/verify-email', { token });
+    return { message: response.data.verified ? 'Email verified successfully!' : 'Email verification failed.' };
   },
 
   /**
@@ -62,8 +107,8 @@ export const authService = {
    * Get current user profile
    */
   getCurrentUser: async (): Promise<User> => {
-    const response = await apiClient.get<User>('/api/auth/me');
-    return response.data;
+    const response = await apiClient.get<BackendUserPublic>('/api/auth/me');
+    return mapUserFromBackend(response.data);
   },
 
   /**

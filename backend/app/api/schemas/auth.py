@@ -23,6 +23,7 @@ class UserPublic(BaseModel):
 class RegisterResponse(BaseModel):
 	user: UserPublic
 	message: str
+	verification_token: str | None = None
 
 
 class LoginRequest(BaseModel):

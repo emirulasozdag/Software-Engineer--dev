@@ -20,6 +20,8 @@ const VerifyEmailPage: React.FC = () => {
         const response = await authService.verifyEmail(token);
         setStatus('success');
         setMessage(response.message || 'Email verified successfully!');
+        // Preserve email typed during registration for login convenience
+        // (Register page stores it as pending_email)
         
         // Redirect to login after 3 seconds
         setTimeout(() => {
@@ -27,7 +29,7 @@ const VerifyEmailPage: React.FC = () => {
         }, 3000);
       } catch (err: any) {
         setStatus('error');
-        setMessage(err.response?.data?.message || 'Email verification failed. The link may have expired.');
+        setMessage(err.response?.data?.message || err.response?.data?.detail || 'Email verification failed. The link may have expired.');
       }
     };
 

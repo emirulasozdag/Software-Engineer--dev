@@ -19,16 +19,31 @@ const LoginPage: React.FC = () => {
     }
   }, [user, navigate]);
 
+  // Prefill email from registration flow to avoid mismatch
+  React.useEffect(() => {
+    if (!email) {
+      const pending = localStorage.getItem('pending_email');
+      if (pending) setEmail(pending);
+    }
+  }, [email]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
     setIsLoading(true);
 
     try {
       await login(email, password);
       // Navigation will happen via the useEffect above
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      const detail = err.response?.data?.detail;
+      const validationMsg =
+        Array.isArray(detail) ? detail.map((d: any) => d?.msg).filter(Boolean).join(', ') : undefined;
+      setError(err.response?.data?.message || validationMsg || detail || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -58,6 +73,7 @@ const LoginPage: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={6}
               placeholder="Enter your password"
             />
           </div>

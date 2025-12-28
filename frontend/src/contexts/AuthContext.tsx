@@ -57,14 +57,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const response = await authService.login({ email, password });
     localStorage.setItem('access_token', response.access_token);
     localStorage.setItem('user', JSON.stringify(response.user));
+    localStorage.removeItem('pending_email');
     setUser(response.user);
   };
 
   const register = async (email: string, password: string, name: string, role: 'student' | 'teacher') => {
-    const response = await authService.register({ email, password, name, role });
-    localStorage.setItem('access_token', response.access_token);
-    localStorage.setItem('user', JSON.stringify(response.user));
-    setUser(response.user);
+    // Registration does NOT log in the user because email verification is required.
+    return authService.register({ email, password, name, role });
   };
 
   const logout = async () => {

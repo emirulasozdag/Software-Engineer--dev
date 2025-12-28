@@ -17,7 +17,15 @@ class Settings(BaseSettings):
 	debug: bool = Field(default=False)
 
 	api_prefix: str = Field(default="/api")
-	cors_origins: list[str] = Field(default_factory=list)
+	# Default dev CORS origins (Vite React defaults to :3000). Override via .env if needed.
+	cors_origins: list[str] = Field(
+		default_factory=lambda: [
+			"http://localhost:3000",
+			"http://127.0.0.1:3000",
+			"http://localhost:5173",
+			"http://127.0.0.1:5173",
+		]
+	)
 
 	# SQLite database (relative to backend/)
 	database_url: str = Field(default="sqlite:///./app.db")

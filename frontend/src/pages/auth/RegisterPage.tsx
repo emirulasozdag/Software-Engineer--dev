@@ -20,6 +20,11 @@ const RegisterPage: React.FC = () => {
     e.preventDefault();
     setError('');
 
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -27,10 +32,20 @@ const RegisterPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await register(formData.email, formData.password, formData.name, formData.role);
-      navigate(`/${formData.role}/dashboard`);
+      const res: any = await register(formData.email, formData.password, formData.name, formData.role);
+      // Help user avoid email mismatch on the next step
+      localStorage.setItem('pending_email', formData.email);
+      // If backend returns a dev verification token, go directly to verify page.
+      if (res?.verification_token) {
+        navigate(`/verify-email/${res.verification_token}`);
+      } else {
+        navigate('/login');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      const detail = err.response?.data?.detail;
+      const validationMsg =
+        Array.isArray(detail) ? detail.map((d: any) => d?.msg).filter(Boolean).join(', ') : undefined;
+      setError(err.response?.data?.message || validationMsg || detail || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -71,6 +86,7 @@ const RegisterPage: React.FC = () => {
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
+              minLength={6}
               placeholder="Enter your password"
             />
           </div>
@@ -82,6 +98,7 @@ const RegisterPage: React.FC = () => {
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               required
+              minLength={6}
               placeholder="Confirm your password"
             />
           </div>

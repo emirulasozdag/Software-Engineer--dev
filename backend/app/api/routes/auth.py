@@ -19,11 +19,14 @@ from app.api.schemas.auth import (
 )
 from app.application.controllers.auth_controller import AuthController
 from app.application.services.auth_service import AuthService
+from app.config.settings import get_settings
 from app.infrastructure.db.session import get_db
 from app.infrastructure.external.notification_service import NotificationService
 from app.infrastructure.repositories.sqlalchemy_user_repository import SqlAlchemyUserRepository
+from app.infrastructure.security.tokens import token_manager
 
 router = APIRouter()
+_settings = get_settings()
 
 
 def _to_public_user(user) -> UserPublic:
@@ -49,9 +52,15 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> Registe
 	except ValueError as e:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+	verification_token: str | None = None
+	if _settings.environment == "development" or _settings.debug:
+		# Dev convenience: return token so frontend can continue the flow without real email.
+		verification_token = token_manager.issue_email_verification_token(user.userId)
+
 	return RegisterResponse(
 		user=_to_public_user(user),
 		message="User created. Verification token sent (check server logs).",
+		verification_token=verification_token,
 	)
 
 
