@@ -15,89 +15,72 @@ const UserManagement: React.FC = () => {
 
   return (
     <div className="container">
-      <Link to="/admin/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>
+      <Link to="/admin/dashboard" className="link" style={{ display: 'inline-block', marginBottom: 16 }}>
         ← Back to Dashboard
       </Link>
-      
-      <h1 className="page-title">User Management</h1>
-      
+
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button 
-              className={`button ${filter === 'all' ? 'button-primary' : 'button-secondary'}`}
-              onClick={() => setFilter('all')}
-            >
-              All
-            </button>
-            <button 
-              className={`button ${filter === 'student' ? 'button-primary' : 'button-secondary'}`}
-              onClick={() => setFilter('student')}
-            >
-              Students
-            </button>
-            <button 
-              className={`button ${filter === 'teacher' ? 'button-primary' : 'button-secondary'}`}
-              onClick={() => setFilter('teacher')}
-            >
-              Teachers
-            </button>
-            <button 
-              className={`button ${filter === 'admin' ? 'button-primary' : 'button-secondary'}`}
-              onClick={() => setFilter('admin')}
-            >
-              Admins
-            </button>
+        <div className="toolbar">
+          <div>
+            <h1 className="page-title" style={{ marginBottom: 0 }}>User Management</h1>
+            <div className="subtitle">Manage user accounts (demo data)</div>
           </div>
-          <input 
-            className="input" 
-            type="text" 
-            placeholder="Search users..." 
-            style={{ width: '300px', marginBottom: 0 }}
+          <input
+            className="input input-sm"
+            type="text"
+            placeholder="Search users…"
+            style={{ width: 320 }}
           />
         </div>
 
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="divider" />
+
+        <div className="tabs" style={{ marginBottom: 10 }}>
+          <button className={`tab ${filter === 'all' ? 'active' : ''}`} type="button" onClick={() => setFilter('all')}>
+            All
+          </button>
+          <button className={`tab ${filter === 'student' ? 'active' : ''}`} type="button" onClick={() => setFilter('student')}>
+            Students
+          </button>
+          <button className={`tab ${filter === 'teacher' ? 'active' : ''}`} type="button" onClick={() => setFilter('teacher')}>
+            Teachers
+          </button>
+          <button className={`tab ${filter === 'admin' ? 'active' : ''}`} type="button" onClick={() => setFilter('admin')}>
+            Admins
+          </button>
+        </div>
+
+        <table className="table">
           <thead>
-            <tr style={{ borderBottom: '2px solid #ddd' }}>
-              <th style={{ textAlign: 'left', padding: '10px' }}>Name</th>
-              <th style={{ textAlign: 'left', padding: '10px' }}>Email</th>
-              <th style={{ textAlign: 'left', padding: '10px' }}>Role</th>
-              <th style={{ textAlign: 'left', padding: '10px' }}>Status</th>
-              <th style={{ textAlign: 'left', padding: '10px' }}>Created</th>
-              <th style={{ textAlign: 'left', padding: '10px' }}>Actions</th>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsers.map((user) => (
-              <tr key={user.id} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: '10px' }}>{user.name}</td>
-                <td style={{ padding: '10px' }}>{user.email}</td>
-                <td style={{ padding: '10px' }}>
-                  <span style={{ 
-                    padding: '4px 8px', 
-                    borderRadius: '4px', 
-                    background: user.role === 'admin' ? '#e74c3c' : user.role === 'teacher' ? '#3498db' : '#2ecc71',
-                    color: 'white',
-                    fontSize: '0.85rem'
-                  }}>
+              <tr key={user.id}>
+                <td>{user.name}</td>
+                <td>{user.email}</td>
+                <td>
+                  <span className={user.role === 'student' ? 'badge-success' : user.role === 'teacher' ? 'badge' : 'badge-muted'}>
                     {user.role}
                   </span>
                 </td>
-                <td style={{ padding: '10px' }}>
-                  <span style={{ color: user.isActive ? '#2ecc71' : '#e74c3c' }}>
-                    {user.isActive ? '● Active' : '● Inactive'}
+                <td>
+                  <span className={user.isActive ? 'badge-success' : 'badge-muted'}>
+                    {user.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td style={{ padding: '10px' }}>{user.createdAt}</td>
-                <td style={{ padding: '10px' }}>
-                  <div style={{ display: 'flex', gap: '5px' }}>
-                    <button className="button button-primary" style={{ fontSize: '0.8rem', padding: '4px 8px' }}>
-                      Edit
-                    </button>
-                    <button className="button button-danger" style={{ fontSize: '0.8rem', padding: '4px 8px' }}>
-                      Delete
-                    </button>
+                <td>{user.createdAt}</td>
+                <td>
+                  <div className="actions">
+                    <button className="button button-primary button-sm" type="button">Edit</button>
+                    <button className="button button-danger button-sm" type="button">Delete</button>
                   </div>
                 </td>
               </tr>

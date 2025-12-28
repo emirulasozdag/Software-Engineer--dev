@@ -6,22 +6,22 @@ const NotFoundPage: React.FC = () => {
   const { user } = useAuth();
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-      <div className="card" style={{ width: '100%', maxWidth: '500px', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '4rem', color: '#3498db' }}>404</h1>
+    <div className="center-page">
+      <div className="card center-card">
+        <div className="big-code">404</div>
         <h2 className="page-title">Page Not Found</h2>
-        <p style={{ marginTop: '20px', color: '#666' }}>
+        <p className="subtitle" style={{ marginTop: 12 }}>
           The page you are looking for doesn't exist or has been moved.
         </p>
         {user ? (
           <Link to={`/${user.role}/dashboard`}>
-            <button className="button button-primary" style={{ marginTop: '20px' }}>
+            <button className="button button-primary" style={{ marginTop: 16 }}>
               Go to Dashboard
             </button>
           </Link>
         ) : (
           <Link to="/login">
-            <button className="button button-primary" style={{ marginTop: '20px' }}>
+            <button className="button button-primary" style={{ marginTop: 16 }}>
               Go to Login
             </button>
           </Link>

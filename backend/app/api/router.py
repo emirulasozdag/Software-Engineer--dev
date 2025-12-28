@@ -11,6 +11,7 @@ from app.api.routes import personal_plan
 from app.api.routes import placement_test
 from app.api.routes import test_results
 from app.api.routes import content_delivery, content_update
+from app.api.routes import users
 
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(messaging.router, prefix="/messaging", tags=["messaging"])
@@ -21,6 +22,7 @@ api_router.include_router(placement_test.router, prefix="/placement-test", tags=
 api_router.include_router(test_results.router, prefix="/test-results", tags=["test-results"])
 api_router.include_router(content_delivery.router, prefix="/content-delivery", tags=["content-delivery"])
 api_router.include_router(content_update.router, prefix="/content-update", tags=["content-update"])
+api_router.include_router(users.router, prefix="/users", tags=["users"])
 
 # Additive router registrations (no changes to existing routes)
 from app.api.routes import data_export, progress

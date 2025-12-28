@@ -1,13 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { communicationService } from '@/services/api/communication.service';
 import { ChatMessage } from '@/types/communication.types';
 
 const Chatbot: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [loadingHistory, setLoadingHistory] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -16,7 +14,9 @@ const Chatbot: React.FC = () => {
     () => ({
       id: 'welcome',
       role: 'assistant',
-      content: "Merhaba! Ben senin AI İngilizce asistanınım. Bugün ne çalışmak istersin?",
+      content:
+        "Merhaba! Ben senin AI İngilizce asistanınım. Şu an demo (mock) modundayım.\n" +
+        "İstersen sorunu yaz; ben de örnek bir açıklama + mini çalışma önerisi üreteyim.",
       timestamp: new Date().toISOString(),
     }),
     []
@@ -26,23 +26,11 @@ const Chatbot: React.FC = () => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const loadHistory = async () => {
-    setLoadingHistory(true);
-    setError(null);
-    try {
-      const history = await communicationService.getChatHistory();
-      setMessages(history.length ? history : [welcome]);
-      setTimeout(scrollToBottom, 50);
-    } catch (e: any) {
-      setMessages([welcome]);
-      setError(e?.response?.data?.detail || 'Chat history yüklenemedi.');
-    } finally {
-      setLoadingHistory(false);
-    }
-  };
-
-  useEffect(() => {
-    loadHistory();
+  // UC20: API entegrasyonunu daha sonra yapacağız. Şimdilik mock/local state.
+  // İlk açılış
+  React.useEffect(() => {
+    setMessages([welcome]);
+    setTimeout(scrollToBottom, 50);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -60,11 +48,22 @@ const Chatbot: React.FC = () => {
     setTimeout(scrollToBottom, 20);
 
     try {
-      const botMsg = await communicationService.sendChatbotMessage(text);
-      setMessages((prev) => [...prev, botMsg]);
+      // Mock response (no API)
+      await new Promise((r) => setTimeout(r, 650));
+      const reply: ChatMessage = {
+        id: `bot-${Date.now()}`,
+        role: 'assistant',
+        timestamp: new Date().toISOString(),
+        content:
+          `Demo cevap (mock):\n` +
+          `- Konu: ${text.slice(0, 60)}${text.length > 60 ? '…' : ''}\n` +
+          `- Açıklama: Bu soruyu çalışmak için 1 kısa kural + 1 örnek + 1 mini alıştırma yeterli.\n` +
+          `- Mini alıştırma: 2 tane örnek cümle yaz ve ben kontrol edeyim.`,
+      };
+      setMessages((prev) => [...prev, reply]);
       setTimeout(scrollToBottom, 20);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Mesaj gönderilemedi.');
+      setError('Mesaj gönderilemedi.');
     } finally {
       setSending(false);
     }
@@ -72,13 +71,8 @@ const Chatbot: React.FC = () => {
 
   const handleNewSession = async () => {
     setError(null);
-    try {
-      await communicationService.startNewChatSession();
-      setMessages([welcome]);
-      setTimeout(scrollToBottom, 20);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Yeni sohbet başlatılamadı.');
-    }
+    setMessages([welcome]);
+    setTimeout(scrollToBottom, 20);
   };
 
   return (
@@ -88,48 +82,41 @@ const Chatbot: React.FC = () => {
       <div className="toolbar">
         <div>
           <h1 className="page-title" style={{ marginBottom: 0 }}>AI Chatbot Tutor (UC20)</h1>
-          <div className="subtitle">Soru sor → anında açıklama + mini çalışma önerisi al.</div>
+          <div className="subtitle">Şimdilik mock modunda: UI var, API entegrasyonunu sonra yapacağız.</div>
         </div>
         <div className="actions">
-          <button className="button button-secondary" onClick={handleNewSession} disabled={sending || loadingHistory}>
+          <button className="button button-secondary" onClick={handleNewSession} disabled={sending}>
             New chat
-          </button>
-          <button className="button button-primary" onClick={loadHistory} disabled={sending || loadingHistory}>
-            {loadingHistory ? 'Loading...' : 'Refresh'}
           </button>
         </div>
       </div>
       
       <div className="card chat-shell">
         <div className="chat-topbar">
-          <div className="pill">Session: active</div>
+          <div className="pill">Mode: mock</div>
           <div className="pill">{messages.length} msgs</div>
         </div>
         {error && <div className="card" style={{ borderColor: 'rgba(220,38,38,0.25)', background: 'rgba(220,38,38,0.06)' }}>{error}</div>}
 
         <div className="chat-body">
-          {loadingHistory ? (
-            <div className="loading">Loading chat…</div>
-          ) : (
-            <>
-              {messages.map((msg) => (
-                <div key={msg.id} className={`chat-row ${msg.role === 'user' ? 'right' : 'left'}`}>
-                  <div className={`chat-bubble ${msg.role === 'user' ? 'user' : 'assistant'}`}>
-                    <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
-                    <div className="chat-time">{new Date(msg.timestamp).toLocaleString()}</div>
-                  </div>
+          <>
+            {messages.map((msg) => (
+              <div key={msg.id} className={`chat-row ${msg.role === 'user' ? 'right' : 'left'}`}>
+                <div className={`chat-bubble ${msg.role === 'user' ? 'user' : 'assistant'}`}>
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                  <div className="chat-time">{new Date(msg.timestamp).toLocaleString()}</div>
                 </div>
-              ))}
-              {sending && (
-                <div className="chat-row left">
-                  <div className="chat-bubble assistant">
-                    <div className="text-muted">Yazıyor…</div>
-                  </div>
+              </div>
+            ))}
+            {sending && (
+              <div className="chat-row left">
+                <div className="chat-bubble assistant">
+                  <div className="text-muted">Yazıyor…</div>
                 </div>
-              )}
-              <div ref={bottomRef} />
-            </>
-          )}
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </>
         </div>
 
         <div className="chat-input">
@@ -142,7 +129,7 @@ const Chatbot: React.FC = () => {
             placeholder="Ask me anything about English..."
             style={{ marginBottom: 0 }}
           />
-          <button className="button button-primary" onClick={handleSend} disabled={sending || loadingHistory}>
+          <button className="button button-primary" onClick={handleSend} disabled={sending}>
             {sending ? 'Sending…' : 'Send'}
           </button>
         </div>

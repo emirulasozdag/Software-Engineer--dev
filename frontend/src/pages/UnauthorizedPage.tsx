@@ -6,23 +6,23 @@ const UnauthorizedPage: React.FC = () => {
   const { user } = useAuth();
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-      <div className="card" style={{ width: '100%', maxWidth: '500px', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '4rem', color: '#e74c3c' }}>403</h1>
+    <div className="center-page">
+      <div className="card center-card">
+        <div className="big-code danger">403</div>
         <h2 className="page-title">Unauthorized Access</h2>
-        <p style={{ marginTop: '20px', color: '#666' }}>
+        <p className="subtitle" style={{ marginTop: 12 }}>
           You don't have permission to access this page.
         </p>
         {user && (
           <Link to={`/${user.role}/dashboard`}>
-            <button className="button button-primary" style={{ marginTop: '20px' }}>
+            <button className="button button-primary" style={{ marginTop: 16 }}>
               Go to Dashboard
             </button>
           </Link>
         )}
         {!user && (
           <Link to="/login">
-            <button className="button button-primary" style={{ marginTop: '20px' }}>
+            <button className="button button-primary" style={{ marginTop: 16 }}>
               Go to Login
             </button>
           </Link>

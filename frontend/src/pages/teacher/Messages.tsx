@@ -308,6 +308,7 @@ const TeacherMessages: React.FC = () => {
         </div>
       )}
 
+      {tab === 'messages' && (
       <div className="card">
         <div className="toolbar">
           <div>
@@ -376,7 +377,9 @@ const TeacherMessages: React.FC = () => {
           {sending ? 'Sending…' : 'Send Message'}
         </button>
       </div>
+      )}
 
+      {tab === 'announcements' && (
       <div className="card">
         <div className="toolbar">
           <div>
@@ -453,6 +456,7 @@ const TeacherMessages: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {tab === 'announcements' && (
         <div className="card">
