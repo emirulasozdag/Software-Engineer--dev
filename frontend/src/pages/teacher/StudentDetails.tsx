@@ -47,8 +47,6 @@ const StudentDetails: React.FC = () => {
     return [...results].sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
   }, [results]);
 
-  const hasAnyResult = sorted.length > 0;
-
   const sendPlacementReminder = async () => {
     if (!studentId || !student) return;
     setSendingReminder(true);
