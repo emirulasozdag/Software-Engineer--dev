@@ -1,11 +1,19 @@
 export interface Message {
   id: string;
   senderId: string;
+  senderName?: string | null;
   receiverId: string;
+  receiverName?: string | null;
   subject: string;
   content: string;
   isRead: boolean;
   createdAt: string;
+}
+
+export interface Contact {
+  id: string;
+  name: string;
+  role: string;
 }
 
 export interface Announcement {

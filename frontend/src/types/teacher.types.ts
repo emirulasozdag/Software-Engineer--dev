@@ -10,6 +10,8 @@ export interface Assignment {
   status: 'pending' | 'submitted' | 'graded';
 }
 
+import type { LanguageLevel } from './test.types';
+
 export interface StudentOverview {
   id: string;
   name: string;
