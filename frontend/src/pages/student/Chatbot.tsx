@@ -85,26 +85,26 @@ const Chatbot: React.FC = () => {
     <div className="container">
       <Link to="/student/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>← Back to Dashboard</Link>
       
-      <h1 className="page-title">AI Chatbot Tutor</h1>
+      <div className="toolbar">
+        <div>
+          <h1 className="page-title" style={{ marginBottom: 0 }}>AI Chatbot Tutor (UC20)</h1>
+          <div className="subtitle">Soru sor → anında açıklama + mini çalışma önerisi al.</div>
+        </div>
+        <div className="actions">
+          <button className="button button-secondary" onClick={handleNewSession} disabled={sending || loadingHistory}>
+            New chat
+          </button>
+          <button className="button button-primary" onClick={loadHistory} disabled={sending || loadingHistory}>
+            {loadingHistory ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
       
       <div className="card chat-shell">
         <div className="chat-topbar">
-          <div>
-            <div style={{ fontWeight: 700 }}>Sohbet</div>
-            <div className="text-muted" style={{ marginTop: 4 }}>
-              UC20: Dersler ve alıştırmalar hakkında soru sor, anında geri bildirim al.
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button className="button button-secondary" onClick={handleNewSession} disabled={sending || loadingHistory}>
-              New chat
-            </button>
-            <button className="button button-primary" onClick={loadHistory} disabled={sending || loadingHistory}>
-              {loadingHistory ? 'Loading...' : 'Refresh'}
-            </button>
-          </div>
+          <div className="pill">Session: active</div>
+          <div className="pill">{messages.length} msgs</div>
         </div>
-
         {error && <div className="card" style={{ borderColor: 'rgba(220,38,38,0.25)', background: 'rgba(220,38,38,0.06)' }}>{error}</div>}
 
         <div className="chat-body">
@@ -149,7 +149,10 @@ const Chatbot: React.FC = () => {
       </div>
 
       <div className="card">
-        <h3>Suggested Questions</h3>
+        <div className="toolbar">
+          <h3 style={{ marginBottom: 0 }}>Suggested prompts</h3>
+          <span className="pill">Click to fill</span>
+        </div>
         <div className="chip-row" style={{ marginTop: '15px' }}>
           {[
             'Explain present perfect tense',
@@ -159,9 +162,8 @@ const Chatbot: React.FC = () => {
           ].map((question, index) => (
             <button
               key={index}
-              className="button button-secondary"
+              className="chip"
               onClick={() => setInput(question)}
-              style={{ fontSize: '0.9rem' }}
             >
               {question}
             </button>
