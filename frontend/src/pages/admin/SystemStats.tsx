@@ -42,22 +42,27 @@ const SystemStats: React.FC = () => {
 
       <div className="card">
         <h2>System Health</h2>
+        {error && (
+          <div className="card" style={{ borderLeft: '4px solid #e74c3c', marginTop: 12 }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
         <div className="kpis" style={{ marginTop: 12 }}>
           <div className="kpi">
-            <div className="label">System Uptime</div>
-            <div className="value">99.8%</div>
+            <div className="label">Maintenance</div>
+            <div className="value">{stats ? (stats.maintenanceEnabled ? 'Enabled' : 'Disabled') : '—'}</div>
           </div>
           <div className="kpi">
-            <div className="label">Avg Response Time</div>
-            <div className="value">125ms</div>
+            <div className="label">Maintenance Reason</div>
+            <div className="value">{stats ? (stats.maintenanceReason || '—') : '—'}</div>
           </div>
           <div className="kpi">
-            <div className="label">Active Sessions</div>
-            <div className="value">342</div>
+            <div className="label">CPU Usage</div>
+            <div className="value">{stats?.lastPerformance ? String(stats.lastPerformance.cpuUsage) : '—'}</div>
           </div>
           <div className="kpi">
-            <div className="label">API Calls (24h)</div>
-            <div className="value">15,847</div>
+            <div className="label">Memory Usage</div>
+            <div className="value">{stats?.lastPerformance ? String(stats.lastPerformance.memoryUsage) : '—'}</div>
           </div>
         </div>
       </div>
@@ -67,19 +72,19 @@ const SystemStats: React.FC = () => {
         <div className="kpis" style={{ marginTop: 12 }}>
           <div className="kpi">
             <div className="label">Total Users</div>
-            <div className="value">1,247</div>
+            <div className="value">{stats ? stats.totalUsers : '—'}</div>
           </div>
           <div className="kpi">
             <div className="label">Active Students</div>
-            <div className="value">892</div>
+            <div className="value">{stats ? stats.totalStudents : '—'}</div>
           </div>
           <div className="kpi">
             <div className="label">Active Teachers</div>
-            <div className="value">45</div>
+            <div className="value">{stats ? stats.totalTeachers : '—'}</div>
           </div>
           <div className="kpi">
-            <div className="label">New Users (7d)</div>
-            <div className="value">28</div>
+            <div className="label">Admins</div>
+            <div className="value">{stats ? stats.totalAdmins : '—'}</div>
           </div>
         </div>
       </div>
@@ -88,20 +93,20 @@ const SystemStats: React.FC = () => {
         <h2>Learning Activity</h2>
         <div className="kpis" style={{ marginTop: 12 }}>
           <div className="kpi">
-            <div className="label">Tests Completed</div>
-            <div className="value">3,421</div>
+            <div className="label">Verified Users</div>
+            <div className="value">{stats ? stats.verifiedUsers : '—'}</div>
           </div>
           <div className="kpi">
-            <div className="label">Lessons Completed</div>
-            <div className="value">12,589</div>
+            <div className="label">Active Users (last perf)</div>
+            <div className="value">{stats?.lastPerformance ? String(stats.lastPerformance.activeUsers) : '—'}</div>
           </div>
           <div className="kpi">
-            <div className="label">Assignments Created</div>
-            <div className="value">567</div>
+            <div className="label">Recorded At</div>
+            <div className="value">{stats?.lastPerformance ? new Date(stats.lastPerformance.recordedAt).toLocaleString() : '—'}</div>
           </div>
           <div className="kpi">
-            <div className="label">AI Content Generated</div>
-            <div className="value">8,943</div>
+            <div className="label">Loading</div>
+            <div className="value">{isLoading ? 'Yes' : 'No'}</div>
           </div>
         </div>
       </div>

@@ -69,8 +69,16 @@ const UserManagement: React.FC = () => {
             type="text"
             placeholder="Search users…"
             style={{ width: 320 }}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+
+        {error && (
+          <div className="card" style={{ borderLeft: '4px solid #e74c3c', marginTop: 12 }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
 
         <div className="divider" />
 
@@ -109,28 +117,51 @@ const UserManagement: React.FC = () => {
               </tr>
             )}
             {filteredUsers.map((user) => (
-              <tr key={user.id}>
+              <tr key={user.userId}>
                 <td>{user.name}</td>
                 <td>{user.email}</td>
                 <td>
-                  <span className={user.role === 'student' ? 'badge-success' : user.role === 'teacher' ? 'badge' : 'badge-muted'}>
-                    {user.role}
-                  </span>
+                  <select
+                    className="input input-sm"
+                    value={user.role}
+                    disabled={isLoading}
+                    onChange={(e) => handleRoleChange(user.userId, e.target.value as UserAccount['role'])}
+                  >
+                    <option value="student">student</option>
+                    <option value="teacher">teacher</option>
+                    <option value="admin">admin</option>
+                  </select>
                 </td>
                 <td>
-                  <span className={user.isActive ? 'badge-success' : 'badge-muted'}>
-                    {user.isActive ? 'Active' : 'Inactive'}
-                  </span>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={user.isVerified}
+                      disabled={isLoading}
+                      onChange={(e) => handleVerifiedToggle(user.userId, e.target.checked)}
+                    />
+                    <span className={user.isVerified ? 'badge-success' : 'badge-muted'}>
+                      {user.isVerified ? 'Verified' : 'Unverified'}
+                    </span>
+                  </label>
                 </td>
-                <td>{user.createdAt}</td>
+                <td>{new Date(user.createdAt).toLocaleString()}</td>
                 <td>
                   <div className="actions">
-                    <button className="button button-primary button-sm" type="button">Edit</button>
-                    <button className="button button-danger button-sm" type="button">Delete</button>
+                    <button className="button button-secondary button-sm" type="button" disabled={isLoading} onClick={refresh}>
+                      Refresh
+                    </button>
                   </div>
                 </td>
               </tr>
             ))}
+            {!isLoading && filteredUsers.length === 0 && (
+              <tr>
+                <td colSpan={6} style={{ padding: '10px' }}>
+                  No users found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

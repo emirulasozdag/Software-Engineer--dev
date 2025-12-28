@@ -66,6 +66,12 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
+      {error && (
+        <div className="card" style={{ borderLeft: '4px solid #e74c3c' }}>
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+
       <div className="dash-grid">
         <Link to="/admin/users" style={{ textDecoration: 'none' }} className="col-4">
           <div className="card click-card action-card">
@@ -113,7 +119,7 @@ const AdminDashboard: React.FC = () => {
           <div className="toolbar">
             <div>
               <h2 style={{ marginBottom: 6 }}>Quick Stats</h2>
-              <div className="text-muted">Demo numbers (replace with API later)</div>
+              <div className="text-muted">Live numbers from the backend</div>
             </div>
             <span className="pill">Overview</span>
           </div>
@@ -121,19 +127,19 @@ const AdminDashboard: React.FC = () => {
           <div className="kpis">
             <div className="kpi">
               <div className="label">Total Users</div>
-              <div className="value">1,247</div>
+              <div className="value">{stats ? stats.totalUsers : '—'}</div>
             </div>
             <div className="kpi">
               <div className="label">Active Students</div>
-              <div className="value">892</div>
+              <div className="value">{stats ? stats.totalStudents : '—'}</div>
             </div>
             <div className="kpi">
               <div className="label">Teachers</div>
-              <div className="value">45</div>
+              <div className="value">{stats ? stats.totalTeachers : '—'}</div>
             </div>
             <div className="kpi">
-              <div className="label">Uptime</div>
-              <div className="value">99.8%</div>
+              <div className="label">Verified Users</div>
+              <div className="value">{stats ? stats.verifiedUsers : '—'}</div>
             </div>
           </div>
         </div>
@@ -142,17 +148,43 @@ const AdminDashboard: React.FC = () => {
           <div className="toolbar">
             <div>
               <h2 style={{ marginBottom: 6 }}>Maintenance</h2>
-              <div className="text-muted">Admin controls (demo)</div>
+              <div className="text-muted">Admin controls</div>
             </div>
-            <span className="pill">Status: Active</span>
+            <span className="pill">
+              Status: {maintenance?.enabled ? 'Enabled' : 'Disabled'}
+            </span>
           </div>
           <div className="divider" />
           <div className="actions">
-            <button className="button button-primary" type="button">
-              Enable Maintenance
-            </button>
-            <button className="button button-secondary" type="button">
-              Schedule Update
+            <label className="form-label">Reason (optional)</label>
+            <input
+              className="input"
+              type="text"
+              value={maintenanceReason}
+              onChange={(e) => setMaintenanceReason(e.target.value)}
+              placeholder="e.g., Scheduled update"
+              disabled={isLoading}
+            />
+            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+              <button
+                className="button button-primary"
+                type="button"
+                disabled={isLoading || Boolean(maintenance?.enabled)}
+                onClick={() => setMaintenanceEnabled(true)}
+              >
+                {isLoading ? 'Working...' : 'Enable'}
+              </button>
+              <button
+                className="button button-secondary"
+                type="button"
+                disabled={isLoading || !Boolean(maintenance?.enabled)}
+                onClick={() => setMaintenanceEnabled(false)}
+              >
+                Disable
+              </button>
+            </div>
+            <button className="button button-secondary" type="button" disabled={isLoading} onClick={refresh}>
+              Refresh
             </button>
           </div>
         </div>
