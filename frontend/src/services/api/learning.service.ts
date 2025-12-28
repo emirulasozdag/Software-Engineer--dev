@@ -17,8 +17,17 @@ export const learningService = {
   /**
    * Get personalized learning plan for current student
    */
-  getMyLearningPlan: async (): Promise<LearningPlan> => {
-    const response = await apiClient.get('/api/personal-plan');
+  getMyLearningPlan: async (refresh: boolean = false): Promise<LearningPlan> => {
+    const qs = refresh ? '?refresh=true' : '';
+    const response = await apiClient.get(`/api/personal-plan/me${qs}`);
+    return response.data;
+  },
+
+  /**
+   * Dev helper: seed a demo test result so UC7 produces a personalized plan
+   */
+  seedUc7Demo: async (): Promise<{ message: string }> => {
+    const response = await apiClient.post('/api/personal-plan/demo-seed');
     return response.data;
   },
 
