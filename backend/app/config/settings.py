@@ -35,6 +35,13 @@ class Settings(BaseSettings):
 	access_token_exp_minutes: int = Field(default=60 * 24)  # 1 day
 	action_token_exp_minutes: int = Field(default=30)  # verify/reset tokens
 
+	# LLM provider configuration
+	ai_provider: str = Field(default="mock")
+	google_api_key: str | None = Field(default=None)
+	google_genai_model: str = Field(default="gemini-2.5-flash")
+	google_genai_temperature: float = Field(default=0.2)
+	google_genai_max_output_tokens: int = Field(default=1024)
+
 @lru_cache
 def get_settings() -> Settings:
 	return Settings()

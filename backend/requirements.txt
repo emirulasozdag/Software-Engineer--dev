@@ -7,3 +7,4 @@ sqlalchemy>=2.0
 sqlalchemy>=2.0
 aiosqlite>=0.19
 python-multipart>=0.0.21
+google-genai>=0.6
