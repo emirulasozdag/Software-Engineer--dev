@@ -103,3 +103,12 @@ def me(user=Depends(get_current_user)) -> UserPublic:
 	return _to_public_user(user)
 
 
+@router.post("/logout")
+def logout() -> dict:
+	"""Stateless auth: server-side logout is a no-op.
+
+	Client clears its local token; this endpoint exists to avoid 404s.
+	"""
+	return {"message": "Logged out"}
+
+
