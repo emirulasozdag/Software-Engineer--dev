@@ -11,7 +11,7 @@ export const testService = {
   /**
    * Start a new placement test
    */
-  startPlacementTest: async (): Promise<{ testId: string; questions: TestQuestion[] }> => {
+  startPlacementTest: async (): Promise<{ testId: string; modules: TestModuleType[] }> => {
     const response = await apiClient.post('/api/placement-test/start');
     return response.data;
   },
@@ -19,19 +19,20 @@ export const testService = {
   /**
    * Get questions for a specific test module
    */
-  getModuleQuestions: async (moduleType: TestModuleType): Promise<TestQuestion[]> => {
-    const response = await apiClient.get(`/api/placement-test/module/${moduleType}`);
-    return response.data;
+  getModuleQuestions: async (testId: string, moduleType: TestModuleType): Promise<TestQuestion[]> => {
+    const response = await apiClient.get(`/api/placement-test/${testId}/module/${moduleType}`);
+    return response.data.questions;
   },
 
   /**
    * Submit answers for a test module
    */
   submitModule: async (
+    testId: string,
     moduleType: TestModuleType,
     submissions: TestSubmission[]
   ): Promise<TestModuleResult> => {
-    const response = await apiClient.post(`/api/placement-test/module/${moduleType}/submit`, {
+    const response = await apiClient.post(`/api/placement-test/${testId}/module/${moduleType}/submit`, {
       submissions,
     });
     return response.data;
@@ -40,12 +41,12 @@ export const testService = {
   /**
    * Submit speaking test audio
    */
-  submitSpeakingTest: async (audioBlob: Blob, questionId: string): Promise<TestModuleResult> => {
+  submitSpeakingTest: async (testId: string, audioBlob: Blob, questionId: string): Promise<TestModuleResult> => {
     const formData = new FormData();
     formData.append('audio', audioBlob);
     formData.append('questionId', questionId);
 
-    const response = await apiClient.post('/api/speaking-test/submit', formData, {
+    const response = await apiClient.post(`/api/placement-test/${testId}/module/speaking/submit-audio`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.config.settings import get_settings
@@ -28,6 +29,9 @@ def create_app() -> FastAPI:
         debug=settings.debug,
         lifespan=lifespan,
     )
+
+    # Serve placeholder media files for tests (e.g., listening audio).
+    app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
     if settings.cors_origins:
         app.add_middleware(
