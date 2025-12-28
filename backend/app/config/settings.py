@@ -19,8 +19,8 @@ class Settings(BaseSettings):
 	api_prefix: str = Field(default="/api")
 	cors_origins: list[str] = Field(default_factory=list)
 
+	# SQLite database (relative to backend/)
+	database_url: str = Field(default="sqlite:///./app.db")
 
-@lru_cache
 def get_settings() -> Settings:
 	return Settings()
-

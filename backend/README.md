@@ -33,6 +33,30 @@ Common variables:
 - `ENVIRONMENT` (e.g. development)
 - `API_PREFIX` (default `/api`)
 - `CORS_ORIGINS` (JSON list, e.g. `["http://localhost:5173"]`)
+- `DATABASE_URL` (default `sqlite:///./app.db`)
+
+## Database
+
+The backend uses **SQLite** by default (file `app.db` in `backend/`).
+
+On first run the app auto-creates all tables via SQLAlchemy's `Base.metadata.create_all()`.
+
+ORM models live under `app/infrastructure/db/models/` and mirror the domain layer:
+
+| Domain model            | ORM table(s)                                     |
+|-------------------------|--------------------------------------------------|
+| User / Student / Teacher / Admin | `users`, `students`, `teachers`, `admins` |
+| Content / Topic / LessonPlan / Exercise | `contents`, `topics`, `lesson_plans`, `exercises` |
+| Test hierarchy          | `tests`, `placement_tests`, `speaking_tests`, `listening_tests`, `reading_tests`, `writing_tests` |
+| TestResult / SpeakingResult | `test_results`, `speaking_results`          |
+| Progress / ProgressSnapshot | `progress`, `progress_snapshots`            |
+| Assignment / StudentAssignment | `assignments`, `student_assignments`      |
+| Reward / StudentReward  | `rewards`, `student_rewards`                    |
+| Message / Announcement  | `messages`, `announcements`                     |
+| Feedback                | `feedback`                                       |
+| ChatSession / ChatMessage | `chat_sessions`, `chat_messages`              |
+| SystemPerformance / MaintenanceLog | `system_performance`, `maintenance_logs` |
+| SystemFeedback          | `system_feedback`                                |
 
 ## Implementing a new module (guide)
 
