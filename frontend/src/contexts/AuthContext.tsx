@@ -7,7 +7,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, role: 'student' | 'teacher') => Promise<any>;
+  register: (email: string, password: string, name: string, role: 'student' | 'teacher' | 'admin') => Promise<any>;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
 }
@@ -61,7 +61,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(response.user);
   };
 
-  const register = async (email: string, password: string, name: string, role: 'student' | 'teacher') => {
+  const register = async (email: string, password: string, name: string, role: 'student' | 'teacher' | 'admin') => {
     // Registration does NOT log in the user because email verification is required.
     return authService.register({ email, password, name, role });
   };

@@ -15,7 +15,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
-  role: 'student' | 'teacher';
+  role: 'student' | 'teacher' | 'admin';
 }
 
 export interface AuthResponse {

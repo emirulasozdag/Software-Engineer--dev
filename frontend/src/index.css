@@ -605,6 +605,19 @@ details > summary::-webkit-details-marker {
   grid-template-columns: repeat(12, 1fr);
   gap: 16px;
 }
+
+/* Make dashboard tiles align neatly (same height per row) */
+.dash-grid a {
+  display: block;
+  height: 100%;
+}
+.dash-grid .card {
+  margin-bottom: 0;
+  height: 100%;
+}
+.dash-grid a > .card {
+  height: 100%;
+}
 .col-4 { grid-column: span 4; }
 .col-6 { grid-column: span 6; }
 .col-8 { grid-column: span 8; }
@@ -625,6 +638,11 @@ details > summary::-webkit-details-marker {
   display: flex;
   gap: 14px;
   align-items: flex-start;
+  height: 100%;
+}
+.action-card > div {
+  flex: 1;
+  min-width: 0;
 }
 .action-icon {
   width: 42px;

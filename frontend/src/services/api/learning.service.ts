@@ -75,7 +75,10 @@ export const learningService = {
    * Export progress data
    */
   exportProgress: async (format: 'pdf' | 'csv'): Promise<Blob> => {
-    const response = await apiClient.get(`/api/data-export?format=${format}`, {
+    if (format !== 'csv') {
+      throw new Error('Only CSV export is implemented on the backend (PDF not available).');
+    }
+    const response = await apiClient.get('/api/export/progress/me.csv', {
       responseType: 'blob',
     });
     return response.data;

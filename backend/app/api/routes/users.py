@@ -94,9 +94,13 @@ def list_teacher_students(db: Session = Depends(get_db)) -> list[dict]:
 def get_student_details(
 	student_user_id: int,
 	db: Session = Depends(get_db),
-	_=Depends(get_current_user),
+	current_user=Depends(get_current_user),
 ) -> dict:
 	"""Return basic student details (teacher/admin can view, student can view self)."""
+	if current_user.role == UserRole.STUDENT and int(current_user.userId) != int(student_user_id):
+		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+	if current_user.role not in (UserRole.STUDENT, UserRole.TEACHER, UserRole.ADMIN):
+		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 	u = db.get(UserDB, int(student_user_id))
 	if not u or u.role != UserRole.STUDENT:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
