@@ -4,6 +4,7 @@ export { testService } from './test.service';
 export { learningService } from './learning.service';
 export { teacherService } from './teacher.service';
 export { communicationService } from './communication.service';
+export { rewardsService } from './rewards.service';
 export { adminService } from './admin.service';
 export { default as apiClient } from './client';
 

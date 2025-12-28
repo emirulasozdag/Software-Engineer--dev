@@ -19,6 +19,7 @@ from app.api.schemas.auth import (
 )
 from app.application.controllers.auth_controller import AuthController
 from app.application.services.auth_service import AuthService
+from app.application.services.reward_service import RewardService
 from app.config.settings import get_settings
 from app.infrastructure.db.session import get_db
 from app.infrastructure.external.notification_service import NotificationService
@@ -81,6 +82,12 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse
 
 	# fetch user for response
 	user = _controller.auth_service.user_repo.findByEmail(payload.email)
+	# UC14/FR33–FR34: record login time for streak/reminder handling
+	try:
+		RewardService(db).recordDailyLogin(userId=int(user.userId))
+	except Exception:
+		# Keep login flow resilient
+		pass
 	return LoginResponse(access_token=token, user=_to_public_user(user))
 
 

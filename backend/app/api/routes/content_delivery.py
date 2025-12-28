@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps.auth import get_current_user, require_role
+from app.api.schemas.content_completion import CompleteContentRequest, CompleteContentResponse
 from app.api.schemas.learning_content import DeliverContentRequest, DeliverContentResponse, ContentOut
 from app.application.controllers.content_delivery_controller import ContentDeliveryController
+from app.application.services.feedback_service import FeedbackService
+from app.application.services.reward_service import RewardService
 from app.domain.enums import LanguageLevel, UserRole
 from app.infrastructure.db.models.results import TestResultDB
 from app.infrastructure.db.models.user import StudentDB
@@ -129,11 +132,40 @@ def get_content(contentId: int, user=Depends(get_current_user)) -> ContentOut:
 	return _to_content_out(content)
 
 
-@router.post("/{contentId}/complete")
-def complete_content(contentId: int, user=Depends(require_role(UserRole.STUDENT))) -> dict:
-	# UC10/Progress is owned by teammates; this is a safe no-op to support frontend UX.
+@router.post("/{contentId}/complete", response_model=CompleteContentResponse)
+def complete_content(
+	contentId: int,
+	payload: CompleteContentRequest | None = Body(default=None),
+	user=Depends(require_role(UserRole.STUDENT)),
+	db: Session = Depends(get_db),
+) -> CompleteContentResponse:
+	# UC12–UC14: completing content triggers streak/points/rewards + auto-feedback.
 	repo = MemoryLearningRepository()
 	content = repo.get_content_by_id(contentId)
 	if not content:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
-	return {"message": f"Content {contentId} marked as completed (demo)."}
+
+	result = RewardService(db).complete_content(
+		userId=int(user.userId),
+		contentId=int(contentId),
+		correctAnswerRate=(payload.correctAnswerRate if payload else None),
+		mistakes=(payload.mistakes if payload else None),
+	)
+
+	# Save UC12 auto-feedback only when a new completion is recorded.
+	if int(result.get("pointsAdded", 0)) > 0:
+		student_pk = db.scalar(select(StudentDB.id).where(StudentDB.user_id == int(user.userId)))
+		if student_pk:
+			feedback_items = FeedbackService(db).generateContentFeedback(
+				studentId=int(student_pk),
+				contentId=int(contentId),
+				correctAnswerRate=(payload.correctAnswerRate if payload else None),
+				mistakes=(payload.mistakes if payload else None),
+			)
+			FeedbackService(db).saveContentFeedback(
+				studentId=int(student_pk),
+				contentId=int(contentId),
+				feedbackList=feedback_items,
+			)
+
+	return CompleteContentResponse(**result)

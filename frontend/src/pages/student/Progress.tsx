@@ -1,12 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-import { progressService } from '@/services/api';
+import { communicationService, progressService, rewardsService } from '@/services/api';
 import { ProgressResponse } from '@/types/progress.types';
+import { RewardSummary } from '@/types/rewards.types';
+import { Notification } from '@/types/communication.types';
 
 const Progress: React.FC = () => {
 
   const [liveProgress, setLiveProgress] = React.useState<ProgressResponse | null>(null);
+  const [rewardSummary, setRewardSummary] = React.useState<RewardSummary | null>(null);
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [isDownloadingCsv, setIsDownloadingCsv] = React.useState(false);
@@ -27,6 +31,46 @@ const Progress: React.FC = () => {
   React.useEffect(() => {
     loadLiveProgress();
   }, [loadLiveProgress]);
+
+  const loadRewards = React.useCallback(async () => {
+    try {
+      const summary = await rewardsService.getMySummary();
+      setRewardSummary(summary);
+    } catch (e: any) {
+      // Non-fatal: keep page usable
+      setRewardSummary(null);
+    }
+  }, []);
+
+  const loadNotifications = React.useCallback(async () => {
+    try {
+      const data = await communicationService.getNotifications();
+      setNotifications(data);
+    } catch {
+      setNotifications([]);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadRewards();
+    loadNotifications();
+  }, [loadRewards, loadNotifications]);
+
+  const refreshAll = React.useCallback(async () => {
+    await Promise.all([loadLiveProgress(), loadRewards(), loadNotifications()]);
+  }, [loadLiveProgress, loadNotifications, loadRewards]);
+
+  const markNotificationAsRead = React.useCallback(
+    async (notificationId: string) => {
+      try {
+        await communicationService.markNotificationAsRead(notificationId);
+        await loadNotifications();
+      } catch {
+        // ignore
+      }
+    },
+    [loadNotifications]
+  );
 
   const downloadCsv = React.useCallback(async () => {
     setIsDownloadingCsv(true);
@@ -51,7 +95,7 @@ const Progress: React.FC = () => {
   return (
     <div className="container">
       <Link to="/student/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>← Back to Dashboard</Link>
-      
+
       <h1 className="page-title">My Progress</h1>
 
       <div className="card">
@@ -61,7 +105,7 @@ const Progress: React.FC = () => {
         </p>
 
         <div style={{ display: 'flex', gap: '10px', marginTop: '12px', alignItems: 'center' }}>
-          <button className="button button-secondary" onClick={loadLiveProgress} disabled={isLoading}>
+          <button className="button button-secondary" onClick={refreshAll} disabled={isLoading}>
             {isLoading ? 'Refreshing…' : 'Refresh'}
           </button>
           <button className="button button-primary" onClick={downloadCsv} disabled={isDownloadingCsv}>
@@ -119,21 +163,21 @@ const Progress: React.FC = () => {
           </p>
         )}
       </div>
-      
+
       <div className="card">
         <h2>Learning Statistics</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '20px' }}>
           <div style={{ padding: '15px', background: '#3498db', color: 'white', borderRadius: '4px' }}>
             <h3 style={{ color: 'white' }}>Daily Streak</h3>
-            <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>7 days</p>
+            <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{rewardSummary ? `${rewardSummary.dailyStreak} days` : '—'}</p>
           </div>
           <div style={{ padding: '15px', background: '#2ecc71', color: 'white', borderRadius: '4px' }}>
             <h3 style={{ color: 'white' }}>Lessons Completed</h3>
-            <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>24</p>
+            <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{liveProgress ? liveProgress.completedLessons.length : '—'}</p>
           </div>
           <div style={{ padding: '15px', background: '#e74c3c', color: 'white', borderRadius: '4px' }}>
-            <h3 style={{ color: 'white' }}>Total Study Time</h3>
-            <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>12h</p>
+            <h3 style={{ color: 'white' }}>Total Points</h3>
+            <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{rewardSummary ? rewardSummary.totalPoints : '—'}</p>
           </div>
         </div>
       </div>
@@ -148,13 +192,52 @@ const Progress: React.FC = () => {
       <div className="card">
         <h2>Achievements & Badges</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '15px', marginTop: '20px' }}>
-          {['First Lesson', 'Week Streak', 'Grammar Master', 'Speaking Pro'].map((badge) => (
-            <div key={badge} style={{ padding: '15px', background: '#f9f9f9', borderRadius: '4px', textAlign: 'center' }}>
-              <div style={{ fontSize: '3rem' }}>🏆</div>
-              <p style={{ fontWeight: 'bold' }}>{badge}</p>
-            </div>
-          ))}
+          {rewardSummary && rewardSummary.rewards.length > 0 ? (
+            rewardSummary.rewards.map((r) => (
+              <div key={r.rewardId} style={{ padding: '15px', background: '#f9f9f9', borderRadius: '4px', textAlign: 'center' }}>
+                <div style={{ fontSize: '3rem' }}>{r.badgeIcon || '🏆'}</div>
+                <p style={{ fontWeight: 'bold' }}>{r.name}</p>
+              </div>
+            ))
+          ) : (
+            <p style={{ color: '#999' }}>No badges earned yet.</p>
+          )}
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Notifications</h2>
+        {notifications.length === 0 ? (
+          <p style={{ marginTop: '12px', color: '#999' }}>No notifications yet.</p>
+        ) : (
+          <div style={{ marginTop: '12px', display: 'grid', gap: '10px' }}>
+            {notifications.slice(0, 10).map((n) => (
+              <div
+                key={n.id}
+                style={{
+                  padding: '12px',
+                  borderRadius: '4px',
+                  background: '#f9f9f9',
+                  border: '1px solid #eee',
+                  opacity: n.isRead ? 0.75 : 1,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                  <div style={{ fontWeight: 600 }}>{n.title}</div>
+                  {!n.isRead ? (
+                    <button className="button button-secondary" onClick={() => markNotificationAsRead(n.id)}>
+                      Mark read
+                    </button>
+                  ) : null}
+                </div>
+                <div style={{ marginTop: '6px', color: '#555' }}>{n.message}</div>
+                <div style={{ marginTop: '6px', color: '#999', fontSize: '0.9rem' }}>
+                  {new Date(n.createdAt).toLocaleString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="card">

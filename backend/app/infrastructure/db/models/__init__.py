@@ -19,8 +19,10 @@ from app.infrastructure.db.models.results import TestResultDB, SpeakingResultDB
 from app.infrastructure.db.models.progress import ProgressDB, ProgressSnapshotDB
 from app.infrastructure.db.models.assignments import AssignmentDB, StudentAssignmentDB
 from app.infrastructure.db.models.rewards import RewardDB, StudentRewardDB
+from app.infrastructure.db.models.notifications import NotificationDB
 from app.infrastructure.db.models.messaging import MessageDB, AnnouncementDB
 from app.infrastructure.db.models.feedback import FeedbackDB
+from app.infrastructure.db.models.student_engagement import StudentStreakDB, StudentContentCompletionDB, ContentAutoFeedbackDB
 from app.infrastructure.db.models.chatbot import ChatSessionDB, ChatMessageDB
 from app.infrastructure.db.models.system import SystemPerformanceDB, MaintenanceLogDB
 from app.infrastructure.db.models.system_feedback import SystemFeedbackDB
@@ -57,11 +59,17 @@ __all__ = [
     # Rewards
     "RewardDB",
     "StudentRewardDB",
+    # Notifications
+    "NotificationDB",
     # Messaging
     "MessageDB",
     "AnnouncementDB",
     # Feedback
     "FeedbackDB",
+    # Engagement (streak/completions/auto-feedback)
+    "StudentStreakDB",
+    "StudentContentCompletionDB",
+    "ContentAutoFeedbackDB",
     # Chatbot
     "ChatSessionDB",
     "ChatMessageDB",

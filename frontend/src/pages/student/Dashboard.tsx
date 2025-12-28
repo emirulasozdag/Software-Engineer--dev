@@ -1,30 +1,38 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { communicationService, learningService, testService } from '@/services/api';
+import { communicationService, learningService, rewardsService, testService } from '@/services/api';
 import { LearningPlan } from '@/types/learning.types';
 import { PlacementTestResult } from '@/types/test.types';
+import { RewardSummary } from '@/types/rewards.types';
 
 const StudentDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [plan, setPlan] = useState<LearningPlan | null>(null);
   const [results, setResults] = useState<PlacementTestResult[]>([]);
   const [unread, setUnread] = useState(0);
+  const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [msgs, r, p] = await Promise.all([
+      const [msgs, r, p, summary, notifs] = await Promise.all([
         communicationService.getMessages().catch(() => []),
         testService.getStudentTestResults().catch(() => []),
         learningService.getMyLearningPlan(false).catch(() => null as any),
+        rewardsService.getMySummary().catch(() => null as any),
+        communicationService.getNotifications().catch(() => []),
       ]);
       const myId = user?.id;
       const unreadCount = myId ? msgs.filter((m: any) => m.receiverId === myId && !m.isRead).length : 0;
       setUnread(unreadCount);
       setResults(r);
       setPlan(p);
+
+      setRewardSummary(summary);
+      setUnreadNotifications((notifs || []).filter((n: any) => !n.isRead).length);
     } finally {
       setLoading(false);
     }
@@ -53,6 +61,9 @@ const StudentDashboard: React.FC = () => {
               <span className="pill">Email: {user?.email}</span>
               <span className="pill">Role: {user?.role}</span>
               <span className="pill">Unread: {loading ? '…' : unread}</span>
+              <span className="pill">Notifications: {loading ? '…' : unreadNotifications}</span>
+              <span className="pill">Streak: {loading ? '…' : (rewardSummary?.dailyStreak ?? 0)}</span>
+              <span className="pill">Points: {loading ? '…' : (rewardSummary?.totalPoints ?? 0)}</span>
             </div>
           </div>
           <div className="hero-actions">

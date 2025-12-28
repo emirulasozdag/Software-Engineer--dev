@@ -13,6 +13,36 @@ export type BackendContentOut = {
   isDraft: boolean;
 };
 
+export type CompleteContentResponse = {
+  message: string;
+  pointsAdded?: number;
+  dailyStreak?: number;
+  totalPoints?: number;
+  awardedRewards?: Array<{
+    rewardId: string;
+    name: string;
+    description?: string | null;
+    points?: number;
+    badgeIcon?: string | null;
+    earnedAt?: string | null;
+  }>;
+};
+
+export type ContentAutoFeedbackOut = {
+  id: string;
+  contentId: number;
+  feedbackList: string[];
+  generatedAt: string;
+};
+
+export type LatestAutoFeedbackResponse = {
+  feedback: ContentAutoFeedbackOut | null;
+};
+
+export type ContentAutoFeedbackListResponse = {
+  items: ContentAutoFeedbackOut[];
+};
+
 export const learningService = {
   /**
    * Get personalized learning plan for current student
@@ -50,8 +80,11 @@ export const learningService = {
   /**
    * Mark content as completed
    */
-  completeContent: async (contentId: string): Promise<{ message: string }> => {
-    const response = await apiClient.post(`/api/content-delivery/${contentId}/complete`);
+  completeContent: async (
+    contentId: string,
+    payload?: { correctAnswerRate?: number; mistakes?: string[] }
+  ): Promise<CompleteContentResponse> => {
+    const response = await apiClient.post(`/api/content-delivery/${contentId}/complete`, payload ?? undefined);
     return response.data;
   },
 
@@ -97,6 +130,22 @@ export const learningService = {
       rating,
       comment,
     });
+    return response.data;
+  },
+
+  /**
+   * UC12: Get latest automatic feedback for current student
+   */
+  getLatestAutoFeedback: async (): Promise<LatestAutoFeedbackResponse> => {
+    const response = await apiClient.get('/api/automatic-feedback/latest');
+    return response.data;
+  },
+
+  /**
+   * UC12: Get automatic feedback entries for a given content
+   */
+  getAutoFeedbackForContent: async (contentId: string, limit: number = 10): Promise<ContentAutoFeedbackListResponse> => {
+    const response = await apiClient.get(`/api/automatic-feedback/content/${contentId}?limit=${limit}`);
     return response.data;
   },
 
