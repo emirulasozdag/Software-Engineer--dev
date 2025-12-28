@@ -13,6 +13,7 @@ import VerifyEmailPage from '@/pages/auth/VerifyEmailPage';
 import StudentDashboard from '@/pages/student/Dashboard';
 import PlacementTest from '@/pages/student/PlacementTest';
 import LearningPlan from '@/pages/student/LearningPlan';
+import AIContentDelivery from '@/pages/student/AIContentDelivery';
 import ContentViewer from '@/pages/student/ContentViewer';
 import Progress from '@/pages/student/Progress';
 import Assignments from '@/pages/student/Assignments';
@@ -53,6 +54,7 @@ const App: React.FC = () => {
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/placement-test" element={<PlacementTest />} />
             <Route path="/student/learning-plan" element={<LearningPlan />} />
+            <Route path="/student/ai-content-delivery" element={<AIContentDelivery />} />
             <Route path="/student/content/:contentId" element={<ContentViewer />} />
             <Route path="/student/progress" element={<Progress />} />
             <Route path="/student/assignments" element={<Assignments />} />

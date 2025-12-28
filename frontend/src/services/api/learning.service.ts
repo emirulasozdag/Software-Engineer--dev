@@ -1,5 +1,17 @@
 import apiClient from './client';
 import { LearningPlan, ContentItem, StudentProgress, ProgressChart } from '@/types/learning.types';
+import { LanguageLevel } from '@/types/test.types';
+
+export type BackendContentOut = {
+  contentId: number;
+  title: string;
+  body: string;
+  contentType: 'LESSON' | 'EXERCISE' | 'ROLEPLAY' | 'VOCABULARY' | 'GRAMMAR';
+  level: LanguageLevel;
+  createdBy: number;
+  createdAt: string;
+  isDraft: boolean;
+};
 
 export const learningService = {
   /**
@@ -90,6 +102,48 @@ export const learningService = {
    */
   requestContentUpdate: async (): Promise<{ message: string; updatedContent: ContentItem[] }> => {
     const response = await apiClient.post('/api/content-update');
+    return response.data;
+  },
+
+  /**
+   * UC8: Deliver next content for student (+ rationale)
+   */
+  deliverNextContent: async (payload: {
+    studentId: number;
+    level?: LanguageLevel;
+    contentType?: 'LESSON' | 'EXERCISE' | 'ROLEPLAY' | 'VOCABULARY' | 'GRAMMAR';
+    planTopics?: string[] | null;
+  }): Promise<{ content: BackendContentOut; rationale: string }> => {
+    const response = await apiClient.post('/api/content-delivery', {
+      studentId: payload.studentId,
+      level: payload.level ?? null,
+      contentType: payload.contentType ?? 'LESSON',
+      planTopics: payload.planTopics ?? null,
+    });
+    return response.data;
+  },
+
+  /**
+   * UC9: Update content based on progress (+ rationale)
+   */
+  updateContentByProgress: async (payload: {
+    studentId: number;
+    correctAnswerRate: number; // 0..1
+    planTopics?: string[] | null;
+  }): Promise<{ updated: boolean; content: BackendContentOut; rationale: string }> => {
+    const response = await apiClient.post('/api/content-update', {
+      studentId: payload.studentId,
+      progress: { correctAnswerRate: payload.correctAnswerRate },
+      planTopics: payload.planTopics ?? null,
+    });
+    return response.data;
+  },
+
+  /**
+   * UC8/UC9: Get delivered content by id (backend ContentOut shape)
+   */
+  getDeliveredContentById: async (contentId: string): Promise<BackendContentOut> => {
+    const response = await apiClient.get(`/api/content-delivery/${contentId}`);
     return response.data;
   },
 };
