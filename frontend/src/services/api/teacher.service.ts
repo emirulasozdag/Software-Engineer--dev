@@ -30,7 +30,7 @@ export const teacherService = {
    * Get student progress
    */
   getStudentProgress: async (studentId: string) => {
-    const response = await apiClient.get(`/api/progress/student/${studentId}`);
+    const response = await apiClient.get(`/api/progress/${studentId}`);
     return response.data;
   },
 

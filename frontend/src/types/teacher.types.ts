@@ -12,8 +12,6 @@ export interface Assignment {
   status: 'pending' | 'submitted' | 'graded';
 }
 
-import type { LanguageLevel } from './test.types';
-
 export interface StudentOverview {
   id: string;
   name: string;
@@ -31,5 +29,3 @@ export interface TeacherDirective {
   focusAreas: string[];
   instructions: string;
 }
-
-export type { LanguageLevel } from './test.types';
