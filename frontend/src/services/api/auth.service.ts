@@ -115,7 +115,11 @@ export const authService = {
    * Refresh access token
    */
   refreshToken: async (): Promise<AuthResponse> => {
-    const response = await apiClient.post<AuthResponse>('/api/auth/refresh');
-    return response.data;
+    const response = await apiClient.post<BackendLoginResponse>('/api/auth/refresh');
+    return {
+      access_token: response.data.access_token,
+      token_type: response.data.token_type,
+      user: mapUserFromBackend(response.data.user),
+    };
   },
 };
