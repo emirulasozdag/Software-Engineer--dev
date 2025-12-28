@@ -23,11 +23,6 @@ const AIContentDelivery: FC = () => {
   const [updatedContent, setUpdatedContent] = useState<BackendContentOut | null>(null);
   const [updateRationale, setUpdateRationale] = useState<string | null>(null);
 
-  const planTopics = useMemo(
-    () => ['Grammar: Present Simple', 'Vocabulary: Daily routines', 'Speaking: Basic introductions'],
-    []
-  );
-
   const runDeliver = async () => {
     if (!studentId) {
       setError('Student id not available. Please re-login.');
@@ -39,7 +34,7 @@ const AIContentDelivery: FC = () => {
       const res = await learningService.deliverNextContent({
         studentId,
         contentType: 'LESSON',
-        planTopics,
+        // Do not send planTopics so backend can derive from DB (test_results strengths/weaknesses + level)
       });
       setDelivered(res.content);
       setDeliverRationale(res.rationale);
@@ -61,7 +56,7 @@ const AIContentDelivery: FC = () => {
       const res = await learningService.updateContentByProgress({
         studentId,
         correctAnswerRate,
-        planTopics,
+        // Do not send planTopics so backend can derive from DB (test_results strengths/weaknesses + level)
       });
       setUpdated(Boolean(res.updated));
       setUpdatedContent(res.content);
