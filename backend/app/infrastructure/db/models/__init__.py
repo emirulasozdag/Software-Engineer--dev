@@ -24,6 +24,7 @@ from app.infrastructure.db.models.feedback import FeedbackDB
 from app.infrastructure.db.models.chatbot import ChatSessionDB, ChatMessageDB
 from app.infrastructure.db.models.system import SystemPerformanceDB, MaintenanceLogDB
 from app.infrastructure.db.models.system_feedback import SystemFeedbackDB
+from app.infrastructure.db.models.student_ai_content import StudentAIContentDB
 
 __all__ = [
     # User hierarchy
@@ -65,6 +66,7 @@ __all__ = [
     # Chatbot
     "ChatSessionDB",
     "ChatMessageDB",
+    "StudentAIContentDB",
     # System
     "SystemPerformanceDB",
     "MaintenanceLogDB",

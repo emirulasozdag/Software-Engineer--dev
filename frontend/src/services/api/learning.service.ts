@@ -50,8 +50,8 @@ export const learningService = {
   /**
    * Mark content as completed
    */
-  completeContent: async (contentId: string): Promise<{ message: string }> => {
-    const response = await apiClient.post(`/api/content-delivery/${contentId}/complete`);
+  completeContent: async (contentId: string, payload?: any): Promise<{ message: string }> => {
+    const response = await apiClient.post(`/api/content-delivery/${contentId}/complete`, payload ?? null);
     return response.data;
   },
 

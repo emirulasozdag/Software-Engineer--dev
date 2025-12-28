@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -10,10 +11,12 @@ from app.api.deps.auth import get_current_user, require_role
 from app.api.schemas.learning_content import DeliverContentRequest, DeliverContentResponse, ContentOut
 from app.application.controllers.content_delivery_controller import ContentDeliveryController
 from app.domain.enums import LanguageLevel, UserRole
+from app.config.settings import get_settings
+from app.application.services.student_ai_content_delivery_service import StudentAIContentDeliveryService
 from app.infrastructure.db.models.results import TestResultDB
 from app.infrastructure.db.models.user import StudentDB
 from app.infrastructure.db.session import get_db
-from app.infrastructure.repositories.memory_learning_repository import MemoryLearningRepository
+from app.infrastructure.db.models.content import ContentDB
 
 router = APIRouter()
 
@@ -109,31 +112,68 @@ def deliver_content(
 				f"Weaknesses={weaknesses[:3] if weaknesses else []}; Strengths={strengths[:3] if strengths else []}. "
 			)
 
-	controller = ContentDeliveryController()
-	content, rationale = controller.prepareContentForStudent(
-		studentId=payload.studentId,
+	# Use DB-backed LLM delivery (persists 1 active item; generates a new one only when completed)
+	service = StudentAIContentDeliveryService(db=db, settings=get_settings())
+	controller = ContentDeliveryController(service=service)
+	content_model, rationale = controller.prepareContentForStudent(
+		studentId=int(payload.studentId),
 		level=level,
 		contentType=payload.contentType,
 		planTopics=plan_topics,
 	)
-	return DeliverContentResponse(content=_to_content_out(content), rationale=(derived_prefix + rationale).strip())
+	content_out = ContentOut(
+		contentId=int(content_model.id),
+		title=content_model.title,
+		body=content_model.body,
+		contentType=content_model.content_type,
+		level=content_model.level,
+		createdBy=int(content_model.created_by),
+		createdAt=content_model.created_at,
+		isDraft=bool(content_model.is_draft),
+	)
+	return DeliverContentResponse(content=content_out, rationale=(derived_prefix + rationale).strip())
 
 
 @router.get("/{contentId}", response_model=ContentOut)
-def get_content(contentId: int, user=Depends(get_current_user)) -> ContentOut:
-	# Minimal retrieval (no rationale persisted in skeleton)
-	repo = MemoryLearningRepository()
-	content = repo.get_content_by_id(contentId)
-	if not content:
+def get_content(contentId: int, user=Depends(get_current_user), db: Session = Depends(get_db)) -> ContentOut:
+	# Student access is restricted to content assigned to them.
+	if user.role == UserRole.STUDENT:
+		service = StudentAIContentDeliveryService(db=db, settings=get_settings())
+		model = service.getDeliveredContentForStudent(studentUserId=int(user.userId), contentId=int(contentId))
+		if not model:
+			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
+		return ContentOut(
+			contentId=int(model.id),
+			title=model.title,
+			body=model.body,
+			contentType=model.content_type,
+			level=model.level,
+			createdBy=int(model.created_by),
+			createdAt=model.created_at,
+			isDraft=bool(model.is_draft),
+		)
+
+	# Non-student roles: allow direct lookup (e.g., admin debugging)
+	model = db.get(ContentDB, int(contentId))
+	if not model:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
-	return _to_content_out(content)
+	return ContentOut(
+		contentId=int(model.id),
+		title=model.title,
+		body=model.body,
+		contentType=model.content_type,
+		level=model.level,
+		createdBy=int(model.created_by),
+		createdAt=model.created_at,
+		isDraft=bool(model.is_draft),
+	)
 
 
 @router.post("/{contentId}/complete")
-def complete_content(contentId: int, user=Depends(require_role(UserRole.STUDENT))) -> dict:
-	# UC10/Progress is owned by teammates; this is a safe no-op to support frontend UX.
-	repo = MemoryLearningRepository()
-	content = repo.get_content_by_id(contentId)
-	if not content:
+def complete_content(contentId: int, payload: dict[str, Any] | None = None, user=Depends(require_role(UserRole.STUDENT)), db: Session = Depends(get_db)) -> dict:
+	# Marks as completed and (best-effort) updates strengths/weaknesses via LLM analysis.
+	service = StudentAIContentDeliveryService(db=db, settings=get_settings())
+	ok = service.completeContent(studentUserId=int(user.userId), contentId=int(contentId), result=payload or None)
+	if not ok:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
-	return {"message": f"Content {contentId} marked as completed (demo)."}
+	return {"message": f"Content {contentId} marked as completed."}
