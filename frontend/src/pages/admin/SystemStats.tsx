@@ -1,7 +1,29 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { adminService } from '@/services/api/admin.service';
+import type { SystemStats } from '@/types/admin.types';
 
 const SystemStats: React.FC = () => {
+  const [stats, setStats] = useState<SystemStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const run = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const s = await adminService.getSystemStats();
+        setStats(s);
+      } catch (e: any) {
+        setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to load system stats');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    run();
+  }, []);
+
   return (
     <div className="container">
       <Link to="/admin/dashboard" className="link" style={{ display: 'inline-block', marginBottom: 16 }}>

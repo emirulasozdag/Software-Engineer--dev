@@ -1,9 +1,49 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { adminService } from '@/services/api/admin.service';
+import type { MaintenanceMode, SystemStats } from '@/types/admin.types';
 
 const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
+  const [stats, setStats] = useState<SystemStats | null>(null);
+  const [maintenance, setMaintenance] = useState<MaintenanceMode | null>(null);
+  const [maintenanceReason, setMaintenanceReason] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const refresh = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [s, m] = await Promise.all([adminService.getSystemStats(), adminService.getMaintenanceMode()]);
+      setStats(s);
+      setMaintenance(m);
+      setMaintenanceReason(m.reason ?? '');
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to load admin dashboard');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const setMaintenanceEnabled = async (enabled: boolean) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const m = await adminService.setMaintenanceMode({ enabled, reason: enabled ? maintenanceReason : null });
+      setMaintenance(m);
+      await refresh();
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to update maintenance mode');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="container">

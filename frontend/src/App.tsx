@@ -25,6 +25,7 @@ import TeacherDashboard from '@/pages/teacher/Dashboard';
 import StudentList from '@/pages/teacher/StudentList';
 import StudentDetails from '@/pages/teacher/StudentDetails';
 import CreateAssignment from '@/pages/teacher/CreateAssignment';
+import AIDrafts from '@/pages/teacher/AIDrafts';
 import TeacherMessages from '@/pages/teacher/Messages';
 
 // Admin pages
@@ -68,6 +69,7 @@ const App: React.FC = () => {
             <Route path="/teacher/students" element={<StudentList />} />
             <Route path="/teacher/students/:studentId" element={<StudentDetails />} />
             <Route path="/teacher/assignments/create" element={<CreateAssignment />} />
+            <Route path="/teacher/ai-drafts" element={<AIDrafts />} />
             <Route path="/teacher/messages" element={<TeacherMessages />} />
           </Route>
 

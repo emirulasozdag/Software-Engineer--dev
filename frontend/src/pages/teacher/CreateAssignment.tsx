@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { assignmentsService } from '@/services/api/assignments.service';
 
 const CreateAssignment: React.FC = () => {
   const navigate = useNavigate();
@@ -8,15 +9,38 @@ const CreateAssignment: React.FC = () => {
     description: '',
     type: 'homework' as 'homework' | 'test' | 'activity',
     dueDate: '',
-    students: [] as string[],
+    studentUserIdsCsv: '',
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // API call will be implemented later
-    console.log('Creating assignment:', formData);
-    alert('Assignment created successfully!');
-    navigate('/teacher/dashboard');
+    setIsLoading(true);
+    setError(null);
+    try {
+      const due = formData.dueDate ? new Date(`${formData.dueDate}T00:00:00.000Z`).toISOString() : new Date().toISOString();
+      const ids = formData.studentUserIdsCsv
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .map((x) => Number(x))
+        .filter((n) => Number.isFinite(n) && n > 0);
+
+      await assignmentsService.createAssignment({
+        title: formData.title,
+        description: formData.description,
+        dueDate: due,
+        assignmentType: formData.type,
+        studentUserIds: ids,
+      });
+      alert('Assignment created successfully!');
+      navigate('/teacher/dashboard');
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to create assignment');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -28,6 +52,11 @@ const CreateAssignment: React.FC = () => {
       <h1 className="page-title">Create Assignment</h1>
       
       <div className="card">
+        {error && (
+          <div style={{ borderLeft: '4px solid #e74c3c', paddingLeft: '10px', marginBottom: '15px' }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="form-label">Assignment Title</label>
@@ -80,28 +109,21 @@ const CreateAssignment: React.FC = () => {
 
           <div className="form-group">
             <label className="form-label">Assign To</label>
-            <select
+            <input
               className="input"
-              multiple
-              size={5}
-              onChange={(e) => {
-                const selected = Array.from(e.target.selectedOptions, option => option.value);
-                setFormData({ ...formData, students: selected });
-              }}
-            >
-              <option value="1">John Doe</option>
-              <option value="2">Sarah Smith</option>
-              <option value="3">Mike Johnson</option>
-              <option value="all">All Students</option>
-            </select>
+              type="text"
+              value={formData.studentUserIdsCsv}
+              onChange={(e) => setFormData({ ...formData, studentUserIdsCsv: e.target.value })}
+              placeholder="Student user IDs (comma separated), e.g. 12, 15, 22"
+            />
             <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '5px' }}>
-              Hold Ctrl/Cmd to select multiple students
+              Tip: IDs are <strong>User</strong> IDs (from Admin → User Management).
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-            <button className="button button-primary" type="submit">
-              Create Assignment
+            <button className="button button-primary" type="submit" disabled={isLoading}>
+              {isLoading ? 'Creating...' : 'Create Assignment'}
             </button>
             <button 
               className="button button-secondary" 

@@ -6,6 +6,38 @@ import {
   SystemFeedback,
 } from '@/types/admin.types';
 
+type BackendAdminUserOut = {
+  userId: number;
+  name: string;
+  email: string;
+  role: 'STUDENT' | 'TEACHER' | 'ADMIN';
+  isVerified: boolean;
+  createdAt: string;
+  lastLogin?: string | null;
+};
+
+type BackendAdminUserListResponse = {
+  users: BackendAdminUserOut[];
+};
+
+type BackendMaintenanceStatus = {
+  enabled: boolean;
+  reason?: string | null;
+  startedAt?: string | null;
+};
+
+function mapUser(u: BackendAdminUserOut): UserAccount {
+  return {
+    userId: Number(u.userId),
+    name: u.name,
+    email: u.email,
+    role: u.role.toLowerCase() as UserAccount['role'],
+    isVerified: Boolean(u.isVerified),
+    createdAt: u.createdAt,
+    lastLogin: u.lastLogin ?? null,
+  };
+}
+
 export const adminService = {
   /**
    * Get system statistics
@@ -19,47 +51,26 @@ export const adminService = {
    * Get all user accounts
    */
   getAllUsers: async (): Promise<UserAccount[]> => {
-    const response = await apiClient.get('/api/admin/users');
-    return response.data;
+    const response = await apiClient.get<BackendAdminUserListResponse>('/api/admin/users');
+    return (response.data.users ?? []).map(mapUser);
   },
 
-  /**
-   * Get user by ID
-   */
-  getUserById: async (userId: string): Promise<UserAccount> => {
-    const response = await apiClient.get(`/api/admin/users/${userId}`);
-    return response.data;
+  updateUserRole: async (userId: number, role: UserAccount['role']): Promise<UserAccount> => {
+    const backendRole = role.toUpperCase() as BackendAdminUserOut['role'];
+    const response = await apiClient.patch<BackendAdminUserOut>(`/api/admin/users/${userId}/role`, { role: backendRole });
+    return mapUser(response.data);
   },
 
-  /**
-   * Update user account
-   */
-  updateUser: async (userId: string, data: Partial<UserAccount>): Promise<UserAccount> => {
-    const response = await apiClient.put(`/api/admin/users/${userId}`, data);
-    return response.data;
-  },
-
-  /**
-   * Delete user account
-   */
-  deleteUser: async (userId: string): Promise<{ message: string }> => {
-    const response = await apiClient.delete(`/api/admin/users/${userId}`);
-    return response.data;
-  },
-
-  /**
-   * Toggle user active status
-   */
-  toggleUserStatus: async (userId: string): Promise<UserAccount> => {
-    const response = await apiClient.patch(`/api/admin/users/${userId}/toggle-status`);
-    return response.data;
+  setUserVerified: async (userId: number, isVerified: boolean): Promise<UserAccount> => {
+    const response = await apiClient.patch<BackendAdminUserOut>(`/api/admin/users/${userId}/verified`, { isVerified });
+    return mapUser(response.data);
   },
 
   /**
    * Get maintenance mode status
    */
   getMaintenanceMode: async (): Promise<MaintenanceMode> => {
-    const response = await apiClient.get('/api/admin/maintenance');
+    const response = await apiClient.get<BackendMaintenanceStatus>('/api/admin/maintenance');
     return response.data;
   },
 
@@ -67,7 +78,7 @@ export const adminService = {
    * Set maintenance mode
    */
   setMaintenanceMode: async (data: MaintenanceMode): Promise<MaintenanceMode> => {
-    const response = await apiClient.post('/api/admin/maintenance', data);
+    const response = await apiClient.post<BackendMaintenanceStatus>('/api/admin/maintenance', data);
     return response.data;
   },
 

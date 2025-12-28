@@ -1,17 +1,56 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { adminService } from '@/services/api/admin.service';
+import type { UserAccount } from '@/types/admin.types';
 
 const UserManagement: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'student' | 'teacher' | 'admin'>('all');
+  const [users, setUsers] = useState<UserAccount[]>([]);
+  const [search, setSearch] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const users = [
-    { id: '1', name: 'John Doe', email: 'john@example.com', role: 'student', isActive: true, createdAt: '2024-01-15' },
-    { id: '2', name: 'Sarah Smith', email: 'sarah@example.com', role: 'student', isActive: true, createdAt: '2024-02-20' },
-    { id: '3', name: 'Mike Johnson', email: 'mike@example.com', role: 'teacher', isActive: true, createdAt: '2024-01-10' },
-    { id: '4', name: 'Admin User', email: 'admin@example.com', role: 'admin', isActive: true, createdAt: '2023-12-01' },
-  ];
+  const refresh = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const all = await adminService.getAllUsers();
+      setUsers(all);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to load users');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const filteredUsers = filter === 'all' ? users : users.filter(u => u.role === filter);
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return users
+      .filter((u) => (filter === 'all' ? true : u.role === filter))
+      .filter((u) => (q ? u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) : true));
+  }, [users, filter, search]);
+
+  const handleRoleChange = async (userId: number, newRole: UserAccount['role']) => {
+    try {
+      const updated = await adminService.updateUserRole(userId, newRole);
+      setUsers((prev) => prev.map((u) => (u.userId === userId ? updated : u)));
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to update role');
+    }
+  };
+
+  const handleVerifiedToggle = async (userId: number, isVerified: boolean) => {
+    try {
+      const updated = await adminService.setUserVerified(userId, isVerified);
+      setUsers((prev) => prev.map((u) => (u.userId === userId ? updated : u)));
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to update verification');
+    }
+  };
 
   return (
     <div className="container">
@@ -62,6 +101,13 @@ const UserManagement: React.FC = () => {
             </tr>
           </thead>
           <tbody>
+            {isLoading && (
+              <tr>
+                <td colSpan={6} style={{ padding: '10px' }}>
+                  Loading...
+                </td>
+              </tr>
+            )}
             {filteredUsers.map((user) => (
               <tr key={user.id}>
                 <td>{user.name}</td>
