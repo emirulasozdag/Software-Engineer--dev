@@ -38,6 +38,9 @@ class TestDB(Base, IdMixin, TimestampMixin):
 
     __tablename__ = "tests"
 
+    # Link to the student who took/owns this test (enables UC3/UC6 flows).
+    student_id: Mapped[Optional[int]] = mapped_column(ForeignKey("students.id"), nullable=True)
+
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     duration: Mapped[int] = mapped_column(Integer, default=0)  # in minutes

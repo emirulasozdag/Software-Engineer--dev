@@ -16,7 +16,24 @@ async def lifespan(app: FastAPI):
     from app.infrastructure.db import Base, engine
     import app.infrastructure.db.models  # noqa: F401  (registers all tables)
 
+    # Create missing tables (does not alter existing ones).
+
     Base.metadata.create_all(bind=engine)
+
+    # Minimal SQLite schema patching for dev DBs created before new columns existed.
+    # (SQLite create_all won't add new columns to existing tables.)
+    try:
+        if engine.dialect.name == "sqlite":
+            from sqlalchemy import text
+
+            with engine.begin() as conn:
+                cols = conn.execute(text("PRAGMA table_info(tests)")).mappings().all()
+                names = {c.get("name") for c in cols}
+                if "student_id" not in names:
+                    conn.execute(text("ALTER TABLE tests ADD COLUMN student_id INTEGER"))
+    except Exception:
+        # Best-effort: avoid blocking app startup in dev.
+        pass
     yield
     # (Optional) cleanup on shutdown
 

@@ -24,6 +24,7 @@ from app.infrastructure.db.session import get_db
 from app.infrastructure.external.notification_service import NotificationService
 from app.infrastructure.repositories.sqlalchemy_user_repository import SqlAlchemyUserRepository
 from app.infrastructure.security.tokens import token_manager
+from app.application.services.reward_service import RewardService
 
 router = APIRouter()
 _settings = get_settings()
@@ -81,6 +82,12 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse
 
 	# fetch user for response
 	user = _controller.auth_service.user_repo.findByEmail(payload.email)
+	# FR33: update daily streak + points on successful student login
+	try:
+		RewardService(db, NotificationService()).updateDailyStreak(user.userId)
+	except Exception:
+		# keep login robust; streak is best-effort
+		pass
 	return LoginResponse(access_token=token, user=_to_public_user(user))
 
 
@@ -116,10 +123,14 @@ def me(user=Depends(get_current_user)) -> UserPublic:
 
 @router.post("/logout")
 def logout() -> dict:
-	"""Stateless auth: server-side logout is a no-op.
-
-	Client clears its local token; this endpoint exists to avoid 404s.
-	"""
+	# Stateless tokens: nothing to invalidate server-side.
 	return {"message": "Logged out"}
+
+
+@router.post("/refresh", response_model=LoginResponse)
+def refresh(user=Depends(get_current_user)) -> LoginResponse:
+	# Issue a new access token for the current authenticated user.
+	new_token = token_manager.issue_access_token(user.userId)
+	return LoginResponse(access_token=new_token, user=_to_public_user(user))
 
 
