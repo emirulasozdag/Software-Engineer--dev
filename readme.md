@@ -944,3 +944,1139 @@ o 3a. If the chatbot receives a question it does not understand, it
 sends a "Could you please rephrase your question?" message.
 
 
+UML:
+
+title AI-Powered English Learning System - Class Diagram
+
+' ==========================================
+' DOMAIN ENTITIES / MODELS
+' ==========================================
+package "Domain Entities" {
+    
+    ' ---- User Hierarchy (UC1, UC2, UC16) ----
+    abstract class User {
+        - userId: int
+        - name: String
+        - email: String
+        - password: String
+        - role: UserRole
+        - isVerified: boolean
+        - createdAt: Date
+        - lastLogin: Date
+        + register()
+        + login()
+        + logout()
+        + verifyEmail(token: String)
+        + resetPassword(newPassword: String)
+        + updateProfile()
+    }
+    
+    enum UserRole {
+        STUDENT
+        TEACHER
+        ADMIN
+    }
+    
+    class Student {
+        - level: LanguageLevel
+        - dailyStreak: int
+        - totalPoints: int
+        - enrollmentDate: Date
+        + takePlacementTest()
+        + viewProgress()
+        + viewResults()
+        + submitFeedback()
+        + startChatbot()
+    }
+    
+    class Teacher {
+        - department: String
+        - specialization: String
+        + assignHomework()
+        + viewStudentProgress()
+        + createContent()
+        + sendAnnouncement()
+        + collaborateWithAI()
+    }
+    
+    class Admin {
+        - adminLevel: int
+        - permissions: String[]
+        + manageUsers()
+        + changeUserRole(userId: int, role: UserRole)
+        + viewSystemPerformance()
+        + enableMaintenanceMode()
+        + viewSystemLogs()
+    }
+    
+    enum LanguageLevel {
+        A1
+        A2
+        B1
+        B2
+        C1
+        C2
+    }
+    
+    ' ---- Test Entities (UC3, UC4, UC5, UC6) ----
+    abstract class Test {
+        - testId: int
+        - title: String
+        - description: String
+        - duration: int
+        - maxScore: int
+        - createdAt: Date
+        + start()
+        + submit()
+        + calculateScore(): int
+    }
+    
+    class PlacementTest {
+        - readingModule: TestModule
+        - writingModule: TestModule
+        - listeningModule: TestModule
+        - speakingModule: TestModule
+        + evaluateLevel(): LanguageLevel
+    }
+    
+    class SpeakingTest {
+        - sampleSentence: String
+        - audioFile: String
+        - pronunciationCriteria: String[]
+        + displaySample()
+        + recordAudio()
+        + analyzeAccuracy(): double
+    }
+    
+    class ListeningTest {
+        - audioFiles: String[]
+        - questions: Question[]
+        + playAudio()
+        + submitAnswers()
+    }
+    
+    class ReadingTest {
+        - passages: String[]
+        - questions: Question[]
+        + displayPassage()
+        + submitAnswers()
+    }
+    
+    class WritingTest {
+        - topic: String
+        - minWords: int
+        - maxWords: int
+        + submitText(text: String)
+        + evaluateWriting(): int
+    }
+    
+    class TestModule {
+        - moduleId: int
+        - moduleType: String
+        - questions: Question[]
+        - score: int
+        + loadQuestions()
+        + submitModule()
+    }
+    
+    class Question {
+        - questionId: int
+        - text: String
+        - options: String[]
+        - correctAnswer: String
+        - points: int
+        + validateAnswer(answer: String): boolean
+    }
+    
+    ' ---- Result Entities (UC6, UC12) ----
+    class TestResult {
+        - resultId: int
+        - studentId: int
+        - testId: int
+        - score: int
+        - level: LanguageLevel
+        - completedAt: Date
+        - strengths: String[]
+        - weaknesses: String[]
+        + getScoreBreakdown(): Map
+        + generateReport(): String
+    }
+    
+    class SpeakingResult {
+        - sessionId: int
+        - audioData: byte[]
+        - accuracyScore: double
+        - pronunciationFeedback: String
+        - completedAt: Date
+        + getFeedback(): String
+    }
+    
+    ' ---- Learning Content Entities (UC7, UC8, UC9, UC19) ----
+    class LessonPlan {
+        - planId: int
+        - studentId: int
+        - topics: Topic[]
+        - recommendedLevel: LanguageLevel
+        - createdAt: Date
+        - updatedAt: Date
+        - isGeneral: boolean
+        + getTopicList(): Topic[]
+        + updatePlan(topics: Topic[])
+    }
+    
+    class Topic {
+        - topicId: int
+        - name: String
+        - category: String
+        - difficulty: LanguageLevel
+        - priority: int
+        + getExercises(): Exercise[]
+    }
+    
+    class Content {
+        - contentId: int
+        - title: String
+        - body: String
+        - contentType: ContentType
+        - level: LanguageLevel
+        - createdBy: int
+        - createdAt: Date
+        - isDraft: boolean
+        + display()
+        + edit(newBody: String)
+        + publish()
+    }
+    
+    enum ContentType {
+        LESSON
+        EXERCISE
+        ROLEPLAY
+        VOCABULARY
+        GRAMMAR
+    }
+    
+    class Exercise {
+        - exerciseId: int
+        - type: String
+        - instructions: String
+        - questions: Question[]
+        - maxScore: int
+        + start()
+        + submit()
+        + getScore(): int
+    }
+    
+    ' ---- Progress Entities (UC10, UC11) ----
+    class Progress {
+        - progressId: int
+        - studentId: int
+        - completedLessons: int[]
+        - completedTests: int[]
+        - correctAnswerRate: double
+        - lastUpdated: Date
+        + getCompletionRate(): double
+        + getWeeklyProgress(): Map
+    }
+    
+    class ProgressSnapshot {
+        - snapshotId: int
+        - studentId: int
+        - snapshotDate: Date
+        - progressData: String
+        + getSnapshot(): Progress
+    }
+    
+    ' ---- Feedback Entities (UC12, UC13) ----
+    class Feedback {
+        - feedbackId: int
+        - studentId: int
+        - testResultId: int
+        - feedbackList: String[]
+        - generatedAt: Date
+        + displayFeedback()
+    }
+    
+    
+    ' ---- Assignment Entities (UC15) ----
+    class Assignment {
+        - assignmentId: int
+        - teacherId: int
+        - title: String
+        - description: String
+        - dueDate: Date
+        - assignmentType: String
+        - createdAt: Date
+        + assign(studentIds: int[])
+        + updateDueDate(newDate: Date)
+    }
+    
+    class StudentAssignment {
+        - studentAssignmentId: int
+        - assignmentId: int
+        - studentId: int
+        - status: AssignmentStatus
+        - submittedAt: Date
+        - score: int
+        + submit()
+        + grade(score: int)
+    }
+    
+    enum AssignmentStatus {
+        PENDING
+        SUBMITTED
+        GRADED
+        LATE
+    }
+    
+    ' ---- Messaging Entities (UC18) ----
+    class Message {
+        - messageId: int
+        - senderId: int
+        - recipientId: int
+        - subject: String
+        - body: String
+        - isRead: boolean
+        - sentAt: Date
+        + send()
+        + markAsRead()
+    }
+    
+    class Announcement {
+        - announcementId: int
+        - teacherId: int
+        - title: String
+        - content: String
+        - recipientGroup: int[]
+        - createdAt: Date
+        + publish()
+        + getRecipients(): User[]
+    }
+    
+    ' ---- Reward Entities (UC14) ----
+    class Reward {
+        - rewardId: int
+        - name: String
+        - description: String
+        - points: int
+        - badgeIcon: String
+        + awardTo(studentId: int)
+    }
+    
+    class StudentReward {
+        - studentRewardId: int
+        - studentId: int
+        - rewardId: int
+        - earnedAt: Date
+        + display()
+    }
+    
+    ' ---- Chatbot Entities (UC20) ----
+    class ChatSession {
+        - sessionId: int
+        - studentId: int
+        - startedAt: Date
+        - endedAt: Date
+        - messages: ChatMessage[]
+        + addMessage(message: ChatMessage)
+        + endSession()
+    }
+    
+    class ChatMessage {
+        - messageId: int
+        - sessionId: int
+        - sender: String
+        - content: String
+        - timestamp: Date
+        + display()
+    }
+    
+    ' ---- System Entities (UC17) ----
+    class SystemPerformance {
+        - performanceId: int
+        - cpuUsage: double
+        - memoryUsage: double
+        - activeUsers: int
+        - recordedAt: Date
+        + getStatistics(): Map
+    }
+    
+    class MaintenanceLog {
+        - logId: int
+        - adminId: int
+        - startTime: Date
+        - endTime: Date
+        - reason: String
+        + startMaintenance()
+        + endMaintenance()
+    }
+}
+
+' ==========================================
+' UI LAYER (Following Sequence Diagram Pattern)
+' ==========================================
+package "UI Layer" {
+    
+    class RegistrationUI {
+        + displayRegistrationForm()
+        + displayLoginForm()
+        + displayVerificationMessage()
+        + displayError(message: String)
+    }
+    
+    class PasswordRecoveryUI {
+        + displayForgotPasswordForm()
+        + displayResetPasswordForm()
+        + displaySuccessMessage()
+    }
+    
+    class PlacementTestUI {
+        + displayTestModules()
+        + displayQuestion(question: Question)
+        + displayResults()
+        + saveProgress()
+    }
+    
+    class SpeakingTestUI {
+        + startSpeakingTest()
+        + showSampleSentence(sampleText: String, audioFile: String)
+        + submitSpeech(audioData: byte[])
+        + requestMicrophonePermission()
+        + showResult(accuracyScore: double, feedback: String)
+        + showRetryMessage()
+    }
+    
+    class ListeningTestUI {
+        + displayAudioPlayer()
+        + displayQuestions()
+        + submitAnswers()
+        + reloadAudio()
+    }
+    
+    class ReadingTestUI {
+        + displayPassage()
+        + displayQuestions()
+        + submitAnswers()
+    }
+    
+    class WritingTestUI {
+        + displayTopic()
+        + displayTextEditor()
+        + submitText()
+        + showWarning(message: String)
+    }
+    
+    class TestResultsUI {
+        + displayResults(results: TestResult)
+        + displayErrorAnalysis()
+        + showError(message: String)
+    }
+    
+    class PersonalPlanUI {
+        + viewPersonalPlan()
+        + updatePersonalPlanView(studentId: int, plan: LessonPlan)
+        + displayTopicRecommendations()
+    }
+    
+    class LearningContentUI {
+        + requestNextContent()
+        + updateContentView(studentId: int, content: Content)
+        + displayExercise()
+        + displayRationale(reason: String)
+    }
+    
+    class StudentProgressUI {
+        + viewMyProgress()
+        + displayStudentProgress(viewModel: Object)
+        + displayGraphs()
+        + displayTable()
+    }
+    
+    class TeacherProgressUI {
+        + viewStudentProgress(studentId: int)
+        + displayStudentProgressSummary(summary: Object)
+        + displayClassProgress()
+    }
+    
+    class DataExportUI {
+        + selectExportOption()
+        + selectFormat(format: String)
+        + displayDownloadLink(link: String)
+        + showNoDataWarning()
+    }
+    
+    class FeedbackUI {
+        + viewLatestFeedback()
+        + displayFeedback(studentId: int, feedbackList: String[])
+        + showErrorState()
+    }
+    
+    
+    class RewardUI {
+        + displayRewards()
+        + displayBadges()
+        + displayDailyStreak(days: int)
+        + showMotivationalMessage()
+    }
+    
+    class AssignmentUI {
+        + displayAssignHomeworkForm()
+        + selectStudents()
+        + submitAssignment()
+        + showWarning(message: String)
+    }
+    
+    class StudentAssignmentUI {
+        + displayAssignments()
+        + viewAssignmentDetails()
+        + submitAssignment()
+    }
+    
+    class AdminDashboardUI {
+        + displayUserList()
+        + displaySystemPerformance()
+        + displayMaintenanceControls()
+        + showWarning(message: String)
+    }
+    
+    class MessagingUI {
+        + displayInbox()
+        + composeMessage()
+        + sendMessage()
+        + showWarning(message: String)
+    }
+    
+    class AnnouncementUI {
+        + displayAnnouncements()
+        + createAnnouncement()
+        + publishAnnouncement()
+    }
+    
+    class AIContentGenerationUI {
+        + openAIContentGenerationModule()
+        + enterLessonTopic(title: String, instructions: String)
+        + showSuggestedContent(contentDraft: Content)
+        + displayDraftForReview()
+        + submitEditedContent(finalContent: Content)
+        + cancelEdit()
+        + showRegenerateOption()
+        + updateTeacherContentView()
+    }
+    
+    class ChatbotUI {
+        + openChatInterface()
+        + sendMessage(message: String)
+        + displayResponse(response: String)
+        + displayHistory()
+        + showConnectionError()
+    }
+}
+
+' ==========================================
+' CONTROLLER LAYER
+' ==========================================
+package "Controller Layer" {
+    
+    class AuthController {
+        + register(name: String, email: String, password: String)
+        + login(email: String, password: String)
+        + verifyEmail(token: String)
+        + requestPasswordReset(email: String)
+        + resetPassword(token: String, newPassword: String)
+    }
+    
+    class PlacementTestController {
+        + startPlacementTest(studentId: int)
+        + submitModule(studentId: int, moduleId: int, answers: Map)
+        + completeTest(studentId: int)
+        + saveProgress(studentId: int, progress: Map)
+    }
+    
+    class SpeakingTestController {
+        + beginSpeakingTest(studentId: int)
+        + submitSpeech(sessionId: int, audioData: byte[])
+        + showResult(accuracyScore: double, feedback: String)
+        + showRetryMessage()
+    }
+    
+    class ListeningTestController {
+        + startListeningTest(studentId: int)
+        + submitAnswers(testId: int, answers: Map)
+        + reloadAudio(audioId: int)
+    }
+    
+    class ReadingTestController {
+        + startReadingTest(studentId: int)
+        + submitAnswers(testId: int, answers: Map)
+    }
+    
+    class WritingTestController {
+        + startWritingTest(studentId: int)
+        + submitWriting(testId: int, text: String)
+    }
+    
+    class TestResultController {
+        + getResults(studentId: int, testId: int)
+        + getResultsForTeacher(teacherId: int, studentId: int)
+        + logAccess(userId: int, resultId: int)
+    }
+    
+    class StudentAnalysisController {
+        + requestPersonalPlan(studentId: int)
+        + generatePersonalPlan(studentId: int)
+        + updatePersonalPlanView(studentId: int, plan: LessonPlan)
+    }
+    
+    class ContentDeliveryController {
+        + startContentDelivery(studentId: int)
+        + prepareContentForStudent(studentId: int)
+        + updateContentView(studentId: int, content: Content)
+    }
+    
+    class ContentUpdateController {
+        + checkProgressStatus(studentId: int)
+        + updateContent(studentId: int)
+        + displayRationale(studentId: int, reason: String)
+        + rejectUpdate(studentId: int)
+    }
+    
+    class ProgressTrackingController {
+        + requestStudentProgress(studentId: int)
+        + requestStudentProgressForTeacher(studentId: int)
+        + displayStudentProgress(viewModel: Object)
+        + displayStudentProgressSummary(summary: Object)
+    }
+    
+    class DataExportController {
+        + listReportTypes(userId: int)
+        + exportData(userId: int, reportType: String, format: String)
+        + generateDownloadLink(fileId: int)
+    }
+    
+    class AutomaticFeedbackController {
+        + requestAutomaticFeedback(studentId: int)
+        + displayFeedback(studentId: int, feedbackList: String[])
+    }
+    
+    
+    class RewardController {
+        + recordDailyLogin(studentId: int)
+        + checkGoalCompletion(studentId: int)
+        + awardReward(studentId: int, rewardId: int)
+        + sendReminder(studentId: int)
+    }
+    
+    class AssignmentController {
+        + createAssignment(teacherId: int, assignment: Assignment)
+        + assignToStudents(assignmentId: int, studentIds: int[])
+        + getStudentAssignments(studentId: int)
+        + submitAssignment(studentAssignmentId: int)
+    }
+    
+    class AdminController {
+        + getUserList()
+        + updateUserRole(userId: int, role: UserRole)
+        + updateUserStatus(userId: int, status: String)
+        + getSystemPerformance()
+        + enableMaintenanceMode()
+        + disableMaintenanceMode()
+    }
+    
+    class MessageController {
+        + getInbox(userId: int)
+        + sendMessage(senderId: int, recipientId: int, message: Message)
+        + markAsRead(messageId: int)
+    }
+    
+    class AnnouncementController {
+        + createAnnouncement(teacherId: int, announcement: Announcement)
+        + publishAnnouncement(announcementId: int)
+        + getAnnouncements(userId: int)
+    }
+    
+    class AIContentController {
+        + startContentCreationSession(teacherId: int)
+        + submitContentInputs(teacherId: int, title: String, instructions: String)
+        + saveApprovedContent(teacherId: int, finalContent: Content)
+        + saveDraftRequest(teacherId: int, contentDraft: Content)
+        + showRegenerateOption()
+        + updateTeacherContentView()
+    }
+    
+    class ChatbotController {
+        + startChatSession(studentId: int)
+        + sendMessage(sessionId: int, message: String)
+        + endChatSession(sessionId: int)
+        + getChatHistory(sessionId: int)
+    }
+}
+
+' ==========================================
+' SERVICE LAYER
+' ==========================================
+package "Service Layer" {
+    
+    class AuthService {
+        + createUser(name: String, email: String, password: String): User
+        + validateCredentials(email: String, password: String): boolean
+        + sendVerificationEmail(userId: int)
+        + verifyEmailToken(token: String): boolean
+        + generateResetToken(email: String): String
+        + updatePassword(userId: int, newPassword: String)
+    }
+    
+    class PlacementTestService {
+        + initializeTest(studentId: int): PlacementTest
+        + evaluateModule(moduleId: int, answers: Map): int
+        + calculateFinalLevel(scores: Map): LanguageLevel
+        + saveTestProgress(studentId: int, progress: Map)
+    }
+    
+    class SpeakingTestService {
+        + createSpeakingSession(studentId: int): int
+        + analyzeAndSaveSpeech(sessionId: int, audioData: byte[])
+        + getSampleSentence(level: LanguageLevel): String
+    }
+    
+    class ListeningTestService {
+        + initializeTest(studentId: int): ListeningTest
+        + evaluateAnswers(testId: int, answers: Map): int
+        + getAudioFile(audioId: int): byte[]
+    }
+    
+    class ReadingTestService {
+        + initializeTest(studentId: int): ReadingTest
+        + evaluateAnswers(testId: int, answers: Map): int
+    }
+    
+    class WritingTestService {
+        + initializeTest(studentId: int): WritingTest
+        + evaluateWriting(testId: int, text: String): int
+        + validateText(text: String): boolean
+    }
+    
+    class TestResultService {
+        + saveTestResult(result: TestResult)
+        + getTestResult(studentId: int, testId: int): TestResult
+        + generateErrorAnalysis(resultId: int): Map
+    }
+    
+    class StudentAnalysisService {
+        + generatePersonalPlan(studentId: int): LessonPlan
+        + identifyStrengthsWeaknesses(results: TestResult[]): Map
+        + createTopicRecommendations(level: LanguageLevel, weaknesses: String[]): Topic[]
+    }
+    
+    class ContentDeliveryService {
+        + prepareContentForStudent(studentId: int): Content
+        + getStudentLevel(studentId: int): LanguageLevel
+        + assignContentToStudent(studentId: int, contentId: int)
+    }
+    
+    class ContentUpdateService {
+        + checkProgress(studentId: int): Progress
+        + compareWithCurrentContent(progress: Progress, content: Content): boolean
+        + generateUpdateRationale(changes: Map): String
+    }
+    
+    class ProgressTrackingService {
+        + buildProgressViewModel(progressData: Progress, graphs: Object): Object
+        + buildTableViewModel(progressData: Progress): Object
+        + getProgressSummary(studentId: int): Object
+        + recordDailyProgressSnapshot(studentId: int, progressData: Progress)
+    }
+    
+    class DataExportService {
+        + getAvailableReports(userId: int): String[]
+        + exportToPDF(data: Object): byte[]
+        + exportToCSV(data: Object): byte[]
+        + generateDownloadLink(fileData: byte[]): String
+    }
+    
+    class FeedbackService {
+        + generateFeedbackForStudent(studentId: int): String[]
+        + analyzeIncorrectAnswers(results: TestResult): String[]
+        + saveFeedback(studentId: int, feedbackList: String[])
+    }
+    
+    
+    class RewardService {
+        + updateDailyStreak(studentId: int): int
+        + checkGoalCompletion(studentId: int): boolean
+        + awardBadge(studentId: int, badgeId: int)
+        + getStudentRewards(studentId: int): Reward[]
+    }
+    
+    class AssignmentService {
+        + createAssignment(assignment: Assignment): int
+        + assignToStudents(assignmentId: int, studentIds: int[])
+        + getStudentAssignments(studentId: int): StudentAssignment[]
+        + submitAssignment(studentAssignmentId: int)
+        + gradeAssignment(studentAssignmentId: int, score: int)
+    }
+    
+    class AdminService {
+        + getAllUsers(): User[]
+        + updateUserRole(userId: int, role: UserRole)
+        + updateUserStatus(userId: int, status: String)
+        + getSystemStats(): SystemPerformance
+        + setMaintenanceMode(enabled: boolean)
+    }
+    
+    class MessageService {
+        + sendMessage(message: Message)
+        + getInbox(userId: int): Message[]
+        + markAsRead(messageId: int)
+    }
+    
+    class AnnouncementService {
+        + createAnnouncement(announcement: Announcement): int
+        + publishAnnouncement(announcementId: int)
+        + getAnnouncementsForUser(userId: int): Announcement[]
+    }
+    
+    class AIContentService {
+        + prepareSuggestedContent(teacherId: int, title: String, instructions: String): Content
+        + storeAndAssignContent(teacherId: int, finalContent: Content)
+        + saveDraftOnly(teacherId: int, contentDraft: Content)
+    }
+    
+    class ChatbotService {
+        + createSession(studentId: int): ChatSession
+        + processMessage(sessionId: int, message: String): String
+        + saveMessage(sessionId: int, message: ChatMessage)
+        + endSession(sessionId: int)
+    }
+    
+    class GraphService {
+        + generateProgressGraphs(progressData: Progress): Object
+        + generateComparisonChart(data: Map): Object
+    }
+}
+
+' ==========================================
+' REPOSITORY LAYER
+' ==========================================
+package "Repository Layer" {
+    
+    class UserRepository {
+        + save(user: User): int
+        + findById(userId: int): User
+        + findByEmail(email: String): User
+        + update(user: User)
+        + delete(userId: int)
+        + findAll(): User[]
+    }
+    
+    class TestRepository {
+        + save(test: Test): int
+        + findById(testId: int): Test
+        + findByStudentId(studentId: int): Test[]
+    }
+    
+    class TestResultRepository {
+        + save(result: TestResult): int
+        + findByStudentId(studentId: int): TestResult[]
+        + findByTestId(testId: int): TestResult[]
+        + getLatestTestResults(studentId: int): TestResult[]
+        + getTestResults(studentId: int): TestResult[]
+    }
+    
+    class SpeakingResultRepository {
+        + saveNewSession(studentId: int): int
+        + saveSpeakingResult(sessionId: int, accuracyScore: double, feedback: String)
+        + findBySessionId(sessionId: int): SpeakingResult
+    }
+    
+    class LessonPlanRepository {
+        + savePersonalPlan(studentId: int, plan: LessonPlan): int
+        + saveGeneralPlan(studentId: int, generalPlan: LessonPlan): int
+        + findByStudentId(studentId: int): LessonPlan
+        + update(plan: LessonPlan)
+    }
+    
+    class ContentRepository {
+        + save(content: Content): int
+        + findById(contentId: int): Content
+        + findByLevel(level: LanguageLevel): Content[]
+        + saveContentForStudent(studentId: int, contentData: Content): int
+        + getLastUsedMaterial(studentId: int): Content
+    }
+    
+    class StudentProfileRepository {
+        + save(student: Student): int
+        + findById(studentId: int): Student
+        + getStudentLevel(studentId: int): LanguageLevel
+        + updateLevel(studentId: int, level: LanguageLevel)
+    }
+    
+    class ProgressDataRepository {
+        + save(progress: Progress): int
+        + fetchProgressData(studentId: int): Progress
+        + saveDailySnapshot(studentId: int, progressData: Progress)
+        + update(progress: Progress)
+    }
+    
+    class CachedProgressRepository {
+        + getMostRecentProgress(studentId: int): Progress
+        + cacheProgress(studentId: int, progress: Progress)
+    }
+    
+    class FeedbackRepository {
+        + saveFeedback(studentId: int, feedbackList: String[]): int
+        + findByStudentId(studentId: int): Feedback[]
+    }
+    
+    
+    class RewardRepository {
+        + save(reward: Reward): int
+        + findById(rewardId: int): Reward
+        + findAll(): Reward[]
+    }
+    
+    class StudentRewardRepository {
+        + save(studentReward: StudentReward): int
+        + findByStudentId(studentId: int): StudentReward[]
+    }
+    
+    class AssignmentRepository {
+        + save(assignment: Assignment): int
+        + findById(assignmentId: int): Assignment
+        + findByTeacherId(teacherId: int): Assignment[]
+    }
+    
+    class StudentAssignmentRepository {
+        + save(studentAssignment: StudentAssignment): int
+        + findByStudentId(studentId: int): StudentAssignment[]
+        + findByAssignmentId(assignmentId: int): StudentAssignment[]
+        + update(studentAssignment: StudentAssignment)
+    }
+    
+    class MessageRepository {
+        + save(message: Message): int
+        + findByRecipientId(recipientId: int): Message[]
+        + findBySenderId(senderId: int): Message[]
+        + markAsRead(messageId: int)
+    }
+    
+    class AnnouncementRepository {
+        + save(announcement: Announcement): int
+        + findById(announcementId: int): Announcement
+        + findByTeacherId(teacherId: int): Announcement[]
+    }
+    
+    class LessonContentRepository {
+        + saveDraftContent(teacherId: int, contentDraft: Content): int
+        + saveLessonContent(teacherId: int, finalContent: Content): int
+        + findByTeacherId(teacherId: int): Content[]
+    }
+    
+    class ChatSessionRepository {
+        + save(session: ChatSession): int
+        + findById(sessionId: int): ChatSession
+        + findByStudentId(studentId: int): ChatSession[]
+        + addMessage(sessionId: int, message: ChatMessage)
+    }
+    
+    class SystemLogRepository {
+        + save(log: MaintenanceLog): int
+        + findAll(): MaintenanceLog[]
+    }
+    
+    class SystemPerformanceRepository {
+        + save(performance: SystemPerformance): int
+        + getLatest(): SystemPerformance
+    }
+}
+
+' ==========================================
+' EXTERNAL SERVICES
+' ==========================================
+package "External Services" {
+    
+    class AIAnalysisEngine <<external>> {
+        + analyzeTestResults(testResults: TestResult[]): Map
+        + identifyStrengths(results: TestResult[]): String[]
+        + identifyWeaknesses(results: TestResult[]): String[]
+        + generateSuggestedContent(title: String, instructions: String): Content
+        + generateContent(levelInfo: LanguageLevel): Content
+    }
+    
+    class AIContentEngine <<external>> {
+        + generateContent(levelInfo: LanguageLevel): Content
+        + generateExercise(topic: Topic, level: LanguageLevel): Exercise
+        + generateRoleplay(scenario: String, level: LanguageLevel): Content
+    }
+    
+    class VoiceRecognitionService <<external>> {
+        + analyzeSpeech(audioData: byte[]): Map
+        + getAccuracyScore(audioData: byte[], expectedText: String): double
+        + getPronunciationFeedback(audioData: byte[]): String
+    }
+    
+    class NotificationService <<external>> {
+        + sendEmail(to: String, subject: String, body: String)
+        + sendVerificationEmail(userId: int, token: String)
+        + sendPasswordResetEmail(userId: int, token: String)
+        + sendFeedbackErrorEmail(studentId: int)
+        + sendAssignmentNotification(studentId: int, assignmentId: int)
+        + sendRewardNotification(studentId: int, rewardId: int)
+        + sendReminderNotification(studentId: int)
+        + sendMessageNotification(recipientId: int, messageId: int)
+    }
+    
+    class Chatbot <<external>> {
+        + processQuery(query: String): String
+        + getContextualResponse(sessionId: int, query: String): String
+        + handleUnknownQuery(): String
+    }
+}
+
+' ==========================================
+' RELATIONSHIPS
+' ==========================================
+
+' User Hierarchy (Generalization)
+User <|-- Student
+User <|-- Teacher
+User <|-- Admin
+User -- UserRole
+
+' Test Hierarchy (Generalization)
+Test <|-- PlacementTest
+Test <|-- SpeakingTest
+Test <|-- ListeningTest
+Test <|-- ReadingTest
+Test <|-- WritingTest
+
+' Composition relationships (parts cannot exist without whole)
+PlacementTest *-- "4" TestModule : contains
+Test *-- "1..*" Question : contains
+TestModule *-- "1..*" Question : contains
+ChatSession *-- "0..*" ChatMessage : contains
+
+' Aggregation relationships (parts can exist independently)
+LessonPlan o-- "1..*" Topic : includes
+Topic o-- "0..*" Exercise : contains
+Exercise o-- "1..*" Question : uses
+
+' Association relationships with multiplicities
+Student "1" -- "0..*" TestResult : takes
+Student "1" -- "0..1" LessonPlan : has
+Student "1" -- "1" Progress : tracks
+Student "1" -- "0..*" StudentAssignment : receives
+Student "1" -- "0..*" StudentReward : earns
+Student "1" -- "0..*" Feedback : receives
+Student "1" -- "0..*" ChatSession : starts
+Student "1" -- "0..*" SpeakingResult : produces
+
+Teacher "1" -- "0..*" Assignment : creates
+Teacher "1" -- "0..*" Announcement : publishes
+Teacher "1" -- "0..*" Content : creates
+Teacher "1" -- "0..*" Message : sends
+
+Admin "1" -- "0..*" MaintenanceLog : creates
+Admin "1" -- "0..*" SystemPerformance : monitors
+
+Message "0..*" -- "1" User : received by
+Assignment "1" -- "0..*" StudentAssignment : assigned as
+
+TestResult "1" -- "0..*" Feedback : generates
+Progress "1" -- "0..*" ProgressSnapshot : snapshots
+Reward "1" -- "0..*" StudentReward : awarded as
+
+Content -- ContentType
+Student -- LanguageLevel
+TestResult -- LanguageLevel
+Content -- LanguageLevel
+StudentAssignment -- AssignmentStatus
+
+' UI to Controller associations
+RegistrationUI ..> AuthController : uses
+PasswordRecoveryUI ..> AuthController : uses
+PlacementTestUI ..> PlacementTestController : uses
+SpeakingTestUI ..> SpeakingTestController : uses
+ListeningTestUI ..> ListeningTestController : uses
+ReadingTestUI ..> ReadingTestController : uses
+WritingTestUI ..> WritingTestController : uses
+TestResultsUI ..> TestResultController : uses
+PersonalPlanUI ..> StudentAnalysisController : uses
+LearningContentUI ..> ContentDeliveryController : uses
+StudentProgressUI ..> ProgressTrackingController : uses
+TeacherProgressUI ..> ProgressTrackingController : uses
+DataExportUI ..> DataExportController : uses
+FeedbackUI ..> AutomaticFeedbackController : uses
+RewardUI ..> RewardController : uses
+AssignmentUI ..> AssignmentController : uses
+StudentAssignmentUI ..> AssignmentController : uses
+AdminDashboardUI ..> AdminController : uses
+MessagingUI ..> MessageController : uses
+AnnouncementUI ..> AnnouncementController : uses
+AIContentGenerationUI ..> AIContentController : uses
+ChatbotUI ..> ChatbotController : uses
+
+' Controller to Service associations
+AuthController ..> AuthService : uses
+PlacementTestController ..> PlacementTestService : uses
+SpeakingTestController ..> SpeakingTestService : uses
+ListeningTestController ..> ListeningTestService : uses
+ReadingTestController ..> ReadingTestService : uses
+WritingTestController ..> WritingTestService : uses
+TestResultController ..> TestResultService : uses
+StudentAnalysisController ..> StudentAnalysisService : uses
+ContentDeliveryController ..> ContentDeliveryService : uses
+ContentUpdateController ..> ContentUpdateService : uses
+ProgressTrackingController ..> ProgressTrackingService : uses
+ProgressTrackingController ..> GraphService : uses
+DataExportController ..> DataExportService : uses
+AutomaticFeedbackController ..> FeedbackService : uses
+RewardController ..> RewardService : uses
+AssignmentController ..> AssignmentService : uses
+AdminController ..> AdminService : uses
+MessageController ..> MessageService : uses
+AnnouncementController ..> AnnouncementService : uses
+AIContentController ..> AIContentService : uses
+ChatbotController ..> ChatbotService : uses
+
+' Service to Repository associations
+AuthService ..> UserRepository : uses
+PlacementTestService ..> TestRepository : uses
+PlacementTestService ..> TestResultRepository : uses
+SpeakingTestService ..> SpeakingResultRepository : uses
+ListeningTestService ..> TestRepository : uses
+ReadingTestService ..> TestRepository : uses
+WritingTestService ..> TestRepository : uses
+TestResultService ..> TestResultRepository : uses
+StudentAnalysisService ..> TestResultRepository : uses
+StudentAnalysisService ..> LessonPlanRepository : uses
+ContentDeliveryService ..> StudentProfileRepository : uses
+ContentDeliveryService ..> ContentRepository : uses
+ProgressTrackingService ..> ProgressDataRepository : uses
+ProgressTrackingService ..> CachedProgressRepository : uses
+FeedbackService ..> TestResultRepository : uses
+FeedbackService ..> FeedbackRepository : uses
+SystemFeedbackService ..> SystemFeedbackRepository : uses
+RewardService ..> RewardRepository : uses
+RewardService ..> StudentRewardRepository : uses
+AssignmentService ..> AssignmentRepository : uses
+AssignmentService ..> StudentAssignmentRepository : uses
+AdminService ..> UserRepository : uses
+AdminService ..> SystemLogRepository : uses
+AdminService ..> SystemPerformanceRepository : uses
+MessageService ..> MessageRepository : uses
+AnnouncementService ..> AnnouncementRepository : uses
+AIContentService ..> LessonContentRepository : uses
+ChatbotService ..> ChatSessionRepository : uses
+
+' Service to External Service associations
+AuthService ..> NotificationService : uses
+SpeakingTestService ..> VoiceRecognitionService : uses
+StudentAnalysisService ..> AIAnalysisEngine : uses
+ContentDeliveryService ..> AIContentEngine : uses
+FeedbackService ..> AIAnalysisEngine : uses
+FeedbackService ..> NotificationService : uses
+RewardService ..> NotificationService : uses
+AssignmentService ..> NotificationService : uses
+MessageService ..> NotificationService : uses
+AnnouncementService ..> NotificationService : uses
+AIContentService ..> AIAnalysisEngine : uses
+ChatbotService ..> Chatbot : uses
