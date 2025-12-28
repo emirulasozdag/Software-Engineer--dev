@@ -1,28 +1,35 @@
+export interface SystemPerformanceSnapshot {
+  cpuUsage: number;
+  memoryUsage: number;
+  activeUsers: number;
+  recordedAt: string;
+}
+
 export interface SystemStats {
   totalUsers: number;
-  activeUsers: number;
   totalStudents: number;
   totalTeachers: number;
-  systemUptime: number;
-  apiResponseTime: number;
+  totalAdmins: number;
+  verifiedUsers: number;
+  maintenanceEnabled: boolean;
+  maintenanceReason?: string | null;
+  lastPerformance?: SystemPerformanceSnapshot | null;
 }
 
 export interface UserAccount {
-  id: string;
+  userId: number;
   email: string;
   name: string;
   role: 'student' | 'teacher' | 'admin';
-  isActive: boolean;
-  isEmailVerified: boolean;
+  isVerified: boolean;
   createdAt: string;
-  lastLogin: string;
+  lastLogin?: string | null;
 }
 
 export interface MaintenanceMode {
-  isEnabled: boolean;
-  message: string;
-  scheduledStart?: string;
-  scheduledEnd?: string;
+  enabled: boolean;
+  reason?: string | null;
+  startedAt?: string | null;
 }
 
 export interface SystemFeedback {

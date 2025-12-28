@@ -33,6 +33,13 @@ const TeacherDashboard: React.FC = () => {
           </div>
         </Link>
 
+        <Link to="/teacher/ai-drafts" style={{ textDecoration: 'none' }}>
+          <div className="card" style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
+            <h3>Teacher–AI Drafts</h3>
+            <p>Generate draft lesson content with AI directives</p>
+          </div>
+        </Link>
+
         <Link to="/teacher/messages" style={{ textDecoration: 'none' }}>
           <div className="card" style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
             <h3>Messages</h3>

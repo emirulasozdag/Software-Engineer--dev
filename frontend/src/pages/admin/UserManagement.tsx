@@ -1,17 +1,56 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { adminService } from '@/services/api/admin.service';
+import type { UserAccount } from '@/types/admin.types';
 
 const UserManagement: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'student' | 'teacher' | 'admin'>('all');
+  const [users, setUsers] = useState<UserAccount[]>([]);
+  const [search, setSearch] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const users = [
-    { id: '1', name: 'John Doe', email: 'john@example.com', role: 'student', isActive: true, createdAt: '2024-01-15' },
-    { id: '2', name: 'Sarah Smith', email: 'sarah@example.com', role: 'student', isActive: true, createdAt: '2024-02-20' },
-    { id: '3', name: 'Mike Johnson', email: 'mike@example.com', role: 'teacher', isActive: true, createdAt: '2024-01-10' },
-    { id: '4', name: 'Admin User', email: 'admin@example.com', role: 'admin', isActive: true, createdAt: '2023-12-01' },
-  ];
+  const refresh = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const all = await adminService.getAllUsers();
+      setUsers(all);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to load users');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const filteredUsers = filter === 'all' ? users : users.filter(u => u.role === filter);
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return users
+      .filter((u) => (filter === 'all' ? true : u.role === filter))
+      .filter((u) => (q ? u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) : true));
+  }, [users, filter, search]);
+
+  const handleRoleChange = async (userId: number, newRole: UserAccount['role']) => {
+    try {
+      const updated = await adminService.updateUserRole(userId, newRole);
+      setUsers((prev) => prev.map((u) => (u.userId === userId ? updated : u)));
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to update role');
+    }
+  };
+
+  const handleVerifiedToggle = async (userId: number, isVerified: boolean) => {
+    try {
+      const updated = await adminService.setUserVerified(userId, isVerified);
+      setUsers((prev) => prev.map((u) => (u.userId === userId ? updated : u)));
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to update verification');
+    }
+  };
 
   return (
     <div className="container">
@@ -22,6 +61,11 @@ const UserManagement: React.FC = () => {
       <h1 className="page-title">User Management</h1>
       
       <div className="card">
+        {error && (
+          <div style={{ borderLeft: '4px solid #e74c3c', paddingLeft: '10px', marginBottom: '15px' }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ display: 'flex', gap: '10px' }}>
             <button 
@@ -54,6 +98,8 @@ const UserManagement: React.FC = () => {
             type="text" 
             placeholder="Search users..." 
             style={{ width: '300px', marginBottom: 0 }}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
@@ -69,8 +115,15 @@ const UserManagement: React.FC = () => {
             </tr>
           </thead>
           <tbody>
+            {isLoading && (
+              <tr>
+                <td colSpan={6} style={{ padding: '10px' }}>
+                  Loading...
+                </td>
+              </tr>
+            )}
             {filteredUsers.map((user) => (
-              <tr key={user.id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={user.userId} style={{ borderBottom: '1px solid #eee' }}>
                 <td style={{ padding: '10px' }}>{user.name}</td>
                 <td style={{ padding: '10px' }}>{user.email}</td>
                 <td style={{ padding: '10px' }}>
@@ -85,18 +138,32 @@ const UserManagement: React.FC = () => {
                   </span>
                 </td>
                 <td style={{ padding: '10px' }}>
-                  <span style={{ color: user.isActive ? '#2ecc71' : '#e74c3c' }}>
-                    {user.isActive ? '● Active' : '● Inactive'}
-                  </span>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={user.isVerified}
+                      onChange={(e) => handleVerifiedToggle(user.userId, e.target.checked)}
+                    />
+                    <span style={{ color: user.isVerified ? '#2ecc71' : '#e74c3c' }}>
+                      {user.isVerified ? '● Verified' : '● Unverified'}
+                    </span>
+                  </label>
                 </td>
-                <td style={{ padding: '10px' }}>{user.createdAt}</td>
+                <td style={{ padding: '10px' }}>{new Date(user.createdAt).toLocaleString()}</td>
                 <td style={{ padding: '10px' }}>
                   <div style={{ display: 'flex', gap: '5px' }}>
-                    <button className="button button-primary" style={{ fontSize: '0.8rem', padding: '4px 8px' }}>
-                      Edit
-                    </button>
-                    <button className="button button-danger" style={{ fontSize: '0.8rem', padding: '4px 8px' }}>
-                      Delete
+                    <select
+                      className="input"
+                      style={{ fontSize: '0.8rem', padding: '4px 8px', marginBottom: 0 }}
+                      value={user.role}
+                      onChange={(e) => handleRoleChange(user.userId, e.target.value as UserAccount['role'])}
+                    >
+                      <option value="student">student</option>
+                      <option value="teacher">teacher</option>
+                      <option value="admin">admin</option>
+                    </select>
+                    <button className="button button-secondary" onClick={refresh} style={{ fontSize: '0.8rem', padding: '4px 8px' }}>
+                      Refresh
                     </button>
                   </div>
                 </td>
