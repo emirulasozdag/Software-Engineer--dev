@@ -39,8 +39,8 @@ class Settings(BaseSettings):
 	ai_provider: str = Field(default="mock")
 	google_api_key: str | None = Field(default=None)
 	google_genai_model: str = Field(default="gemini-2.5-flash")
-	google_genai_temperature: float = Field(default=0.2)
-	google_genai_max_output_tokens: int = Field(default=1024)
+	google_genai_temperature: float = Field(default=0.1)
+	google_genai_max_output_tokens: int = Field(default=14000)
 
 @lru_cache
 def get_settings() -> Settings:

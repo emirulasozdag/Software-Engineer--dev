@@ -18,6 +18,38 @@ from app.infrastructure.db.models.user import StudentDB
 logger = logging.getLogger(__name__)
 
 
+def _log_full_text(*, prefix: str, text: str, test_id: int, provider: str) -> None:
+    """Log full text output in chunks so terminals don't hide it as a single long line."""
+    if text is None:
+        logger.info("%s (testId=%s, provider=%s): <None>", prefix, int(test_id), provider)
+        return
+    text = str(text)
+    logger.info("%s (testId=%s, provider=%s, len=%s)", prefix, int(test_id), provider, len(text))
+    if not text:
+        return
+    chunk_size = 800
+    total = (len(text) + chunk_size - 1) // chunk_size
+    for idx in range(total):
+        chunk = text[idx * chunk_size : (idx + 1) * chunk_size]
+        logger.info("%s chunk %s/%s (testId=%s): %s", prefix, idx + 1, total, int(test_id), chunk)
+
+
+def _log_full_text_warning(*, prefix: str, text: str, test_id: int, provider: str) -> None:
+    """Same as _log_full_text but logs at WARNING level (useful when INFO is filtered)."""
+    if text is None:
+        logger.warning("%s (testId=%s, provider=%s): <None>", prefix, int(test_id), provider)
+        return
+    text = str(text)
+    logger.warning("%s (testId=%s, provider=%s, len=%s)", prefix, int(test_id), provider, len(text))
+    if not text:
+        return
+    chunk_size = 800
+    total = (len(text) + chunk_size - 1) // chunk_size
+    for idx in range(total):
+        chunk = text[idx * chunk_size : (idx + 1) * chunk_size]
+        logger.warning("%s chunk %s/%s (testId=%s): %s", prefix, idx + 1, total, int(test_id), chunk)
+
+
 ModuleType = Literal["reading", "writing", "listening", "speaking"]
 
 
@@ -575,13 +607,15 @@ class PlacementTestService:
 
         prompt = (
             "You are an English writing assessor. Grade the student's writing using CEFR (A1, A2, B1, B2, C1, C2). "
-            "Return ONLY valid JSON with the following schema:\n"
+            "Return ONLY valid minified JSON (single line, no newlines) with the following schema:\n"
             "{\n"
             "  \"cefr_level\": \"A1|A2|B1|B2|C1|C2\",\n"
             "  \"strength_tags\": [\"...\"],\n"
             "  \"weakness_tags\": [\"...\"]\n"
             "}\n"
-            "Use short tags suitable for learning topics (e.g., 'writing: coherence', 'grammar: verb tenses', 'vocabulary: collocations'). Do not use markdown such as ``` or any other formatting, return valid JSON only.\n\n"
+            "Use short tags suitable for learning topics (e.g., 'writing: coherence', 'grammar: verb tenses', 'vocabulary: collocations'). "
+            "Return at most 3 strength_tags and 3 weakness_tags. "
+            "Do not use markdown such as ``` or any other formatting; return valid JSON only.\n\n"
             "Student submissions:\n\n"
             + "\n\n".join(pairs)
         )
@@ -593,10 +627,12 @@ class PlacementTestService:
             settings = get_settings()
             client = get_llm_client(settings)
             provider = str(getattr(settings, "ai_provider", "mock") or "mock")
+            model_name = getattr(settings, "google_genai_model", None)
             logger.info(
-                "PlacementTest writing LLM analysis started (testId=%s, provider=%s, submissions=%s)",
+                "PlacementTest writing LLM analysis started (testId=%s, provider=%s, model=%s, submissions=%s)",
                 int(testId),
                 provider,
+                model_name,
                 len(pairs),
             )
             resp = client.generate(
@@ -612,31 +648,80 @@ class PlacementTestService:
                 )
             )
             raw_text = (resp.text or "").strip()
-            if raw_text:
-                logger.info(
-                    "PlacementTest writing LLM raw response (testId=%s): %s",
-                    int(testId),
-                    raw_text[:2000],
-                )
-            else:
+            if not raw_text:
                 logger.warning(
                     "PlacementTest writing LLM returned empty text (testId=%s)",
                     int(testId),
                 )
+            else:
+                # Log the full output (chunked).
+                _log_full_text(prefix="PlacementTest writing LLM raw response", text=raw_text, test_id=int(testId), provider=provider)
+
+            # If available, log finish_reason / stop details from the raw SDK response.
+            try:
+                raw = resp.raw
+                candidates = getattr(raw, "candidates", None)
+                finish_reason = None
+                if isinstance(candidates, list) and candidates:
+                    finish_reason = getattr(candidates[0], "finish_reason", None)
+                logger.info(
+                    "PlacementTest writing LLM metadata (testId=%s, provider=%s, finish_reason=%s)",
+                    int(testId),
+                    provider,
+                    finish_reason,
+                )
+            except Exception:
+                pass
             data = self._extract_json_object(raw_text)
             if not isinstance(data, dict):
-                head = raw_text[:800]
-                tail = raw_text[-800:] if len(raw_text) > 800 else ""
                 logger.warning(
-                    "PlacementTest writing LLM response was not JSON object (testId=%s, provider=%s, len=%s, endswith_brace=%s). head=%r tail=%r",
+                    "PlacementTest writing LLM response was not JSON object (testId=%s, provider=%s, len=%s, endswith_brace=%s)",
                     int(testId),
                     provider,
                     len(raw_text),
                     raw_text.rstrip().endswith("}"),
-                    head,
-                    tail,
                 )
-                return None
+                # Re-log full response at WARNING level so it's visible even if INFO is filtered.
+                _log_full_text_warning(
+                    prefix="PlacementTest writing LLM raw response (parse_failed)",
+                    text=raw_text,
+                    test_id=int(testId),
+                    provider=provider,
+                )
+
+                # One retry with stricter instructions and deterministic settings.
+                try:
+                    retry_prompt = (
+                        "Your previous answer was invalid or cut off. Output the COMPLETE JSON object again. "
+                        "Return ONLY minified JSON on a single line. "
+                        "Schema: {\"cefr_level\":\"A1|A2|B1|B2|C1|C2\",\"strength_tags\":[...],\"weakness_tags\":[...]} "
+                        "Max 3 tags each.\n\n"
+                        "Student submissions (same as before):\n\n"
+                        + "\n\n".join(pairs)
+                    )
+                    retry = client.generate(
+                        LLMChatRequest(
+                            messages=[
+                                LLMMessage(role="system", content="You are a strict JSON generator."),
+                                LLMMessage(role="user", content=retry_prompt),
+                            ],
+                            model=getattr(settings, "google_genai_model", None),
+                            temperature=0.0,
+                            max_output_tokens=int(getattr(settings, "google_genai_max_output_tokens", 1024)),
+                        )
+                    )
+                    retry_text = (retry.text or "").strip()
+                    _log_full_text_warning(
+                        prefix="PlacementTest writing LLM raw response (retry)",
+                        text=retry_text,
+                        test_id=int(testId),
+                        provider=provider,
+                    )
+                    data = self._extract_json_object(retry_text)
+                    if not isinstance(data, dict):
+                        return None
+                except Exception:
+                    return None
             logger.info(
                 "PlacementTest writing LLM parsed JSON (testId=%s): %s",
                 int(testId),

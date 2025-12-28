@@ -41,23 +41,26 @@ class GoogleGenAIClient:
 
         response: Any
 
-        # Prefer typed config if available, but keep a fallback that works across versions.
+        # Prefer typed config if available, but keep a fallback that still passes settings.
         try:
             from google.genai import types as genai_types  # type: ignore
 
             config = genai_types.GenerateContentConfig(
                 temperature=temperature,
                 max_output_tokens=max_output_tokens,
+                response_mime_type="application/json",
             )
-            response = self._client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config=config,
-            )
+            response = self._client.models.generate_content(model=model, contents=prompt, config=config)
         except Exception:
+            # Some versions accept a plain dict for config.
             response = self._client.models.generate_content(
                 model=model,
                 contents=prompt,
+                config={
+                    "temperature": temperature,
+                    "max_output_tokens": max_output_tokens,
+                    "response_mime_type": "application/json",
+                },
             )
 
         text = _extract_text(response)
