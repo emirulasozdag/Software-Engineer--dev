@@ -4,14 +4,23 @@ import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domain.enums import LanguageLevel
 from app.infrastructure.db.models.results import TestResultDB
-from app.infrastructure.db.models.tests import PlacementTestDB, QuestionDB, TestDB, TestModuleDB
+from app.infrastructure.db.models.tests import (
+    PlacementTestDB,
+    QuestionDB,
+    TestDB,
+    TestModuleDB,
+    ReadingQuestionDB,
+    WritingQuestionDB,
+    ListeningQuestionDB,
+    TestSessionDB,
+)
 from app.infrastructure.db.models.user import StudentDB
 
 
@@ -141,13 +150,23 @@ class PlacementTestService:
             ],
         )
 
-    def getModuleQuestions(self, testId: int, moduleType: ModuleType) -> list[QuestionDB]:
+    def getModuleQuestions(self, testId: int, moduleType: ModuleType) -> list[Any]:
         module = self._get_module_for_test(testId, moduleType)
         payload = self._parse_questions_json(module.questions_json)
         question_ids: list[int] = [int(qid) for qid in payload.get("question_ids", [])]
         if not question_ids:
             return []
-        rows = list(self.db.scalars(select(QuestionDB).where(QuestionDB.id.in_(question_ids))).all())
+
+        if moduleType == "reading":
+            model = ReadingQuestionDB
+        elif moduleType == "listening":
+            model = ListeningQuestionDB
+        elif moduleType == "writing":
+            model = WritingQuestionDB
+        else:
+            model = QuestionDB
+
+        rows = list(self.db.scalars(select(model).where(model.id.in_(question_ids))).all())
         by_id = {q.id: q for q in rows}
         return [by_id[qid] for qid in question_ids if qid in by_id]
 
@@ -156,8 +175,14 @@ class PlacementTestService:
         _ = self._require_student(userId)
         module = self._get_module_for_test(testId, moduleType)
         questions = self.getModuleQuestions(testId, moduleType)
-        correct_by_id = {str(q.id): (q.correct_answer or "").strip() for q in questions}
-        points_by_id = {str(q.id): int(q.points or 0) for q in questions}
+        correct_by_id = {str(q.id): (q.correct_answer or "").strip() for q in questions if hasattr(q, 'correct_answer')}
+        
+        points_by_id = {}
+        for q in questions:
+            if hasattr(q, 'points'):
+                points_by_id[str(q.id)] = int(q.points or 0)
+            else:
+                points_by_id[str(q.id)] = 1
 
         score = 0
         for sub in submissions:
@@ -409,6 +434,39 @@ class PlacementTestService:
             raise ValueError("Module not found")
         return module
 
+    def saveProgress(self, userId: int, testId: int, currentStep: int, answers: dict[str, Any]) -> None:
+        student = self._require_student(userId)
+        session = self.db.scalar(select(TestSessionDB).where(
+            TestSessionDB.student_id == student.id,
+            TestSessionDB.test_id == testId
+        ))
+        if not session:
+            session = TestSessionDB(
+                student_id=student.id,
+                test_id=testId,
+                current_step=currentStep,
+                answers_json=json.dumps(answers)
+            )
+            self.db.add(session)
+        else:
+            session.current_step = currentStep
+            session.answers_json = json.dumps(answers)
+        self.db.commit()
+
+    def getTestSession(self, userId: int, testId: int) -> Optional[TestSessionDB]:
+        student = self._require_student(userId)
+        return self.db.scalar(select(TestSessionDB).where(
+            TestSessionDB.student_id == student.id,
+            TestSessionDB.test_id == testId
+        ))
+
+    def listMyActiveTests(self, userId: int) -> list[TestSessionDB]:
+        student = self._require_student(userId)
+        return list(self.db.scalars(select(TestSessionDB).where(
+            TestSessionDB.student_id == student.id,
+            TestSessionDB.status == "in_progress"
+        )).all())
+
     def _parse_questions_json(self, raw: str | None) -> dict[str, Any]:
         if not raw:
             return {}
@@ -418,103 +476,146 @@ class PlacementTestService:
         except Exception:
             return {}
 
-    def _ensure_seed_questions(self) -> dict[ModuleType, list[QuestionDB]]:
+    def _ensure_seed_questions(self) -> dict[ModuleType, list[Any]]:
         """Create deterministic seed questions if missing."""
-        seed_defs: dict[ModuleType, list[dict[str, Any]]] = {
-            "reading": [
+        # Reading
+        reading_qs = list(self.db.scalars(select(ReadingQuestionDB)).all())
+        if not reading_qs:
+            seeds = [
                 {
-                    "text": "[SEED][READING] Choose the best meaning of: 'efficient'",
-                    "options": ["fast and organized", "very expensive", "confusing", "unfriendly"],
-                    "correct": "fast and organized",
+                    "content": "Reading Passage 1: Efficiency is key in modern business. It ensures that resources are used effectively to achieve the desired goals with minimum waste.",
+                    "question_text": "Choose the best meaning of: 'efficient'",
+                    "options_json": json.dumps(["fast and organized", "very expensive", "confusing", "unfriendly"]),
+                    "correct_answer": "fast and organized",
+                    "difficulty": LanguageLevel.A2
                 },
                 {
-                    "text": "[SEED][READING] Pick the correct sentence:",
-                    "options": [
+                    "content": "Reading Passage 2: Tea culture varies around the world. In some countries, it is a formal ceremony, while in others, it is a casual daily habit.",
+                    "question_text": "Pick the correct sentence based on grammar:",
+                    "options_json": json.dumps([
                         "She don't like tea.",
                         "She doesn't like tea.",
                         "She doesn't likes tea.",
                         "She not like tea.",
-                    ],
-                    "correct": "She doesn't like tea.",
+                    ]),
+                    "correct_answer": "She doesn't like tea.",
+                    "difficulty": LanguageLevel.A1
                 },
                 {
-                    "text": "[SEED][READING] In a short email, which greeting is most formal?",
-                    "options": ["Hey!", "Hi", "Dear Mr. Smith,", "Yo"],
-                    "correct": "Dear Mr. Smith,",
+                    "content": "Reading Passage 3: Writing emails is an essential skill. Formal emails require specific greetings and sign-offs.",
+                    "question_text": "In a short email, which greeting is most formal?",
+                    "options_json": json.dumps(["Hey!", "Hi", "Dear Mr. Smith,", "Yo"]),
+                    "correct_answer": "Dear Mr. Smith,",
+                    "difficulty": LanguageLevel.B1
                 },
-            ],
-            "listening": [
+            ]
+            for s in seeds:
+                q = ReadingQuestionDB(**s)
+                self.db.add(q)
+            self.db.commit()
+            reading_qs = list(self.db.scalars(select(ReadingQuestionDB)).all())
+
+        # Listening
+        listening_qs = list(self.db.scalars(select(ListeningQuestionDB)).all())
+        if not listening_qs:
+            seeds = [
                 {
-                    "text": "[SEED][LISTENING] (Audio: silence.wav) What number do you hear? (dummy)",
-                    "options": ["One", "Two", "Three", "Four"],
-                    "correct": "Two",
-                },
-                {
-                    "text": "[SEED][LISTENING] (Audio: silence.wav) Which word is stressed? (dummy)",
-                    "options": ["record (noun)", "record (verb)", "both", "neither"],
-                    "correct": "record (noun)",
-                },
-                {
-                    "text": "[SEED][LISTENING] (Audio: silence.wav) What is the speaker asking for? (dummy)",
-                    "options": ["directions", "a refund", "a menu", "help with homework"],
-                    "correct": "a menu",
-                },
-            ],
-            "writing": [
-                {
-                    "text": "[SEED][WRITING] Write 2-3 sentences about your daily routine.",
-                    "options": None,
-                    "correct": "N/A",
+                    "audio_url": "/static/audio/silence.wav",
+                    "transcript": "Number two.",
+                    "question_text": "What number do you hear? (dummy)",
+                    "options_json": json.dumps(["One", "Two", "Three", "Four"]),
+                    "correct_answer": "Two",
+                    "difficulty": LanguageLevel.A1
                 },
                 {
-                    "text": "[SEED][WRITING] Write a short opinion: Is studying online effective? Why?",
-                    "options": None,
-                    "correct": "N/A",
+                    "audio_url": "/static/audio/silence.wav",
+                    "transcript": "Please record your name.",
+                    "question_text": "Which word is stressed? (dummy)",
+                    "options_json": json.dumps(["record (noun)", "record (verb)", "both", "neither"]),
+                    "correct_answer": "record (noun)",
+                    "difficulty": LanguageLevel.B1
                 },
                 {
-                    "text": "[SEED][WRITING] Write a short email asking for an appointment.",
-                    "options": None,
-                    "correct": "N/A",
+                    "audio_url": "/static/audio/silence.wav",
+                    "transcript": "Can I see the menu please?",
+                    "question_text": "What is the speaker asking for? (dummy)",
+                    "options_json": json.dumps(["directions", "a refund", "a menu", "help with homework"]),
+                    "correct_answer": "a menu",
+                    "difficulty": LanguageLevel.A2
                 },
-            ],
-            "speaking": [
+            ]
+            for s in seeds:
+                q = ListeningQuestionDB(**s)
+                self.db.add(q)
+            self.db.commit()
+            listening_qs = list(self.db.scalars(select(ListeningQuestionDB)).all())
+
+        # Writing
+        writing_qs = list(self.db.scalars(select(WritingQuestionDB)).all())
+        if not writing_qs:
+            seeds = [
+                {
+                    "prompt": "Write 2-3 sentences about your daily routine.",
+                    "min_words": 20,
+                    "difficulty": LanguageLevel.A1
+                },
+                {
+                    "prompt": "Write a short opinion: Is studying online effective? Why?",
+                    "min_words": 50,
+                    "difficulty": LanguageLevel.B1
+                },
+                {
+                    "prompt": "Write a short email asking for an appointment.",
+                    "min_words": 30,
+                    "difficulty": LanguageLevel.A2
+                },
+            ]
+            for s in seeds:
+                q = WritingQuestionDB(**s)
+                self.db.add(q)
+            self.db.commit()
+            writing_qs = list(self.db.scalars(select(WritingQuestionDB)).all())
+
+        # Speaking (Legacy QuestionDB for now)
+        speaking_qs = []
+        existing_speaking = list(self.db.scalars(select(QuestionDB).where(QuestionDB.text.like("[SEED][SPEAKING]%"))).all())
+        if not existing_speaking:
+             seeds = [
                 {
                     "text": "[SEED][SPEAKING] Record yourself introducing yourself in 15 seconds (dummy).",
-                    "options": None,
-                    "correct": "N/A",
+                    "options_json": None,
+                    "correct_answer": "N/A",
                 },
                 {
                     "text": "[SEED][SPEAKING] Describe a hobby you enjoy (dummy).",
-                    "options": None,
-                    "correct": "N/A",
+                    "options_json": None,
+                    "correct_answer": "N/A",
+                },
+                {
+                    "text": "[SEED][SPEAKING] Read this sentence aloud: 'The quick brown fox jumps over the lazy dog.'",
+                    "options_json": None,
+                    "correct_answer": "N/A",
                 },
                 {
                     "text": "[SEED][SPEAKING] Explain your favorite movie in 2-3 sentences (dummy).",
-                    "options": None,
-                    "correct": "N/A",
+                    "options_json": None,
+                    "correct_answer": "N/A",
                 },
-            ],
-        }
+            ]
+             for s in seeds:
+                q = QuestionDB(**s)
+                self.db.add(q)
+             self.db.commit()
+             speaking_qs = list(self.db.scalars(select(QuestionDB).where(QuestionDB.text.like("[SEED][SPEAKING]%"))).all())
+        else:
+            speaking_qs = existing_speaking
 
-        out: dict[ModuleType, list[QuestionDB]] = {"reading": [], "writing": [], "listening": [], "speaking": []}
-        for module_type, questions in seed_defs.items():
-            for qdef in questions:
-                text = qdef["text"]
-                existing = self.db.scalar(select(QuestionDB).where(QuestionDB.text == text))
-                if existing:
-                    out[module_type].append(existing)
-                    continue
-                model = QuestionDB(
-                    text=text,
-                    options_json=json.dumps(qdef["options"]) if qdef.get("options") else None,
-                    correct_answer=qdef["correct"],
-                    points=1,
-                )
-                self.db.add(model)
-                self.db.commit()
-                self.db.refresh(model)
-                out[module_type].append(model)
-        return out
+        return {
+            "reading": reading_qs,
+            "listening": listening_qs,
+            "writing": writing_qs,
+            "speaking": speaking_qs,
+        }
 
     def _level_for_module_score(self, moduleType: ModuleType, score: int) -> LanguageLevel:
         # Per-module max is currently 3 points.
@@ -591,7 +692,7 @@ class PlacementTestService:
 
         # Pull question text so the LLM sees prompt + answer.
         questions = self.getModuleQuestions(int(testId), "writing")
-        q_by_id: dict[str, str] = {str(q.id): str(q.text) for q in questions}
+        q_by_id: dict[str, str] = {str(q.id): str(getattr(q, "prompt", getattr(q, "text", ""))) for q in questions}
         pairs: list[str] = []
         for sub in subs:
             if not isinstance(sub, dict):

@@ -47,6 +47,8 @@ class LessonPlanDB(Base, IdMixin, TimestampMixin):
     is_general: Mapped[bool] = mapped_column(Boolean, default=False)
     # topics stored as JSON text or separate join table; simplified here
     topics_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Granular progress tracking (0-100%) per topic
+    progress_tracking_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
 
 class ExerciseDB(Base, IdMixin):

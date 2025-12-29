@@ -28,7 +28,7 @@ class StudentAnalysisService:
 			"weaknesses": analysis.get("weaknesses", []) or [],
 		}
 
-	def generatePersonalPlan(self, studentUserId: int) -> Any:
+	def generatePersonalPlan(self, studentUserId: int, refresh: bool = True) -> Any:
 		"""Generate (or refresh) a personalized lesson plan for the given *user id* (Student).
 
 		UC7:
@@ -39,22 +39,26 @@ class StudentAnalysisService:
 		"""
 		student = self._get_student_by_user_id(studentUserId)
 
-		results = self._get_latest_results(student.id, limit=5)
-		analysis = self.identifyStrengthsWeaknesses(results)
-		weakness_items: list[dict[str, Any]] = analysis.get("weakness_items", [])
-
-		level = self._resolve_level(student, results)
-		is_general = len(results) == 0
-
-		recommendations = self.createTopicRecommendations(level, weakness_items, is_general=is_general)
-		topics_json = json.dumps(recommendations)
-
-		# Upsert: keep one latest plan per student (simple)
+		# Check for existing plan if not refreshing
 		existing = self.db.scalar(
 			select(LessonPlanDB)
 			.where(LessonPlanDB.student_id == student.id)
 			.order_by(LessonPlanDB.created_at.desc())
 		)
+
+		if not refresh and existing:
+			return existing
+
+		results = self._get_latest_results(student.id, limit=5)
+		analysis = self.identifyStrengthsWeaknesses(results)
+		weakness_items: list[dict[str, Any]] = analysis.get("weakness_items", [])
+		strength_items: list[dict[str, Any]] = analysis.get("strength_items", [])
+
+		level = self._resolve_level(student, results)
+		is_general = len(results) == 0
+
+		recommendations = self.createTopicRecommendations(level, weakness_items, strength_items, is_general=is_general)
+		topics_json = json.dumps(recommendations)
 
 		if existing:
 			existing.recommended_level = level
@@ -123,6 +127,121 @@ class StudentAnalysisService:
 		}
 
 	def createTopicRecommendations(
+		self,
+		level: LanguageLevel,
+		weakness_items: list[dict[str, Any]],
+		strength_items: list[dict[str, Any]],
+		*,
+		is_general: bool,
+	) -> list[dict[str, Any]]:
+		"""Create topic recommendations based on level + weaknesses using LLM."""
+
+		# Prepare context for LLM
+		weakness_summary = []
+		for item in weakness_items:
+			label = self._label_from_item(item)
+			score = item.get("score")
+			note = item.get("note")
+			desc = f"- {label}"
+			if score is not None:
+				desc += f" (score: {score})"
+			if note:
+				desc += f": {note}"
+			weakness_summary.append(desc)
+
+		strength_summary = []
+		for item in strength_items:
+			label = self._label_from_item(item)
+			score = item.get("score")
+			note = item.get("note")
+			desc = f"- {label}"
+			if score is not None:
+				desc += f" (score: {score})"
+			if note:
+				desc += f": {note}"
+			strength_summary.append(desc)
+
+		weakness_text = "\n".join(weakness_summary) if weakness_summary else "No specific weaknesses identified."
+		strength_text = "\n".join(strength_summary) if strength_summary else "No specific strengths identified."
+
+		prompt = (
+			f"Generate a personalized English learning plan for a student at {level.value} level.\n"
+			f"Identified weaknesses:\n{weakness_text}\nIdentified strengths:\n{strength_text}\n\n"
+			"A weakness overrides a strength if they conflict.\n"
+			"Create 5 specific learning topics. For each topic, provide:\n"
+			"- name: A clear, engaging title.\n"
+			"- category: One of [GRAMMAR, VOCABULARY, PRONUNCIATION, LISTENING, READING, WRITING, SPEAKING].\n"
+			"- reason: A short explanation of why this topic is recommended.\n"
+			"\n"
+			"Return ONLY valid minified JSON (single line) with the following schema:\n"
+			"[\n"
+			"  {\"name\": \"...\", \"category\": \"...\", \"reason\": \"...\"},\n"
+			"  ...\n"
+			"]"
+		)
+
+		try:
+			from app.config.settings import get_settings
+			from app.infrastructure.external.llm import LLMChatRequest, LLMMessage, get_llm_client
+
+			settings = get_settings()
+			client = get_llm_client(settings)
+
+			resp = client.generate(
+				LLMChatRequest(
+					messages=[
+						LLMMessage(role="system", content="You are an expert English curriculum designer. Output strict JSON."),
+						LLMMessage(role="user", content=prompt),
+					],
+					temperature=0.7,
+				)
+			)
+
+			raw_text = (resp.text or "").strip()
+			# Extract JSON
+			start = raw_text.find("[")
+			end = raw_text.rfind("]")
+			if start != -1 and end != -1:
+				json_str = raw_text[start : end + 1]
+				topics = json.loads(json_str)
+			else:
+				topics = [] # Fallback
+
+		except Exception as e:
+			# Fallback to heuristics if LLM fails
+			print(f"LLM Plan Generation Failed: {e}")
+			topics = []
+
+		# Validate and format topics
+		picks = []
+		for i, t in enumerate(topics):
+			if not isinstance(t, dict): continue
+			picks.append({
+				"name": t.get("name", "Untitled Topic"),
+				"category": t.get("category", "GENERAL"),
+				"difficulty": level.value,
+				"priority": i + 1,
+				"reason": t.get("reason", "Recommended for your level."),
+				"evidence": ["Generated by AI based on your profile."]
+			})
+
+		# If LLM failed or returned empty, use fallback (existing logic)
+		if not picks:
+			 return self._createTopicRecommendationsFallback(level, weakness_items, is_general=is_general)
+
+		# Ensure topics exist in TopicDB
+		for item in picks:
+			topic = self._get_or_create_topic(
+				name=item["name"],
+				category=item["category"],
+				level=LanguageLevel(item["difficulty"]),
+				priority=int(item["priority"]),
+			)
+			item["topicId"] = int(topic.id)
+
+		return picks
+
+	def _createTopicRecommendationsFallback(
 		self,
 		level: LanguageLevel,
 		weakness_items: list[dict[str, Any]],

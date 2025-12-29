@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { testService } from '@/services/api/test.service';
 import type {
@@ -32,6 +32,11 @@ const PlacementTest: React.FC = () => {
 
   const [moduleResults, setModuleResults] = useState<Partial<Record<TestModuleType, TestModuleResult>>>({});
   const [finalResult, setFinalResult] = useState<PlacementTestResult | null>(null);
+  const [activeTests, setActiveTests] = useState<{ testId: number; currentStep: number; updatedAt: string }[]>([]);
+
+  useEffect(() => {
+    testService.listActiveTests().then(setActiveTests).catch(console.error);
+  }, []);
 
   const currentModule = useMemo<TestModuleType | null>(() => {
     if (!modules.length) return null;
@@ -54,6 +59,39 @@ const PlacementTest: React.FC = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleSaveAndExit = async () => {
+    if (!testId) return;
+    try {
+      await testService.saveProgress(testId, moduleIndex, answersByQuestionId);
+      alert('Progress saved!');
+      navigate('/dashboard');
+    } catch (e) {
+      console.error(e);
+      setError('Failed to save progress');
+    }
+  };
+
+  const handleResume = async (tid: number) => {
+    setIsStarting(true);
+    try {
+      const data = await testService.resumeTest(tid.toString());
+      setTestId(data.testId.toString());
+      setModuleIndex(data.currentStep);
+      setAnswersByQuestionId(data.answers);
+      setModules(['reading', 'writing', 'listening', 'speaking']);
+      if (['reading', 'writing', 'listening', 'speaking'][data.currentStep]) {
+        await loadModuleQuestions(
+          data.testId.toString(),
+          ['reading', 'writing', 'listening', 'speaking'][data.currentStep] as TestModuleType
+        );
+      }
+    } catch (e) {
+      setError('Failed to resume test');
+    } finally {
+      setIsStarting(false);
+    }
+  };
 
   const loadModuleQuestions = async (tid: string, moduleType: TestModuleType) => {
     setIsLoadingQuestions(true);
@@ -297,6 +335,40 @@ const PlacementTest: React.FC = () => {
             </button>
             <div style={{ color: '#666' }}>Make sure you have time to complete all modules.</div>
           </div>
+
+          {activeTests.length > 0 && (
+            <div style={{ marginTop: 20, borderTop: '1px solid #eee', paddingTop: 20 }}>
+              <h3 style={{ marginBottom: 10 }}>Resume In-Progress Test</h3>
+              {activeTests.map((t) => (
+                <div
+                  key={t.testId}
+                  className="card"
+                  style={{
+                    marginBottom: 10,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: '#f9f9f9',
+                    boxShadow: 'none',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600 }}>Test #{t.testId}</div>
+                    <div style={{ fontSize: '0.9em', color: '#666' }}>
+                      Last updated: {new Date(t.updatedAt).toLocaleString()}
+                    </div>
+                  </div>
+                  <button
+                    className="button button-secondary"
+                    onClick={() => handleResume(t.testId)}
+                    disabled={isStarting}
+                  >
+                    Resume
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -312,8 +384,13 @@ const PlacementTest: React.FC = () => {
             }}
           >
             <h2 style={{ textTransform: 'capitalize', marginBottom: 6 }}>{currentModule} Module</h2>
-            <div style={{ color: '#666' }}>
-              Module {moduleIndex + 1} of {modules.length}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button className="button button-secondary" onClick={handleSaveAndExit}>
+                Save & Exit
+              </button>
+              <div style={{ color: '#666' }}>
+                Module {moduleIndex + 1} of {modules.length}
+              </div>
             </div>
           </div>
 
@@ -333,6 +410,22 @@ const PlacementTest: React.FC = () => {
                   className="card"
                   style={{ background: '#f9f9f9', boxShadow: 'none', marginBottom: 12 }}
                 >
+                  {q.content && (
+                    <div
+                      style={{
+                        marginBottom: 12,
+                        padding: 10,
+                        background: '#eee',
+                        borderRadius: 6,
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      {q.content}
+                    </div>
+                  )}
+
                   <div style={{ fontWeight: 600, marginBottom: 10 }}>
                     {idx + 1}. {q.question}
                   </div>

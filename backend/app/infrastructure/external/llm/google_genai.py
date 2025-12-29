@@ -39,6 +39,8 @@ class GoogleGenAIClient:
         ).strip()
         prompt = dialogue_text if not system_text else f"SYSTEM: {system_text}\n\n{dialogue_text}"
 
+        print("GoogleGenAIClient.generate prompt:", prompt)
+
         response: Any
 
         # Prefer typed config if available, but keep a fallback that still passes settings.
@@ -64,6 +66,7 @@ class GoogleGenAIClient:
             )
 
         text = _extract_text(response)
+        print("GoogleGenAIClient.generate response text:", text)
         return LLMChatResponse(text=text, raw=response)
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -13,6 +13,7 @@ class TestQuestion(BaseModel):
 	id: str
 	type: TestModuleType
 	question: str
+	content: Optional[str] = None
 	options: Optional[list[str]] = None
 	audioUrl: Optional[str] = None
 
@@ -48,6 +49,24 @@ class PlacementTestResult(BaseModel):
 	id: str
 	studentId: str
 	overallLevel: str
+
+
+class SaveProgressRequest(BaseModel):
+	testId: int
+	currentStep: int
+	answers: dict[str, Any]
+
+
+class ResumeTestResponse(BaseModel):
+	testId: int
+	currentStep: int
+	answers: dict[str, Any]
+
+
+class ActiveTestResponse(BaseModel):
+	testId: int
+	currentStep: int
+	updatedAt: datetime
 	readingLevel: str
 	writingLevel: str
 	listeningLevel: str

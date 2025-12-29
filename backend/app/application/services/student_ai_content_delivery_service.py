@@ -12,9 +12,10 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import Settings
 from app.domain.enums import ContentType, LanguageLevel
-from app.infrastructure.db.models.content import ContentDB
+from app.infrastructure.db.models.content import ContentDB, LessonPlanDB, TopicDB
 from app.infrastructure.db.models.results import TestResultDB
 from app.infrastructure.db.models.student_ai_content import StudentAIContentDB
+from app.infrastructure.db.models.tests import ListeningQuestionDB
 from app.infrastructure.db.models.user import StudentDB
 from app.infrastructure.external.llm import LLMChatRequest, LLMMessage, get_llm_client
 
@@ -186,6 +187,9 @@ class StudentAIContentDeliveryService:
 		row.completed_at = datetime.utcnow()
 		self.db.commit()
 
+		# Update topic progress
+		self._update_topic_progress(studentUserId, row, result)
+
 		# Post-completion: update strengths/weaknesses (but not CEFR levels)
 		try:
 			self._analyze_and_update_strengths_weaknesses(
@@ -280,6 +284,30 @@ class StudentAIContentDeliveryService:
 		if int(active_count) > 0:
 			return []
 
+		# Fetch active plan and determine target topic
+		plan = self.db.scalar(
+			select(LessonPlanDB)
+			.where(LessonPlanDB.student_id == student_db_id)
+			.order_by(LessonPlanDB.created_at.desc())
+		)
+
+		target_topic = None
+		if plan and plan.topics_json:
+			try:
+				topics = json.loads(plan.topics_json)
+				progress = {}
+				if plan.progress_tracking_json:
+					progress = json.loads(plan.progress_tracking_json)
+				
+				for t in topics:
+					topic_name = t.get("name")
+					p = progress.get(topic_name, 0)
+					if p < 100:
+						target_topic = t
+						break
+			except Exception:
+				pass
+
 		rows: list[StudentAIContentDB] = []
 		for i in range(1, self.ACTIVE_LIMIT + 1):
 			title, body, rationale, prompt_ctx = self._generate_one(
@@ -288,6 +316,7 @@ class StudentAIContentDeliveryService:
 				contentType=contentType,
 				planTopics=planTopics,
 				batch_index=i,
+				target_topic=target_topic,
 			)
 
 			content = ContentDB(
@@ -348,11 +377,23 @@ class StudentAIContentDeliveryService:
 		contentType: ContentType,
 		planTopics: list[str] | None,
 		batch_index: int,
+		target_topic: dict[str, Any] | None = None,
 	) -> tuple[str, str, str, dict[str, Any]]:
 		print(f"Plan topics: {planTopics}")
 		print(f"Content type: {contentType}")
 		print(f"Student snapshot: {snapshot}")
 		target_skill = self._resolve_target_skill(contentType=contentType, planTopics=planTopics)
+		
+		# Override target skill if target_topic is present
+		if target_topic:
+			cat = target_topic.get("category", "").upper()
+			if cat == "LISTENING":
+				target_skill = "listening"
+			elif cat == "SPEAKING":
+				target_skill = "speaking"
+			elif cat in ("READING", "WRITING", "GRAMMAR", "VOCABULARY"):
+				target_skill = "reading_writing"
+
 		print(f"Resolved target skill: {target_skill}")
 
 		prompt_ctx: dict[str, Any] = {
@@ -371,15 +412,23 @@ class StudentAIContentDeliveryService:
 			},
 			"targetSkill": target_skill,
 			"generatedAt": datetime.utcnow().isoformat(),
+			"targetTopic": target_topic,
 		}
 
-		# Dummy for speaking/listening
-		if target_skill in {"speaking", "listening"}:
+		# Handle Listening: fetch transcript
+		if target_skill == "listening":
+			lq = self.db.scalar(select(ListeningQuestionDB).order_by(func.random()).limit(1))
+			if lq:
+				prompt_ctx["listening_transcript"] = lq.transcript
+				prompt_ctx["listening_audio_url"] = lq.audio_url
+
+		# Dummy for speaking (still dummy as per original code, but listening is now enhanced)
+		if target_skill == "speaking":
 			title = f"{contentType.value.title()} (Dummy)"
 			payload = {
 				"formatVersion": 1,
 				"title": title,
-				"rationale": "Listening/Speaking content is currently dummy (per requirement).",
+				"rationale": "Speaking content is currently dummy.",
 				"blocks": [
 					{
 						"type": "text",
@@ -419,8 +468,16 @@ class StudentAIContentDeliveryService:
 			"- Keep ids stable and unique within the JSON."
 		)
 
+		topic_info = ""
+		if target_topic:
+			topic_info = f"Target Topic: {target_topic.get('name')} ({target_topic.get('category')})\nReason: {target_topic.get('reason')}\n"
+		
+		if "listening_transcript" in prompt_ctx:
+			topic_info += f"Listening Transcript: {prompt_ctx['listening_transcript']}\n(Generate exercises based on this transcript)\n"
+
 		user = (
 			"Generate the next learning content item.\n"
+			f"{topic_info}"
 			f"Content type: {contentType.value}\n"
 			"Student profile:\n"
 			f"- Strengths: {snapshot.strengths}\n"
@@ -552,3 +609,54 @@ class StudentAIContentDeliveryService:
 		latest.strengths_json = json.dumps(strengths_clean[:8])
 		latest.weaknesses_json = json.dumps(weaknesses_clean[:8])
 		self.db.commit()
+
+	def _update_topic_progress(self, studentUserId: int, row: StudentAIContentDB, result: dict[str, Any] | None):
+		if not row.prompt_context_json:
+			return
+
+		try:
+			ctx = json.loads(row.prompt_context_json)
+			target_topic = ctx.get("targetTopic")
+			if not target_topic:
+				return
+
+			topic_name = target_topic.get("name")
+			if not topic_name:
+				return
+
+			# Calculate score from result
+			score_percent = 0.0
+			if result and "score" in result:
+				score_percent = float(result["score"])  # 0-100
+			else:
+				# If no score provided, assume completion means some progress.
+				score_percent = 70.0  # Default pass
+
+			# Increment progress
+			student = self.db.scalar(select(StudentDB).where(StudentDB.user_id == int(studentUserId)))
+			plan = self.db.scalar(
+				select(LessonPlanDB)
+				.where(LessonPlanDB.student_id == student.id)
+				.order_by(LessonPlanDB.created_at.desc())
+			)
+
+			if plan:
+				progress = {}
+				if plan.progress_tracking_json:
+					progress = json.loads(plan.progress_tracking_json)
+
+				current_p = progress.get(topic_name, 0)
+				# Increment logic: e.g. +10% if score > 80, +5% if score > 50.
+				increment = 5
+				if score_percent >= 80:
+					increment = 10
+				elif score_percent < 50:
+					increment = 2
+
+				new_p = min(100, current_p + increment)
+				progress[topic_name] = new_p
+				plan.progress_tracking_json = json.dumps(progress)
+				self.db.commit()
+
+		except Exception as e:
+			logger.error(f"Failed to update topic progress: {e}")

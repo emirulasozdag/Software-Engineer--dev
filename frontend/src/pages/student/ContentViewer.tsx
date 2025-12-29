@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useParams, Link } from 'react-router-dom';
+import { useLocation, useParams, Link, useNavigate } from 'react-router-dom';
 import { learningService, BackendContentOut } from '@/services/api/learning.service';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ContentBlock =
   | { type: 'text'; id: string; text: string }
@@ -44,6 +45,8 @@ const tryParseStructuredBody = (raw: string): StructuredContentBody | null => {
 const ContentViewer: React.FC = () => {
   const { contentId } = useParams<{ contentId: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const rationaleFromNav = (location.state as any)?.rationale as string | undefined;
 
   const [content, setContent] = useState<BackendContentOut | null>(null);
@@ -179,6 +182,43 @@ const ContentViewer: React.FC = () => {
     );
   };
 
+  const handleComplete = async () => {
+    if (!content || !contentId || !user) return;
+    setIsCompleting(true);
+    setCompleteMsg(null);
+    try {
+      // Calculate score (dummy logic for now)
+      let score = 100;
+      // In a real app, we would validate answers against the correct ones here
+      // For now, we just assume completion is enough
+
+      await learningService.completeContent(contentId, {
+        answers,
+        score,
+      });
+
+      setCompleteMsg('Completed! Loading next lesson...');
+
+      // Seamless transition
+      try {
+        const next = await learningService.deliverNextContent({
+          studentId: parseInt(user.id),
+          contentType: 'LESSON',
+        });
+        navigate(`/student/content/${next.content.contentId}`);
+      } catch (err) {
+        // If no next content, go back to plan
+        navigate('/student/learning-plan');
+      }
+      
+    } catch (e: any) {
+      setCompleteMsg(null);
+      setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to complete content');
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   return (
     <div className="container">
       <Link to="/student/learning-plan" style={{ marginBottom: '20px', display: 'inline-block' }}>
@@ -249,30 +289,7 @@ const ContentViewer: React.FC = () => {
               <button
                 className="button button-primary"
                 disabled={isCompleting}
-                onClick={async () => {
-                  if (!contentId) return;
-                  setIsCompleting(true);
-                  setCompleteMsg(null);
-                  try {
-                    const payload = structured
-                      ? {
-                          formatVersion: 1,
-                          contentId: Number(contentId),
-                          answers,
-                        }
-                      : {
-                          contentId: Number(contentId),
-                          answers: null,
-                        };
-                    const res = await learningService.completeContent(contentId, payload);
-                    setCompleteMsg(res.message || 'Completed');
-                  } catch (e: any) {
-                    setCompleteMsg(null);
-                    setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to complete content');
-                  } finally {
-                    setIsCompleting(false);
-                  }
-                }}
+                onClick={handleComplete}
               >
                 {isCompleting ? 'Submitting...' : 'Submit & Complete'}
               </button>

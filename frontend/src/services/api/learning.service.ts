@@ -149,4 +149,11 @@ export const learningService = {
     const response = await apiClient.get(`/api/content-delivery/${contentId}`);
     return response.data;
   },
+
+  completeContent: async (contentId: string, result: any): Promise<{ success: boolean }> => {
+    const response = await apiClient.post(`/api/content-delivery/${contentId}/complete`, {
+      result,
+    });
+    return response.data;
+  },
 };
