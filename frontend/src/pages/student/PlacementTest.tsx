@@ -9,6 +9,7 @@ import type {
   TestQuestion,
   TestSubmission,
 } from '@/types/test.types';
+import AILoading from '@/components/AILoading';
 
 const PlacementTest: React.FC = () => {
   const [isStarting, setIsStarting] = useState(false);
@@ -250,6 +251,8 @@ const PlacementTest: React.FC = () => {
 
   return (
     <div className="container">
+      {isSubmitting && isLastModule && <AILoading message="Analyzing your test results..." />}
+      
       <div
         style={{
           display: 'flex',

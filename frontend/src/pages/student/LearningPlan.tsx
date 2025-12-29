@@ -2,15 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { learningService } from '@/services/api/learning.service';
 import { LearningPlan as LearningPlanType } from '@/types/learning.types';
+import AILoading from '@/components/AILoading';
 
 const LearningPlan: React.FC = () => {
   const [plan, setPlan] = useState<LearningPlanType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const load = async (refresh: boolean) => {
     setError('');
     setLoading(true);
+    if (refresh) setIsRefreshing(true);
     try {
       const p = await learningService.getMyLearningPlan(refresh);
       setPlan(p);
@@ -23,6 +26,7 @@ const LearningPlan: React.FC = () => {
       setError(msg);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -37,6 +41,8 @@ const LearningPlan: React.FC = () => {
 
   return (
     <div className="container">
+      {isRefreshing && <AILoading message="Generating your personalized plan..." />}
+      
       <Link to="/student/dashboard" className="link mb-16" style={{ display: 'inline-block' }}>
         ← Back to Dashboard
       </Link>

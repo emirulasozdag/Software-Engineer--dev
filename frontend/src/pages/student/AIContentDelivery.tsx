@@ -3,6 +3,7 @@ import type { FC } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { learningService } from '@/services/api/learning.service';
 import { useAuth } from '@/contexts/AuthContext';
+import AILoading from '@/components/AILoading';
 
 const AIContentDelivery: FC = () => {
   const { user } = useAuth();
@@ -39,15 +40,15 @@ const AIContentDelivery: FC = () => {
 
   return (
     <div className="container">
+      {isLoading && <AILoading message="Generating personalized content..." />}
+      
       <Link to="/student/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>
         ← Back to Dashboard
       </Link>
 
       <h1 className="page-title">AI Content Delivery</h1>
       
-      {isLoading && <p>Loading your personalized content...</p>}
-
-      {error && (
+      {!isLoading && error && (
         <div className="card" style={{ borderLeft: '4px solid #e74c3c' }}>
           <strong>Error:</strong> {error}
           <div style={{ marginTop: 10 }}>

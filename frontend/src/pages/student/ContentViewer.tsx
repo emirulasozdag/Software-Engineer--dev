@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useParams, Link, useNavigate } from 'react-router-dom';
 import { learningService, BackendContentOut } from '@/services/api/learning.service';
 import { useAuth } from '@/contexts/AuthContext';
+import AILoading from '@/components/AILoading';
 
 type ContentBlock =
   | { type: 'text'; id: string; text: string }
@@ -53,6 +54,7 @@ const ContentViewer: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isCompleting, setIsCompleting] = useState<boolean>(false);
+  const [isLoadingNext, setIsLoadingNext] = useState<boolean>(false);
   const [completeMsg, setCompleteMsg] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState<boolean>(false);
   const [feedbackData, setFeedbackData] = useState<any>(null);
@@ -284,6 +286,7 @@ const ContentViewer: React.FC = () => {
 
   const proceedToNext = async () => {
     if (!user) return;
+    setIsLoadingNext(true);
     try {
       const next = await learningService.deliverNextContent({
         studentId: parseInt(user.id),
@@ -293,11 +296,17 @@ const ContentViewer: React.FC = () => {
     } catch (err) {
       // If no next content, go back to plan
       navigate('/student/learning-plan');
+    } finally {
+      setIsLoadingNext(false);
     }
   };
 
   return (
     <div className="container">
+      {/* AI Loading Overlays */}
+      {isCompleting && <AILoading message="Analyzing your answers..." />}
+      {isLoadingNext && <AILoading message="Generating your next lesson..." />}
+      
       <Link to="/student/learning-plan" style={{ marginBottom: '20px', display: 'inline-block' }}>
         ← Back to Learning Plan
       </Link>

@@ -8,7 +8,7 @@ const apiClient: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  timeout: 360000, // 6 minutes for LLM operations
 });
 
 // Request interceptor - add auth token
