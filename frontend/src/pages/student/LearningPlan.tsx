@@ -69,23 +69,6 @@ const LearningPlan: React.FC = () => {
           </div>
 
           <div className="lp-actions">
-            <button
-              className="button button-secondary"
-              onClick={async () => {
-                setError('');
-                setLoading(true);
-                try {
-                  await learningService.seedUc7Demo();
-                  await load(true);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              disabled={loading}
-              title="Dev helper: adds a demo placement test result so UC7 becomes personalized"
-            >
-              Seed Demo Data
-            </button>
             <button className="button button-primary" onClick={() => load(true)} disabled={loading}>
               {loading ? 'Refreshing...' : 'Refresh Plan'}
             </button>
