@@ -31,5 +31,11 @@ class StudentAIContentDB(Base, IdMixin, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+    # Feedback on student's answers
+    feedback_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Student's submitted answers (for review)
+    user_answers_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     # Ordering within a generated batch (1..5). Not strictly required, but useful.
     batch_index: Mapped[int] = mapped_column(Integer, default=0)

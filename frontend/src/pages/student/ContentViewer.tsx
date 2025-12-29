@@ -54,6 +54,8 @@ const ContentViewer: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isCompleting, setIsCompleting] = useState<boolean>(false);
   const [completeMsg, setCompleteMsg] = useState<string | null>(null);
+  const [showFeedback, setShowFeedback] = useState<boolean>(false);
+  const [feedbackData, setFeedbackData] = useState<any>(null);
 
   // answers payload keyed by blockId
   const [answers, setAnswers] = useState<Record<string, any>>({});
@@ -67,12 +69,23 @@ const ContentViewer: React.FC = () => {
       }
       setError(null);
       setIsLoading(true);
+      setShowFeedback(false);
+      setFeedbackData(null);
       try {
         const c = await learningService.getDeliveredContentById(contentId);
         setContent(c);
 
-        // Reset answers for new content
-        setAnswers({});
+        // If completed, load saved answers
+        if (c.isCompleted && c.userAnswers) {
+          try {
+            const savedAnswers = JSON.parse(c.userAnswers);
+            setAnswers(savedAnswers);
+          } catch {
+            setAnswers({});
+          }
+        } else {
+          setAnswers({});
+        }
       } catch (e: any) {
         setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to load content');
       } finally {
@@ -102,6 +115,8 @@ const ContentViewer: React.FC = () => {
       parts.push({ kind: 'text', value: b.textWithBlanks.slice(lastIndex) });
     }
 
+    const isCompleted = content?.isCompleted || false;
+
     return (
       <div style={{ marginTop: '16px' }}>
         {b.title && <h4 style={{ marginBottom: '6px' }}>{b.title}</h4>}
@@ -122,9 +137,12 @@ const ContentViewer: React.FC = () => {
                   style={{ display: 'inline-block', width: '160px', margin: '0 6px' }}
                   value={current[p.id] ?? ''}
                   onChange={(e) => {
-                    const next = { ...current, [p.id]: e.target.value };
-                    setAnswers((prev) => ({ ...prev, [b.id]: next }));
+                    if (!isCompleted) {
+                      const next = { ...current, [p.id]: e.target.value };
+                      setAnswers((prev) => ({ ...prev, [b.id]: next }));
+                    }
                   }}
+                  disabled={isCompleted}
                 />
               );
             })}
@@ -138,11 +156,13 @@ const ContentViewer: React.FC = () => {
 
   const renderMatching = (b: Extract<ContentBlock, { type: 'matching' }>) => {
     const current = (answers[b.id] as Record<string, string> | undefined) ?? {};
+    const isCompleted = content?.isCompleted || false;
     
     // Helper to check if a right item is already matched
     const isMatched = (rightId: string) => Object.values(current).includes(rightId);
     
     const handleLeftClick = (leftId: string) => {
+      if (isCompleted) return;
       if (current[leftId]) {
         // Unmatch
         const next = { ...current };
@@ -154,6 +174,7 @@ const ContentViewer: React.FC = () => {
     };
 
     const handleRightClick = (rightId: string) => {
+      if (isCompleted) return;
       if (selectedLeft) {
         // Create match
         const next = { ...current, [selectedLeft]: rightId };
@@ -176,7 +197,7 @@ const ContentViewer: React.FC = () => {
             {b.left.map((l) => {
               const matchedRightId = current[l.id];
               const isSelected = selectedLeft === l.id;
-              const isCompleted = !!matchedRightId;
+              const isMatched = !!matchedRightId;
               
               return (
                 <div
@@ -184,16 +205,16 @@ const ContentViewer: React.FC = () => {
                   onClick={() => handleLeftClick(l.id)}
                   style={{
                     padding: '12px',
-                    border: isSelected ? '2px solid #3498db' : isCompleted ? '2px solid #2ecc71' : '1px solid #ddd',
+                    border: isSelected ? '2px solid #3498db' : isMatched ? '2px solid #9b59b6' : '1px solid #ddd',
                     borderRadius: '6px',
                     cursor: 'pointer',
-                    background: isSelected ? '#eaf2f8' : isCompleted ? '#eafaf1' : '#fff',
+                    background: isSelected ? '#eaf2f8' : isMatched ? '#f4ecf7' : '#fff',
                     transition: 'all 0.2s',
                     position: 'relative'
                   }}
                 >
                   {l.text}
-                  {isCompleted && <span style={{ position: 'absolute', right: 10, color: '#2ecc71' }}>✓</span>}
+                  {isMatched && <span style={{ position: 'absolute', right: 10, color: '#9b59b6' }}>🔗</span>}
                 </div>
               );
             })}
@@ -203,8 +224,6 @@ const ContentViewer: React.FC = () => {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {b.right.map((r) => {
               const isUsed = isMatched(r.id);
-              // Find which left item matches this right item (for visual feedback)
-              const matchingLeftId = Object.keys(current).find(key => current[key] === r.id);
               
               return (
                 <div
@@ -212,10 +231,10 @@ const ContentViewer: React.FC = () => {
                   onClick={() => !isUsed && handleRightClick(r.id)}
                   style={{
                     padding: '12px',
-                    border: isUsed ? '2px solid #2ecc71' : '1px solid #ddd',
+                    border: isUsed ? '2px solid #9b59b6' : '1px solid #ddd',
                     borderRadius: '6px',
                     cursor: isUsed ? 'default' : 'pointer',
-                    background: isUsed ? '#eafaf1' : '#fff',
+                    background: isUsed ? '#f4ecf7' : '#fff',
                     opacity: isUsed ? 0.8 : 1,
                     transition: 'all 0.2s'
                   }}
@@ -240,23 +259,19 @@ const ContentViewer: React.FC = () => {
       // In a real app, we would validate answers against the correct ones here
       // For now, we just assume completion is enough
 
-      await learningService.completeContent(contentId, {
+      const response = await learningService.completeContent(contentId, {
         answers,
         score,
       });
 
-      setCompleteMsg('Completed! Loading next lesson...');
-
-      // Seamless transition
-      try {
-        const next = await learningService.deliverNextContent({
-          studentId: parseInt(user.id),
-          contentType: 'LESSON',
-        });
-        navigate(`/student/content/${next.content.contentId}`);
-      } catch (err) {
-        // If no next content, go back to plan
-        navigate('/student/learning-plan');
+      // Check if feedback was returned
+      if (response.feedback) {
+        setFeedbackData(response.feedback);
+        setShowFeedback(true);
+      } else {
+        // No feedback, proceed to next
+        setCompleteMsg('Content completed! Moving to next lesson...');
+        setTimeout(() => proceedToNext(), 1000);
       }
       
     } catch (e: any) {
@@ -267,13 +282,72 @@ const ContentViewer: React.FC = () => {
     }
   };
 
+  const proceedToNext = async () => {
+    if (!user) return;
+    try {
+      const next = await learningService.deliverNextContent({
+        studentId: parseInt(user.id),
+        contentType: 'LESSON',
+      });
+      navigate(`/student/content/${next.content.contentId}`);
+    } catch (err) {
+      // If no next content, go back to plan
+      navigate('/student/learning-plan');
+    }
+  };
+
   return (
     <div className="container">
       <Link to="/student/learning-plan" style={{ marginBottom: '20px', display: 'inline-block' }}>
         ← Back to Learning Plan
       </Link>
       
-      <h1 className="page-title">Content Viewer</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h1 className="page-title">Content Viewer</h1>
+        <Link to="/student/content/history" className="button button-secondary">
+          View History
+        </Link>
+      </div>
+      
+      {/* Feedback Modal */}
+      {showFeedback && feedbackData && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '30px',
+            borderRadius: '8px',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+          }}>
+            <h2 style={{ marginTop: 0, color: '#2ecc71' }}>Great Job! 🎉</h2>
+            <div style={{ marginTop: '20px' }}>
+              <h3>Feedback</h3>
+              <p style={{ lineHeight: 1.6, fontSize: '1.05rem', color: '#2c3e50' }}>{feedbackData.feedback}</p>
+            </div>
+            
+            <button
+              className="button button-primary"
+              style={{ marginTop: '30px', width: '100%' }}
+              onClick={proceedToNext}
+            >
+              Continue to Next Lesson
+            </button>
+          </div>
+        </div>
+      )}
       
       <div className="card">
         {isLoading && <p>Loading...</p>}
@@ -350,18 +424,41 @@ const ContentViewer: React.FC = () => {
               )}
             </div>
 
-            <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-              <button
-                className="button button-primary"
-                disabled={isCompleting}
-                onClick={handleComplete}
-              >
-                {isCompleting ? 'Submitting...' : 'Submit & Complete'}
-              </button>
-              <button className="button button-secondary" disabled title="Progress module will be implemented separately">
-                Save Progress
-              </button>
-            </div>
+            {content.isCompleted && (
+              <div style={{ marginTop: '20px', padding: '15px', background: '#eafaf1', borderRadius: '4px', border: '1px solid #2ecc71' }}>
+                <strong style={{ color: '#27ae60' }}>✓ Completed on {new Date(content.completedAt || '').toLocaleDateString()}</strong>
+                {content.feedback && (
+                  <div style={{ marginTop: '10px' }}>
+                    <button 
+                      className="button button-secondary"
+                      onClick={() => {
+                        try {
+                          const parsed = JSON.parse(content.feedback!);
+                          setFeedbackData(parsed);
+                          setShowFeedback(true);
+                        } catch (e) {
+                          alert('Feedback not available');
+                        }
+                      }}
+                    >
+                      View Feedback
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!content.isCompleted && (
+              <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+                <button
+                  className="button button-primary"
+                  disabled={isCompleting}
+                  onClick={handleComplete}
+                >
+                  {isCompleting ? 'Submitting...' : 'Submit & Complete'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

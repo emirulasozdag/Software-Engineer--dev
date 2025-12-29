@@ -21,6 +21,43 @@ from app.infrastructure.db.models.content import ContentDB
 router = APIRouter()
 
 
+@router.get("/history")
+def get_content_history(
+	user=Depends(require_role(UserRole.STUDENT)),
+	db: Session = Depends(get_db)
+) -> dict:
+	"""Get all completed AI-generated content for the current student."""
+	from app.infrastructure.db.models.student_ai_content import StudentAIContentDB
+	
+	student = db.scalar(select(StudentDB).where(StudentDB.user_id == int(user.userId)))
+	if not student:
+		return {"history": []}
+	
+	completed = db.scalars(
+		select(StudentAIContentDB)
+		.where(
+			StudentAIContentDB.student_id == int(student.id),
+			StudentAIContentDB.is_active == False  # noqa: E712
+		)
+		.order_by(StudentAIContentDB.completed_at.desc())
+	).all()
+	
+	result = []
+	for row in completed:
+		content = db.get(ContentDB, int(row.content_id))
+		if content:
+			result.append({
+				"contentId": int(content.id),
+				"title": content.title,
+				"contentType": content.content_type.value,
+				"level": content.level.value if content.level else None,
+				"completedAt": row.completed_at.isoformat() if row.completed_at else None,
+				"hasFeedback": bool(row.feedback_json),
+			})
+	
+	return {"history": result}
+
+
 def _to_content_out(c) -> ContentOut:
 	return ContentOut(
 		contentId=c.contentId,
@@ -134,46 +171,74 @@ def deliver_content(
 	return DeliverContentResponse(content=content_out, rationale=(derived_prefix + rationale).strip())
 
 
-@router.get("/{contentId}", response_model=ContentOut)
-def get_content(contentId: int, user=Depends(get_current_user), db: Session = Depends(get_db)) -> ContentOut:
+@router.get("/{contentId}")
+def get_content(contentId: int, user=Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+	"""Get content by ID. For students, includes completion state, answers, and feedback if completed."""
 	# Student access is restricted to content assigned to them.
 	if user.role == UserRole.STUDENT:
+		from app.infrastructure.db.models.student_ai_content import StudentAIContentDB
+		
 		service = StudentAIContentDeliveryService(db=db, settings=get_settings())
 		model = service.getDeliveredContentForStudent(studentUserId=int(user.userId), contentId=int(contentId))
 		if not model:
 			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
-		return ContentOut(
-			contentId=int(model.id),
-			title=model.title,
-			body=model.body,
-			contentType=model.content_type,
-			level=model.level,
-			createdBy=int(model.created_by),
-			createdAt=model.created_at,
-			isDraft=bool(model.is_draft),
-		)
+		
+		# Check if content is completed and get answers/feedback
+		student = db.scalar(select(StudentDB).where(StudentDB.user_id == int(user.userId)))
+		row = None
+		if student:
+			row = db.scalar(
+				select(StudentAIContentDB)
+				.where(
+					StudentAIContentDB.student_id == int(student.id),
+					StudentAIContentDB.content_id == int(contentId),
+				)
+			)
+		
+		content_out = {
+			"contentId": int(model.id),
+			"title": model.title,
+			"body": model.body,
+			"contentType": model.content_type.value,
+			"level": model.level.value if model.level else None,
+			"createdBy": int(model.created_by),
+			"createdAt": model.created_at.isoformat(),
+			"isDraft": bool(model.is_draft),
+			"isCompleted": row is not None and not row.is_active,
+			"userAnswers": row.user_answers_json if row and row.user_answers_json else None,
+			"feedback": row.feedback_json if row and row.feedback_json else None,
+			"completedAt": row.completed_at.isoformat() if row and row.completed_at else None,
+		}
+		return content_out
 
 	# Non-student roles: allow direct lookup (e.g., admin debugging)
 	model = db.get(ContentDB, int(contentId))
 	if not model:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
-	return ContentOut(
-		contentId=int(model.id),
-		title=model.title,
-		body=model.body,
-		contentType=model.content_type,
-		level=model.level,
-		createdBy=int(model.created_by),
-		createdAt=model.created_at,
-		isDraft=bool(model.is_draft),
-	)
+	return {
+		"contentId": int(model.id),
+		"title": model.title,
+		"body": model.body,
+		"contentType": model.content_type.value,
+		"level": model.level.value if model.level else None,
+		"createdBy": int(model.created_by),
+		"createdAt": model.created_at.isoformat(),
+		"isDraft": bool(model.is_draft),
+		"isCompleted": False,
+		"userAnswers": None,
+		"feedback": None,
+		"completedAt": None,
+	}
 
 
 @router.post("/{contentId}/complete")
 def complete_content(contentId: int, payload: dict[str, Any] | None = None, user=Depends(require_role(UserRole.STUDENT)), db: Session = Depends(get_db)) -> dict:
 	# Marks as completed and (best-effort) updates strengths/weaknesses via LLM analysis.
 	service = StudentAIContentDeliveryService(db=db, settings=get_settings())
-	ok = service.completeContent(studentUserId=int(user.userId), contentId=int(contentId), result=payload or None)
-	if not ok:
+	result = service.completeContent(studentUserId=int(user.userId), contentId=int(contentId), result=payload or None)
+	if not result:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
-	return {"message": f"Content {contentId} marked as completed."}
+	return {
+		"message": f"Content {contentId} marked as completed.",
+		"feedback": result.get("feedback")
+	}

@@ -167,10 +167,10 @@ class StudentAIContentDeliveryService:
 		studentUserId: int,
 		contentId: int,
 		result: dict[str, Any] | None = None,
-	) -> bool:
+	) -> dict[str, Any] | None:
 		student = self.db.scalar(select(StudentDB).where(StudentDB.user_id == int(studentUserId)))
 		if not student:
-			return False
+			return None
 
 		row = self.db.scalar(
 			select(StudentAIContentDB)
@@ -181,7 +181,11 @@ class StudentAIContentDeliveryService:
 			)
 		)
 		if not row:
-			return False
+			return None
+
+		# Store user answers if provided
+		if result and "answers" in result:
+			row.user_answers_json = json.dumps(result["answers"])
 
 		row.is_active = False
 		row.completed_at = datetime.utcnow()
@@ -190,19 +194,25 @@ class StudentAIContentDeliveryService:
 		# Update topic progress
 		self._update_topic_progress(studentUserId, row, result)
 
-		# Post-completion: update strengths/weaknesses (but not CEFR levels)
+		# Generate feedback and update strengths/weaknesses
+		feedback_data = None
 		try:
-			self._analyze_and_update_strengths_weaknesses(
+			feedback = self._analyze_and_update_strengths_weaknesses(
 				student_db_id=int(student.id),
 				row=row,
 				content=self.db.get(ContentDB, int(contentId)),
 				result=result or {},
 			)
+			# Store feedback
+			if feedback:
+				row.feedback_json = json.dumps(feedback)
+				self.db.commit()
+				feedback_data = feedback
 		except Exception:
 			# Non-fatal: completion should succeed even if analysis fails
 			pass
 
-		return True
+		return {"feedback": feedback_data}
 
 	def _get_or_create_student(self, studentUserId: int) -> StudentDB:
 		student = self.db.scalar(select(StudentDB).where(StudentDB.user_id == int(studentUserId)))
@@ -541,7 +551,7 @@ class StudentAIContentDeliveryService:
 		row: StudentAIContentDB,
 		content: ContentDB | None,
 		result: dict[str, Any],
-	) -> None:
+	) -> dict[str, Any] | None:
 		# Update the latest TestResultDB strengths/weaknesses only.
 		latest = self.db.scalar(
 			select(TestResultDB)
@@ -550,19 +560,21 @@ class StudentAIContentDeliveryService:
 			.limit(1)
 		)
 		if not latest:
-			return
+			return None
 
 		current_strengths = _parse_json_list(latest.strengths_json)
 		current_weaknesses = _parse_json_list(latest.weaknesses_json)
 
 		system = (
-			"You analyze a learner's performance and update strengths/weaknesses tags. "
+			"You analyze a learner's performance and provide feedback. "
 			"Do NOT change CEFR levels. "
-			"Return STRICT JSON: {strengths: [..], weaknesses: [..]} with short skill tags."
+			"Return STRICT JSON: {strengths: [..], weaknesses: [..], feedback: \"...\"} "
+			"with short skill tags and a brief paragraph of feedback (2-3 sentences) on student performance."
 		)
 
 		user = (
-			"Update strengths/weaknesses based on this completed content and performance summary.\n"
+			"Update strengths/weaknesses based on this completed content and performance summary, "
+			"and provide short feedback on the student's answers.\n"
 			f"Current strengths: {current_strengths}\n"
 			f"Current weaknesses: {current_weaknesses}\n\n"
 			f"Content title: {(content.title if content else '')}\n"
@@ -570,10 +582,12 @@ class StudentAIContentDeliveryService:
 			"Content body (truncated):\n"
 			+ ("" if not content else (content.body[:2500]))
 			+ "\n\n"
+			f"Student answers: {result.get('answers', {})}\n"
 			f"Performance/result JSON: {result}\n\n"
 			"Rules:\n"
 			"- Output max 8 strengths and max 8 weaknesses.\n"
 			"- Keep tags consistent over time (reuse existing tags when possible).\n"
+			"- Provide specific, constructive feedback on the student's answers (2-3 sentences).\n"
 		)
 
 		resp = self.llm.generate(
@@ -585,23 +599,25 @@ class StudentAIContentDeliveryService:
 			)
 		)
 
-		print("\n========== LLM PROMPT (strength/weakness update) ==========")
+		print("\n========== LLM PROMPT (strength/weakness update + feedback) ==========")
 		print("SYSTEM:\n" + system)
 		print("\nUSER:\n" + user)
 		print("==========================================================\n")
 
-		print("\n========== LLM RESPONSE (strength/weakness update) ==========")
+		print("\n========== LLM RESPONSE (strength/weakness update + feedback) ==========")
 		print(resp.text)
 		print("===========================================================\n")
 
 		parsed = _safe_json_loads(resp.text)
 		if not isinstance(parsed, dict):
-			return
+			return None
 
 		strengths = parsed.get("strengths")
 		weaknesses = parsed.get("weaknesses")
+		feedback = parsed.get("feedback")
+		
 		if not isinstance(strengths, list) or not isinstance(weaknesses, list):
-			return
+			return None
 
 		strengths_clean = [str(x).strip() for x in strengths if isinstance(x, (str, int, float)) and str(x).strip()]
 		weaknesses_clean = [str(x).strip() for x in weaknesses if isinstance(x, (str, int, float)) and str(x).strip()]
@@ -609,6 +625,15 @@ class StudentAIContentDeliveryService:
 		latest.strengths_json = json.dumps(strengths_clean[:8])
 		latest.weaknesses_json = json.dumps(weaknesses_clean[:8])
 		self.db.commit()
+		
+		# Return feedback for storage
+		if feedback and isinstance(feedback, str):
+			return {
+				"feedback": feedback.strip(),
+				"strengths": strengths_clean[:8],
+				"weaknesses": weaknesses_clean[:8]
+			}
+		return None
 
 	def _update_topic_progress(self, studentUserId: int, row: StudentAIContentDB, result: dict[str, Any] | None):
 		if not row.prompt_context_json:
