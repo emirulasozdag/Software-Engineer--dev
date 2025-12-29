@@ -574,7 +574,7 @@ class StudentAIContentDeliveryService:
 
 		user = (
 			"Update strengths/weaknesses based on this completed content and performance summary, "
-			"and provide short feedback on the student's answers.\n"
+			"and provide short feedback on the student's answers. Address the student directly in the feedback.\n"
 			f"Current strengths: {current_strengths}\n"
 			f"Current weaknesses: {current_weaknesses}\n\n"
 			f"Content title: {(content.title if content else '')}\n"
@@ -598,15 +598,6 @@ class StudentAIContentDeliveryService:
 				],
 			)
 		)
-
-		print("\n========== LLM PROMPT (strength/weakness update + feedback) ==========")
-		print("SYSTEM:\n" + system)
-		print("\nUSER:\n" + user)
-		print("==========================================================\n")
-
-		print("\n========== LLM RESPONSE (strength/weakness update + feedback) ==========")
-		print(resp.text)
-		print("===========================================================\n")
 
 		parsed = _safe_json_loads(resp.text)
 		if not isinstance(parsed, dict):

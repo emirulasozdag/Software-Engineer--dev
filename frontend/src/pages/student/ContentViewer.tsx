@@ -256,14 +256,8 @@ const ContentViewer: React.FC = () => {
     setIsCompleting(true);
     setCompleteMsg(null);
     try {
-      // Calculate score (dummy logic for now)
-      let score = 100;
-      // In a real app, we would validate answers against the correct ones here
-      // For now, we just assume completion is enough
-
       const response = await learningService.completeContent(contentId, {
-        answers,
-        score,
+        answers
       });
 
       // Check if feedback was returned
