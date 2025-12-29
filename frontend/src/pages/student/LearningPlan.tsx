@@ -147,6 +147,17 @@ const LearningPlan: React.FC = () => {
                     <span className="badge">Difficulty: <strong>{t.difficulty}</strong></span>
                   </div>
                 </div>
+                
+                <div style={{ marginTop: 12, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
+                    <span>Progress</span>
+                    <span>{Math.round(t.progress)}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: 8, background: '#eee', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${t.progress}%`, height: '100%', background: '#2ecc71', transition: 'width 0.3s ease' }} />
+                  </div>
+                </div>
+
                 <details style={{ marginTop: 10 }}>
                   <summary className="link" style={{ cursor: 'pointer', display: 'inline-block' }}>
                     Why this topic?

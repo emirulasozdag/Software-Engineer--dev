@@ -134,49 +134,97 @@ const ContentViewer: React.FC = () => {
     );
   };
 
+  const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+
   const renderMatching = (b: Extract<ContentBlock, { type: 'matching' }>) => {
     const current = (answers[b.id] as Record<string, string> | undefined) ?? {};
-    return (
-      <div style={{ marginTop: '16px' }}>
-        {b.title && <h4 style={{ marginBottom: '6px' }}>{b.title}</h4>}
-        <p style={{ color: '#666', marginBottom: '10px' }}>{b.prompt}</p>
+    
+    // Helper to check if a right item is already matched
+    const isMatched = (rightId: string) => Object.values(current).includes(rightId);
+    
+    const handleLeftClick = (leftId: string) => {
+      if (current[leftId]) {
+        // Unmatch
+        const next = { ...current };
+        delete next[leftId];
+        setAnswers(prev => ({ ...prev, [b.id]: next }));
+      } else {
+        setSelectedLeft(leftId);
+      }
+    };
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
-          {b.left.map((l) => (
-            <div
-              key={l.id}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '10px',
-                alignItems: 'center',
-                padding: '10px',
-                background: '#f9f9f9',
-                borderRadius: '4px',
-              }}
-            >
-              <div>
-                <strong>{l.text}</strong>
-              </div>
-              <div>
-                <select
-                  className="input"
-                  value={current[l.id] ?? ''}
-                  onChange={(e) => {
-                    const next = { ...current, [l.id]: e.target.value };
-                    setAnswers((prev) => ({ ...prev, [b.id]: next }));
+    const handleRightClick = (rightId: string) => {
+      if (selectedLeft) {
+        // Create match
+        const next = { ...current, [selectedLeft]: rightId };
+        setAnswers(prev => ({ ...prev, [b.id]: next }));
+        setSelectedLeft(null);
+      }
+    };
+
+    return (
+      <div style={{ marginTop: '24px', padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eee' }}>
+        {b.title && <h4 style={{ marginBottom: '12px' }}>{b.title}</h4>}
+        <p style={{ color: '#666', marginBottom: '16px' }}>{b.prompt}</p>
+        <p style={{ fontSize: '0.9em', color: '#888', marginBottom: '16px' }}>
+          Click an item on the left, then click its match on the right. Click a matched item on the left to unmatch.
+        </p>
+
+        <div style={{ display: 'flex', gap: '40px' }}>
+          {/* Left Column */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {b.left.map((l) => {
+              const matchedRightId = current[l.id];
+              const isSelected = selectedLeft === l.id;
+              const isCompleted = !!matchedRightId;
+              
+              return (
+                <div
+                  key={l.id}
+                  onClick={() => handleLeftClick(l.id)}
+                  style={{
+                    padding: '12px',
+                    border: isSelected ? '2px solid #3498db' : isCompleted ? '2px solid #2ecc71' : '1px solid #ddd',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    background: isSelected ? '#eaf2f8' : isCompleted ? '#eafaf1' : '#fff',
+                    transition: 'all 0.2s',
+                    position: 'relative'
                   }}
                 >
-                  <option value="">Select…</option>
-                  {b.right.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.text}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          ))}
+                  {l.text}
+                  {isCompleted && <span style={{ position: 'absolute', right: 10, color: '#2ecc71' }}>✓</span>}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Right Column */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {b.right.map((r) => {
+              const isUsed = isMatched(r.id);
+              // Find which left item matches this right item (for visual feedback)
+              const matchingLeftId = Object.keys(current).find(key => current[key] === r.id);
+              
+              return (
+                <div
+                  key={r.id}
+                  onClick={() => !isUsed && handleRightClick(r.id)}
+                  style={{
+                    padding: '12px',
+                    border: isUsed ? '2px solid #2ecc71' : '1px solid #ddd',
+                    borderRadius: '6px',
+                    cursor: isUsed ? 'default' : 'pointer',
+                    background: isUsed ? '#eafaf1' : '#fff',
+                    opacity: isUsed ? 0.8 : 1,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {r.text}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
@@ -270,8 +318,17 @@ const ContentViewer: React.FC = () => {
                   {structured.blocks.map((b) => {
                     if (b.type === 'text') {
                       return (
-                        <div key={b.id} style={{ marginTop: '12px' }}>
-                          <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{b.text}</pre>
+                        <div key={b.id} style={{ marginTop: '20px', marginBottom: '20px' }}>
+                          <div style={{ 
+                            whiteSpace: 'pre-wrap', 
+                            margin: 0, 
+                            fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                            fontSize: '1.1rem',
+                            lineHeight: '1.6',
+                            color: '#2c3e50'
+                          }}>
+                            {b.text}
+                          </div>
                         </div>
                       );
                     }
@@ -281,7 +338,15 @@ const ContentViewer: React.FC = () => {
                   })}
                 </>
               ) : (
-                <pre style={{ whiteSpace: 'pre-wrap' }}>{content.body}</pre>
+                <div style={{ 
+                  whiteSpace: 'pre-wrap', 
+                  fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                  fontSize: '1.1rem',
+                  lineHeight: '1.6',
+                  color: '#2c3e50'
+                }}>
+                  {content.body}
+                </div>
               )}
             </div>
 

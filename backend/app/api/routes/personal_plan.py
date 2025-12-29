@@ -30,6 +30,20 @@ def _plan_to_response(plan_db, *, strengths: list[str], weaknesses: list[str]) -
 		except Exception:
 			topics_raw = []
 
+	progress_map = {}
+	if getattr(plan_db, "progress_tracking_json", None):
+		try:
+			progress_map = json.loads(plan_db.progress_tracking_json) or {}
+		except Exception:
+			pass
+
+	topics = []
+	for t in topics_raw:
+		# Merge progress
+		t_obj = TopicRecommendation(**t)
+		t_obj.progress = float(progress_map.get(t_obj.name, 0.0))
+		topics.append(t_obj)
+
 	return LessonPlanResponse(
 		planId=int(plan_db.id),
 		studentId=int(plan_db.student_id),
@@ -37,7 +51,7 @@ def _plan_to_response(plan_db, *, strengths: list[str], weaknesses: list[str]) -
 		isGeneral=bool(plan_db.is_general),
 		strengths=strengths,
 		weaknesses=weaknesses,
-		topics=[TopicRecommendation(**t) for t in topics_raw],
+		topics=topics,
 		createdAt=plan_db.created_at,
 		updatedAt=plan_db.updated_at,
 	)

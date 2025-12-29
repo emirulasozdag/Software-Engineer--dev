@@ -19,8 +19,7 @@ export interface TopicRecommendation {
   difficulty: LanguageLevel;
   priority: number;
   reason: string;
-  evidence?: string[];
-}
+  evidence?: string[];  progress: number;}
 
 export interface ContentItem {
   id: string;
