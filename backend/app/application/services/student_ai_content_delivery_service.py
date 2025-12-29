@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -317,14 +318,27 @@ class StudentAIContentDeliveryService:
 
 	def _resolve_target_skill(self, *, contentType: ContentType, planTopics: list[str] | None) -> str:
 		# Minimal mapping to satisfy "listening/speaking dummy" requirement.
-		if contentType == ContentType.ROLEPLAY:
-			return "speaking"
+		# If multiple skill keywords are present, randomly choose among them
+		# so listening/speaking does not always override reading/writing topics.
 		joined = " ".join([t.lower() for t in (planTopics or []) if isinstance(t, str)])
-		if "speaking" in joined or "pronunciation" in joined or "fluency" in joined:
-			return "speaking"
+
+		candidates: list[str] = []
+		if any(k in joined for k in ("speaking", "pronunciation", "fluency")):
+			candidates.append("speaking")
 		if "listening" in joined:
-			return "listening"
-		return "reading_writing"
+			candidates.append("listening")
+		if any(k in joined for k in ("reading", "writing", "grammar")):
+			candidates.append("reading_writing")
+
+		# De-dupe while preserving order.
+		seen: set[str] = set()
+		unique_candidates = [c for c in candidates if not (c in seen or seen.add(c))]
+
+		if not unique_candidates:
+			return "reading_writing"
+		if len(unique_candidates) == 1:
+			return unique_candidates[0]
+		return random.choice(unique_candidates)
 
 	def _generate_one(
 		self,
@@ -335,7 +349,11 @@ class StudentAIContentDeliveryService:
 		planTopics: list[str] | None,
 		batch_index: int,
 	) -> tuple[str, str, str, dict[str, Any]]:
+		print(f"Plan topics: {planTopics}")
+		print(f"Content type: {contentType}")
+		print(f"Student snapshot: {snapshot}")
 		target_skill = self._resolve_target_skill(contentType=contentType, planTopics=planTopics)
+		print(f"Resolved target skill: {target_skill}")
 
 		prompt_ctx: dict[str, Any] = {
 			"studentUserId": int(student_user_id),

@@ -176,3 +176,4 @@ static_root/
 .Trashes
 ehthumbs.db
 Thumbs.db
+frontend/package-lock.json
