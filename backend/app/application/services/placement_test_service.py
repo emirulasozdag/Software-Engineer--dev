@@ -22,6 +22,8 @@ from app.infrastructure.db.models.tests import (
     TestSessionDB,
 )
 from app.infrastructure.db.models.user import StudentDB
+from app.infrastructure.external.audio_manager import AudioFileManager
+from app.application.services.listening_question_generator_service import ListeningQuestionGeneratorService
 
 
 logger = logging.getLogger(__name__)
@@ -664,40 +666,8 @@ class PlacementTestService:
             self.db.commit()
             reading_qs = list(self.db.scalars(select(ReadingQuestionDB)).all())
 
-        # Listening
-        listening_qs = list(self.db.scalars(select(ListeningQuestionDB)).all())
-        if not listening_qs:
-            seeds = [
-                {
-                    "audio_url": "/static/audio/silence.wav",
-                    "transcript": "Number two.",
-                    "question_text": "What number do you hear? (dummy)",
-                    "options_json": json.dumps(["One", "Two", "Three", "Four"]),
-                    "correct_answer": "Two",
-                    "difficulty": LanguageLevel.A1
-                },
-                {
-                    "audio_url": "/static/audio/silence.wav",
-                    "transcript": "Please record your name.",
-                    "question_text": "Which word is stressed? (dummy)",
-                    "options_json": json.dumps(["record (noun)", "record (verb)", "both", "neither"]),
-                    "correct_answer": "record (noun)",
-                    "difficulty": LanguageLevel.B1
-                },
-                {
-                    "audio_url": "/static/audio/silence.wav",
-                    "transcript": "Can I see the menu please?",
-                    "question_text": "What is the speaker asking for? (dummy)",
-                    "options_json": json.dumps(["directions", "a refund", "a menu", "help with homework"]),
-                    "correct_answer": "a menu",
-                    "difficulty": LanguageLevel.A2
-                },
-            ]
-            for s in seeds:
-                q = ListeningQuestionDB(**s)
-                self.db.add(q)
-            self.db.commit()
-            listening_qs = list(self.db.scalars(select(ListeningQuestionDB)).all())
+        # Listening - Use audio files with LLM-generated questions
+        listening_qs = self._generate_listening_questions_for_placement()
 
         # Writing
         writing_qs = list(self.db.scalars(select(WritingQuestionDB)).all())
@@ -1034,3 +1004,128 @@ class PlacementTestService:
             return json.loads(candidate)
         except Exception:
             return None
+
+    def _generate_listening_questions_for_placement(self) -> list[ListeningQuestionDB]:
+        """Generate listening questions for placement test using audio files and LLM.
+        
+        Randomly selects one audio file per level (A1, A2, B1, B2) and generates
+        3 questions per audio using the LLM.
+        """
+        try:
+            audio_manager = AudioFileManager()
+            question_generator = ListeningQuestionGeneratorService()
+            
+            # Get one random audio for each level
+            audio_by_level = audio_manager.get_random_for_placement_test()
+            
+            all_questions = []
+            
+            for level, audio_file in audio_by_level.items():
+                logger.info(
+                    "Generating listening questions for placement test (level=%s, audio=%s)",
+                    level.value,
+                    audio_file.filename,
+                )
+                
+                # Generate 3 questions per audio
+                questions = question_generator.generate_questions(
+                    script=audio_file.script,
+                    level=level,
+                    num_questions=3,
+                )
+                
+                # Create ListeningQuestionDB objects
+                for q_data in questions:
+                    # Check if question already exists to avoid duplicates
+                    existing = self.db.scalar(
+                        select(ListeningQuestionDB).where(
+                            ListeningQuestionDB.audio_url == audio_manager.get_audio_url(audio_file.filename),
+                            ListeningQuestionDB.question_text == q_data["question"]
+                        )
+                    )
+                    
+                    if existing:
+                        all_questions.append(existing)
+                        continue
+                    
+                    q_obj = ListeningQuestionDB(
+                        audio_url=audio_manager.get_audio_url(audio_file.filename),
+                        transcript=audio_file.script,
+                        question_text=q_data["question"],
+                        options_json=json.dumps(q_data["options"]),
+                        correct_answer=q_data["correct_answer"],
+                        difficulty=level,
+                    )
+                    self.db.add(q_obj)
+                    all_questions.append(q_obj)
+            
+            self.db.commit()
+            
+            # Refresh all objects to get IDs
+            for q in all_questions:
+                self.db.refresh(q)
+            
+            logger.info(
+                "Generated %s listening questions for placement test",
+                len(all_questions)
+            )
+            
+            return all_questions
+        
+        except Exception as e:
+            logger.error(
+                "Failed to generate listening questions for placement test: %s",
+                str(e),
+                exc_info=True
+            )
+            # Fall back to existing questions if available
+            existing_qs = list(self.db.scalars(select(ListeningQuestionDB)).all())
+            if existing_qs:
+                logger.info("Using existing listening questions as fallback")
+                return existing_qs
+            
+            # Last resort: create minimal fallback questions
+            logger.warning("Creating minimal fallback listening questions")
+            return self._create_fallback_listening_questions()
+    
+    def _create_fallback_listening_questions(self) -> list[ListeningQuestionDB]:
+        """Create minimal fallback listening questions when audio generation fails."""
+        seeds = [
+            {
+                "audio_url": "/static/audio/silence.wav",
+                "transcript": "Number two.",
+                "question_text": "What number do you hear? (dummy)",
+                "options_json": json.dumps(["One", "Two", "Three", "Four"]),
+                "correct_answer": "Two",
+                "difficulty": LanguageLevel.A1
+            },
+            {
+                "audio_url": "/static/audio/silence.wav",
+                "transcript": "Can I see the menu please?",
+                "question_text": "What is the speaker asking for? (dummy)",
+                "options_json": json.dumps(["directions", "a refund", "a menu", "help with homework"]),
+                "correct_answer": "a menu",
+                "difficulty": LanguageLevel.A2
+            },
+            {
+                "audio_url": "/static/audio/silence.wav",
+                "transcript": "Please record your name.",
+                "question_text": "Which word is stressed? (dummy)",
+                "options_json": json.dumps(["record (noun)", "record (verb)", "both", "neither"]),
+                "correct_answer": "record (noun)",
+                "difficulty": LanguageLevel.B1
+            },
+        ]
+        
+        questions = []
+        for s in seeds:
+            q = ListeningQuestionDB(**s)
+            self.db.add(q)
+            questions.append(q)
+        
+        self.db.commit()
+        
+        for q in questions:
+            self.db.refresh(q)
+        
+        return questions

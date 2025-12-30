@@ -18,6 +18,20 @@ class TestQuestion(BaseModel):
 	audioUrl: Optional[str] = None
 
 
+class ListeningQuestion(BaseModel):
+	"""A single listening question within a group."""
+	id: str
+	question: str
+	options: list[str]
+
+
+class ListeningQuestionGroup(BaseModel):
+	"""A group of questions for a single audio file."""
+	audioUrl: str
+	transcript: Optional[str] = None
+	questions: list[ListeningQuestion]
+
+
 class TestSubmission(BaseModel):
 	questionId: str
 	answer: str = Field(default="")
@@ -32,6 +46,7 @@ class ModuleQuestionsResponse(BaseModel):
 	testId: str
 	moduleType: TestModuleType
 	questions: list[TestQuestion]
+	listeningGroups: Optional[list[ListeningQuestionGroup]] = None
 
 
 class SubmitModuleRequest(BaseModel):
@@ -67,8 +82,3 @@ class ActiveTestResponse(BaseModel):
 	testId: int
 	currentStep: int
 	updatedAt: datetime
-	readingLevel: str
-	writingLevel: str
-	listeningLevel: str
-	speakingLevel: str
-	completedAt: datetime

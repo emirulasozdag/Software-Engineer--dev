@@ -21,6 +21,19 @@ type ContentBlock =
       prompt: string;
       wordBank: string[];
       textWithBlanks: string; // uses {{b1}} placeholders
+    }
+  | {
+      type: 'audio';
+      id: string;
+      audioUrl: string;
+      transcript?: string;
+    }
+  | {
+      type: 'multiple_choice';
+      id: string;
+      question: string;
+      options: string[];
+      correctAnswer: string;
     };
 
 type StructuredContentBody = {
@@ -155,6 +168,105 @@ const ContentViewer: React.FC = () => {
   };
 
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+
+  const renderAudio = (b: Extract<ContentBlock, { type: 'audio' }>) => {
+    return (
+      <div style={{ marginTop: '20px', padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eee' }}>
+        <h4 style={{ marginBottom: '12px' }}>🎧 Listen to the Audio</h4>
+        <p style={{ color: '#666', marginBottom: '12px' }}>
+          Listen carefully to the audio. You can play it multiple times.
+        </p>
+        <audio 
+          controls 
+          src={`http://localhost:8000${b.audioUrl}`}
+          style={{ 
+            width: '100%', 
+            marginBottom: 12,
+            borderRadius: 6,
+          }}
+          preload="metadata"
+        >
+          Your browser does not support the audio element.
+        </audio>
+        {b.transcript && (
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ cursor: 'pointer', color: '#666', fontSize: '0.9em' }}>
+              Show transcript
+            </summary>
+            <div
+              style={{
+                marginTop: 8,
+                padding: 10,
+                background: '#f9f9f9',
+                borderRadius: 6,
+                fontSize: '0.9em',
+                color: '#555',
+                whiteSpace: 'pre-wrap',
+              }}
+            >
+              {b.transcript}
+            </div>
+          </details>
+        )}
+      </div>
+    );
+  };
+
+  const renderMultipleChoice = (b: Extract<ContentBlock, { type: 'multiple_choice' }>) => {
+    const current = answers[b.id] as string | undefined;
+    const isCompleted = content?.isCompleted || false;
+
+    return (
+      <div style={{ marginTop: '20px', padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eee' }}>
+        <div style={{ fontWeight: 600, marginBottom: 12, fontSize: '1.05em' }}>
+          {b.question}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {b.options.map((opt, idx) => {
+            const isSelected = current === opt;
+            const showCorrect = isCompleted && b.correctAnswer === opt;
+            const showIncorrect = isCompleted && isSelected && current !== b.correctAnswer;
+            
+            return (
+              <label
+                key={idx}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  cursor: isCompleted ? 'default' : 'pointer',
+                  padding: 12,
+                  borderRadius: 6,
+                  background: showCorrect ? '#d4edda' : showIncorrect ? '#f8d7da' : isSelected ? '#e3f2fd' : '#f9f9f9',
+                  border: isSelected ? '2px solid #2196F3' : '2px solid transparent',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <input
+                  type="radio"
+                  name={`mc-${b.id}`}
+                  value={opt}
+                  checked={isSelected}
+                  onChange={(e) => {
+                    if (!isCompleted) {
+                      setAnswers((prev) => ({ ...prev, [b.id]: e.target.value }));
+                    }
+                  }}
+                  disabled={isCompleted}
+                  style={{ marginTop: 2 }}
+                />
+                <div style={{ flex: 1 }}>
+                  {opt}
+                  {showCorrect && <span style={{ marginLeft: 8, color: '#28a745' }}>✓ Correct</span>}
+                  {showIncorrect && <span style={{ marginLeft: 8, color: '#dc3545' }}>✗ Incorrect</span>}
+                </div>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   const renderMatching = (b: Extract<ContentBlock, { type: 'matching' }>) => {
     const current = (answers[b.id] as Record<string, string> | undefined) ?? {};
@@ -409,6 +521,8 @@ const ContentViewer: React.FC = () => {
                         </div>
                       );
                     }
+                    if (b.type === 'audio') return <div key={b.id}>{renderAudio(b)}</div>;
+                    if (b.type === 'multiple_choice') return <div key={b.id}>{renderMultipleChoice(b)}</div>;
                     if (b.type === 'matching') return <div key={b.id}>{renderMatching(b)}</div>;
                     if (b.type === 'fill_blanks') return <div key={b.id}>{renderFillBlanks(b)}</div>;
                     return null;

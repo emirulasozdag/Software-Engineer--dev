@@ -16,6 +16,8 @@ from app.api.schemas.placement_test import (
 	SaveProgressRequest,
 	ResumeTestResponse,
 	ActiveTestResponse,
+	ListeningQuestionGroup,
+	ListeningQuestion,
 )
 from app.application.controllers.placement_test_controller import PlacementTestController
 from app.application.services.placement_test_service import PlacementTestService
@@ -100,10 +102,53 @@ def get_module_questions(
 	except ValueError as e:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+	# For listening module, group questions by audio URL
+	listening_groups = None
+	if moduleType == "listening" and questions:
+		# Group questions by audio URL
+		from collections import defaultdict
+		groups_dict = defaultdict(list)
+		
+		for q in questions:
+			audio_url = getattr(q, "audio_url", None)
+			if audio_url:
+				groups_dict[audio_url].append(q)
+		
+		# Create listening groups
+		listening_groups = []
+		for audio_url, qs in groups_dict.items():
+			# Get transcript from first question (they all share same audio)
+			transcript = getattr(qs[0], "transcript", None) if qs else None
+			
+			listening_questions = []
+			for q in qs:
+				question_text = getattr(q, "question_text", "")
+				options = None
+				if getattr(q, "options_json", None):
+					try:
+						options = json.loads(q.options_json)
+					except Exception:
+						options = []
+				
+				if options:
+					listening_questions.append(ListeningQuestion(
+						id=str(q.id),
+						question=question_text,
+						options=options,
+					))
+			
+			if listening_questions:
+				listening_groups.append(ListeningQuestionGroup(
+					audioUrl=audio_url,
+					transcript=transcript,
+					questions=listening_questions,
+				))
+
 	return ModuleQuestionsResponse(
 		testId=str(testId),
 		moduleType=moduleType,  # type: ignore[arg-type]
 		questions=[_to_question(q, moduleType) for q in questions],
+		listeningGroups=listening_groups,
 	)
 
 

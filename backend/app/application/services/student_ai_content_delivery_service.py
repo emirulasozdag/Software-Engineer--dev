@@ -18,6 +18,8 @@ from app.infrastructure.db.models.student_ai_content import StudentAIContentDB
 from app.infrastructure.db.models.tests import ListeningQuestionDB
 from app.infrastructure.db.models.user import StudentDB
 from app.infrastructure.external.llm import LLMChatRequest, LLMMessage, get_llm_client
+from app.infrastructure.external.audio_manager import AudioFileManager
+from app.application.services.listening_question_generator_service import ListeningQuestionGeneratorService
 
 
 logger = logging.getLogger(__name__)
@@ -183,6 +185,42 @@ class StudentAIContentDeliveryService:
 		if not row:
 			return None
 
+		content = self.db.get(ContentDB, int(contentId))
+		
+		# Evaluate listening answers if provided
+		if result and "answers" in result and content:
+			try:
+				content_body = json.loads(content.body)
+				if content_body.get("formatVersion") == 1:
+					blocks = content_body.get("blocks", [])
+					
+					# Check if this is listening content with multiple choice questions
+					has_audio = any(b.get("type") == "audio" for b in blocks)
+					questions = [b for b in blocks if b.get("type") == "multiple_choice"]
+					
+					if has_audio and questions:
+						# Grade the listening questions
+						answers = result["answers"]
+						correct_count = 0
+						total_count = len(questions)
+						
+						for q in questions:
+							q_id = q.get("id")
+							correct_ans = q.get("correctAnswer", "")
+							user_ans = answers.get(q_id, "")
+							
+							if user_ans.strip().lower() == correct_ans.strip().lower():
+								correct_count += 1
+						
+						# Calculate score percentage
+						score = (correct_count / total_count * 100) if total_count > 0 else 0
+						result["score"] = score
+						result["correct"] = correct_count
+						result["total"] = total_count
+			
+			except Exception as e:
+				logger.error(f"Failed to evaluate listening content: {e}")
+
 		# Store user answers if provided
 		if result and "answers" in result:
 			row.user_answers_json = json.dumps(result["answers"])
@@ -200,7 +238,7 @@ class StudentAIContentDeliveryService:
 			feedback = self._analyze_and_update_strengths_weaknesses(
 				student_db_id=int(student.id),
 				row=row,
-				content=self.db.get(ContentDB, int(contentId)),
+				content=content,
 				result=result or {},
 			)
 			# Store feedback
@@ -212,7 +250,7 @@ class StudentAIContentDeliveryService:
 			# Non-fatal: completion should succeed even if analysis fails
 			pass
 
-		return {"feedback": feedback_data}
+		return {"feedback": feedback_data, "score": result.get("score") if result else None}
 
 	def _get_or_create_student(self, studentUserId: int) -> StudentDB:
 		student = self.db.scalar(select(StudentDB).where(StudentDB.user_id == int(studentUserId)))
@@ -425,8 +463,68 @@ class StudentAIContentDeliveryService:
 			"targetTopic": target_topic,
 		}
 
-		# Handle Listening: fetch transcript
+		# Handle Listening: fetch transcript and generate questions
 		if target_skill == "listening":
+			try:
+				audio_manager = AudioFileManager()
+				question_generator = ListeningQuestionGeneratorService()
+				
+				# Get a random audio file appropriate for the student's listening level
+				audio_files = audio_manager.get_random_by_level(snapshot.listening_level, count=1)
+				
+				if audio_files:
+					audio_file = audio_files[0]
+					audio_url = audio_manager.get_audio_url(audio_file.filename)
+					
+					# Generate questions using LLM
+					questions = question_generator.generate_questions(
+						script=audio_file.script,
+						level=snapshot.listening_level,
+						num_questions=5,  # Generate 5 questions for content delivery
+					)
+					
+					# Build the content payload with audio and questions
+					title = f"Listening Comprehension - {snapshot.listening_level.value}"
+					
+					blocks = [
+						{
+							"type": "audio",
+							"id": "audio1",
+							"audioUrl": audio_url,
+							"transcript": audio_file.script,
+						}
+					]
+					
+					# Add each question as a block
+					for i, q in enumerate(questions, 1):
+						blocks.append({
+							"type": "multiple_choice",
+							"id": f"q{i}",
+							"question": q["question"],
+							"options": q["options"],
+							"correctAnswer": q["correct_answer"],
+						})
+					
+					payload = {
+						"formatVersion": 1,
+						"title": title,
+						"rationale": f"Listening comprehension exercise at {snapshot.listening_level.value} level based on audio transcript.",
+						"blocks": blocks,
+					}
+					
+					body = json.dumps(payload, ensure_ascii=False)
+					rationale = payload["rationale"]
+					prompt_ctx["llmUsed"] = True
+					prompt_ctx["listening_audio_url"] = audio_url
+					prompt_ctx["listening_questions_count"] = len(questions)
+					
+					return title, body, rationale, prompt_ctx
+			
+			except Exception as e:
+				logger.error(f"Failed to generate listening content: {e}", exc_info=True)
+				# Fall back to basic listening content
+			
+			# Fallback if audio generation fails
 			lq = self.db.scalar(select(ListeningQuestionDB).order_by(func.random()).limit(1))
 			if lq:
 				prompt_ctx["listening_transcript"] = lq.transcript

@@ -25,6 +25,14 @@ export const testService = {
   },
 
   /**
+   * Get listening groups for listening module
+   */
+  getListeningGroups: async (testId: string): Promise<any> => {
+    const response = await apiClient.get(`/api/placement-test/${testId}/module/listening`);
+    return response.data.listeningGroups || [];
+  },
+
+  /**
    * Submit answers for a test module
    */
   submitModule: async (
