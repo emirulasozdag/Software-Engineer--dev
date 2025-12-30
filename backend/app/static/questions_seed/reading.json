@@ -1,0 +1,177 @@
+[
+  {
+    "content": "Mina has a dog. The dog is brown. Mina plays with the dog in the park.",
+    "question_text": "Where does Mina play with the dog?",
+    "options_json": "[\"in the park\",\"in the kitchen\",\"at school\",\"in a shop\"]",
+    "correct_answer": "in the park",
+    "difficulty": "A1"
+  },
+  {
+    "content": "Tom is hungry. He makes a sandwich with bread and cheese. Then he eats it.",
+    "question_text": "What does Tom put in his sandwich?",
+    "options_json": "[\"bread and cheese\",\"rice and fish\",\"milk and sugar\",\"apples and oranges\"]",
+    "correct_answer": "bread and cheese",
+    "difficulty": "A1"
+  },
+  {
+    "content": "The weather is cold today. Sara wears a coat and a scarf. She feels warm.",
+    "question_text": "Why does Sara wear a coat and a scarf?",
+    "options_json": "[\"Because it is cold\",\"Because it is hot\",\"Because it is raining\",\"Because it is windy\"]",
+    "correct_answer": "Because it is cold",
+    "difficulty": "A1"
+  },
+  {
+    "content": "Ali goes to the library on Saturday. He borrows a book about space.",
+    "question_text": "When does Ali go to the library?",
+    "options_json": "[\"on Saturday\",\"on Monday\",\"on Friday\",\"on Sunday\"]",
+    "correct_answer": "on Saturday",
+    "difficulty": "A1"
+  },
+  {
+    "content": "Emma has two brothers. They like football. Emma likes drawing pictures.",
+    "question_text": "What does Emma like?",
+    "options_json": "[\"drawing pictures\",\"football\",\"running\",\"swimming\"]",
+    "correct_answer": "drawing pictures",
+    "difficulty": "A1"
+  },
+  {
+    "content": "At 7:30, Ken wakes up and takes a shower. He eats breakfast at 8:00 and leaves home at 8:20.",
+    "question_text": "What time does Ken leave home?",
+    "options_json": "[\"8:20\",\"7:30\",\"8:00\",\"9:00\"]",
+    "correct_answer": "8:20",
+    "difficulty": "A2"
+  },
+  {
+    "content": "Lina wants to save money. She brings lunch from home instead of buying food every day.",
+    "question_text": "Why does Lina bring lunch from home?",
+    "options_json": "[\"To save money\",\"To meet friends\",\"To learn cooking\",\"To travel\"]",
+    "correct_answer": "To save money",
+    "difficulty": "A2"
+  },
+  {
+    "content": "The train is late because there is heavy rain. Many passengers wait inside the station.",
+    "question_text": "What causes the train to be late?",
+    "options_json": "[\"heavy rain\",\"a party\",\"a holiday\",\"a new timetable\"]",
+    "correct_answer": "heavy rain",
+    "difficulty": "A2"
+  },
+  {
+    "content": "Nora visits her grandparents every weekend. She helps them in the garden and drinks tea with them.",
+    "question_text": "What does Nora do with her grandparents?",
+    "options_json": "[\"She helps in the garden and drinks tea\",\"She watches movies all night\",\"She studies math\",\"She goes shopping\"]",
+    "correct_answer": "She helps in the garden and drinks tea",
+    "difficulty": "A2"
+  },
+  {
+    "content": "This museum is free on Wednesdays. On other days, adults pay 10 dollars and children pay 5 dollars.",
+    "question_text": "How much does an adult pay on Thursday?",
+    "options_json": "[\"10 dollars\",\"0 dollars\",\"5 dollars\",\"15 dollars\"]",
+    "correct_answer": "10 dollars",
+    "difficulty": "A2"
+  },
+  {
+    "content": "Luis started learning English to talk with customers at work. He practices for 20 minutes every evening.",
+    "question_text": "What is Luis's main reason for learning English?",
+    "options_json": "[\"To talk with customers at work\",\"To win a race\",\"To cook better\",\"To change his phone\"]",
+    "correct_answer": "To talk with customers at work",
+    "difficulty": "B1"
+  },
+  {
+    "content": "In the city center, a new bike lane opened last month. Many people now cycle to work, and traffic is a little lighter during rush hour.",
+    "question_text": "What has changed since the bike lane opened?",
+    "options_json": "[\"More people cycle to work\",\"Buses stopped running\",\"The weather became warmer\",\"Shops closed earlier\"]",
+    "correct_answer": "More people cycle to work",
+    "difficulty": "B1"
+  },
+  {
+    "content": "Maya forgot her umbrella at home. When it began to rain, she waited under a shop roof until the rain stopped, and then she walked quickly to the bus stop.",
+    "question_text": "What did Maya do when it started raining?",
+    "options_json": "[\"She waited under a shop roof\",\"She went back home immediately\",\"She bought a new coat\",\"She stayed on the bus\"]",
+    "correct_answer": "She waited under a shop roof",
+    "difficulty": "B1"
+  },
+  {
+    "content": "A small café near the university offers a discount to students. To get it, students must show their student card when they pay.",
+    "question_text": "How can students get the discount?",
+    "options_json": "[\"By showing a student card\",\"By ordering tea only\",\"By coming on Sundays\",\"By paying with cash only\"]",
+    "correct_answer": "By showing a student card",
+    "difficulty": "B1"
+  },
+  {
+    "content": "After moving to a new apartment, Hana felt lonely. She joined a local book club, and soon she began to recognize people in her neighborhood and felt more comfortable.",
+    "question_text": "How did Hana feel after joining the book club?",
+    "options_json": "[\"More comfortable\",\"More lonely\",\"Angry\",\"Bored\"]",
+    "correct_answer": "More comfortable",
+    "difficulty": "B1"
+  },
+  {
+    "content": "The company introduced flexible working hours. Employees can now start between 8:00 and 10:00, as long as they work the same total number of hours each day.",
+    "question_text": "What is required under the new schedule?",
+    "options_json": "[\"Working the same total hours each day\",\"Starting exactly at 8:00\",\"Working fewer hours\",\"Working only from home\"]",
+    "correct_answer": "Working the same total hours each day",
+    "difficulty": "B2"
+  },
+  {
+    "content": "During the renovation, the library will remain open, but some sections will be closed at different times. Visitors are advised to check the online notice board before coming.",
+    "question_text": "What should visitors do before visiting the library?",
+    "options_json": "[\"Check the online notice board\",\"Call the police\",\"Bring their own books\",\"Arrive before sunrise\"]",
+    "correct_answer": "Check the online notice board",
+    "difficulty": "B2"
+  },
+  {
+    "content": "Although the new software promised faster performance, many users reported crashes after the update. The developers released a patch two days later to fix the most common issues.",
+    "question_text": "What did the developers do in response to user reports?",
+    "options_json": "[\"They released a patch\",\"They removed the software permanently\",\"They increased the price\",\"They stopped answering messages\"]",
+    "correct_answer": "They released a patch",
+    "difficulty": "B2"
+  },
+  {
+    "content": "The article argues that urban trees reduce heat by providing shade and releasing moisture into the air. However, it also notes that cities must plan carefully to avoid damaging underground pipes and cables.",
+    "question_text": "What is a concern mentioned about planting urban trees?",
+    "options_json": "[\"They can damage underground pipes and cables\",\"They make streets too bright\",\"They attract too many cars\",\"They cause buildings to grow taller\"]",
+    "correct_answer": "They can damage underground pipes and cables",
+    "difficulty": "B2"
+  },
+  {
+    "content": "Researchers observed that participants who slept at least seven hours performed better on memory tasks than those who slept less. Still, the study warns that stress levels and diet may also influence the results.",
+    "question_text": "Which factor could also affect the results besides sleep?",
+    "options_json": "[\"Stress levels and diet\",\"Shoe size\",\"Hair color\",\"Favorite music\"]",
+    "correct_answer": "Stress levels and diet",
+    "difficulty": "B2"
+  },
+  {
+    "content": "The report challenges the assumption that remote work always increases productivity. While some teams benefit from fewer interruptions, others experience slower decision-making due to reduced spontaneous communication. The author concludes that outcomes depend heavily on task type, management practices, and how collaboration tools are used.",
+    "question_text": "What is the main idea of the report?",
+    "options_json": "[\"Remote work productivity depends on multiple factors\",\"Remote work always reduces productivity\",\"Office work is never productive\",\"Collaboration tools are unnecessary\"]",
+    "correct_answer": "Remote work productivity depends on multiple factors",
+    "difficulty": "C1"
+  },
+  {
+    "content": "In many cities, public transportation subsidies are justified as a social good. Critics argue these funds distort markets and primarily help commuters who would pay anyway. Supporters respond that the broader benefits, such as reduced congestion and lower emissions, accrue to society at large, making strict profit-based comparisons incomplete.",
+    "question_text": "Why do supporters say profit-based comparisons are incomplete?",
+    "options_json": "[\"Because public transport creates wider social benefits\",\"Because tickets are free everywhere\",\"Because markets never work\",\"Because commuters refuse to pay\"]",
+    "correct_answer": "Because public transport creates wider social benefits",
+    "difficulty": "C1"
+  },
+  {
+    "content": "The historian notes that eyewitness accounts can be vivid yet unreliable, especially when written long after the event. Memory is shaped by later experiences, social pressure, and selective attention. Therefore, the historian recommends cross-checking testimony with independent records before drawing strong conclusions.",
+    "question_text": "What does the historian recommend doing with eyewitness testimony?",
+    "options_json": "[\"Cross-check it with independent records\",\"Treat it as perfectly accurate\",\"Ignore all written sources\",\"Use it without question\"]",
+    "correct_answer": "Cross-check it with independent records",
+    "difficulty": "C1"
+  },
+  {
+    "content": "A policy proposal suggests raising the carbon tax gradually to give industries time to adapt. The proposal pairs the tax with rebates for low-income households to reduce regressive effects. Its critics claim rebates weaken the incentive to reduce emissions, but the authors argue that price signals remain intact while political feasibility improves.",
+    "question_text": "What is the purpose of providing rebates in the proposal?",
+    "options_json": "[\"To reduce regressive effects on low-income households\",\"To eliminate the carbon tax\",\"To increase fuel consumption\",\"To punish companies immediately\"]",
+    "correct_answer": "To reduce regressive effects on low-income households",
+    "difficulty": "C1"
+  },
+  {
+    "content": "The essay argues that innovation is often mischaracterized as a sudden breakthrough. In practice, it tends to be cumulative: small refinements, iterative testing, and incremental learning. The author warns that focusing only on dramatic success stories can lead organizations to underinvest in the slow, routine work that makes major advances possible.",
+    "question_text": "According to the essay, what is a risk of focusing only on dramatic success stories?",
+    "options_json": "[\"Organizations may underinvest in routine incremental work\",\"Innovation will stop completely\",\"Testing becomes illegal\",\"Employees will never learn\"]",
+    "correct_answer": "Organizations may underinvest in routine incremental work",
+    "difficulty": "C1"
+  }
+]
