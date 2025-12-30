@@ -234,11 +234,55 @@ def get_content(contentId: int, user=Depends(get_current_user), db: Session = De
 @router.post("/{contentId}/complete")
 def complete_content(contentId: int, payload: dict[str, Any] | None = None, user=Depends(require_role(UserRole.STUDENT)), db: Session = Depends(get_db)) -> dict:
 	# Marks as completed and (best-effort) updates strengths/weaknesses via LLM analysis.
+	from app.application.services.achievement_service import AchievementService
+	
+	# Get student
+	student = db.scalar(select(StudentDB).where(StudentDB.user_id == int(user.userId)))
+	if not student:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+	
+	# Get content to check type
+	content = db.get(ContentDB, int(contentId))
+	
 	service = StudentAIContentDeliveryService(db=db, settings=get_settings())
 	result = service.completeContent(studentUserId=int(user.userId), contentId=int(contentId), result=payload or None)
 	if not result:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
+	
+	# Check for achievements
+	achievement_service = AchievementService(db)
+	new_achievement_ids = []
+	
+	# Check content type specific achievements
+	if content:
+		content_type = content.content_type.value if content.content_type else None
+		new_achievement_ids.extend(
+			achievement_service.check_and_award_content_completion(int(student.id), content_type)
+		)
+		
+		# Check if listening content (has audio blocks)
+		if payload and "answers" in payload:
+			try:
+				import json as json_module
+				content_body = json_module.loads(content.body)
+				if content_body.get("formatVersion") == 1:
+					blocks = content_body.get("blocks", [])
+					has_audio = any(b.get("type") == "audio" for b in blocks)
+					if has_audio:
+						new_achievement_ids.extend(
+							achievement_service.check_and_award_listening_completion(int(student.id))
+						)
+			except Exception:
+				pass
+	else:
+		# Generic content completion check
+		new_achievement_ids.extend(
+			achievement_service.check_and_award_content_completion(int(student.id))
+		)
+	
 	return {
 		"message": f"Content {contentId} marked as completed.",
-		"feedback": result.get("feedback")
+		"feedback": result.get("feedback"),
+		"score": result.get("score"),
+		"newAchievements": new_achievement_ids
 	}

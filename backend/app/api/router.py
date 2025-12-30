@@ -29,8 +29,9 @@ api_router.include_router(ai_content.router, prefix="/ai-content", tags=["ai-con
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 
 # Additive router registrations (no changes to existing routes)
-from app.api.routes import data_export, progress
+from app.api.routes import data_export, progress, rewards
 
 api_router.include_router(progress.router, prefix="/progress", tags=["progress"])
 api_router.include_router(data_export.router, prefix="/export", tags=["export"])
+api_router.include_router(rewards.router, prefix="/rewards", tags=["rewards"])
 

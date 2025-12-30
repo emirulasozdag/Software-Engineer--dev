@@ -3,6 +3,8 @@ import { useLocation, useParams, Link, useNavigate } from 'react-router-dom';
 import { learningService, BackendContentOut } from '@/services/api/learning.service';
 import { useAuth } from '@/contexts/AuthContext';
 import AILoading from '@/components/AILoading';
+import { AchievementNotificationContainer } from '@/components/AchievementNotification';
+import { useAchievementNotifications } from '@/hooks/useAchievementNotifications';
 
 type ContentBlock =
   | { type: 'text'; id: string; text: string }
@@ -62,6 +64,7 @@ const ContentViewer: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const rationaleFromNav = (location.state as any)?.rationale as string | undefined;
+  const { newAchievements, clearAchievements, checkForNewAchievements } = useAchievementNotifications();
 
   const [content, setContent] = useState<BackendContentOut | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -372,6 +375,9 @@ const ContentViewer: React.FC = () => {
         answers
       });
 
+      // Check for new achievements after content completion
+      await checkForNewAchievements();
+
       // Check if feedback was returned
       if (response.feedback) {
         setFeedbackData(response.feedback);
@@ -409,6 +415,13 @@ const ContentViewer: React.FC = () => {
 
   return (
     <div className="container">
+      {newAchievements && newAchievements.length > 0 && (
+        <AchievementNotificationContainer
+          achievements={newAchievements}
+          onClose={clearAchievements}
+        />
+      )}
+      
       {/* AI Loading Overlays */}
       {isCompleting && <AILoading message="Analyzing your answers..." />}
       {isLoadingNext && <AILoading message="Generating your next lesson..." />}

@@ -15,8 +15,21 @@ async def lifespan(app: FastAPI):
     # Import models so Base.metadata is populated, then create tables
     from app.infrastructure.db import Base, engine
     import app.infrastructure.db.models  # noqa: F401  (registers all tables)
+    from app.infrastructure.db.session import SessionLocal
+    from app.application.services.achievement_service import AchievementService
 
     Base.metadata.create_all(bind=engine)
+    
+    # Initialize achievements
+    try:
+        db = SessionLocal()
+        achievement_service = AchievementService(db)
+        achievement_service.initialize_achievements()
+        logging.getLogger("uvicorn.error").info("Achievements initialized successfully")
+        db.close()
+    except Exception as e:
+        logging.getLogger("uvicorn.error").error(f"Failed to initialize achievements: {e}")
+    
     yield
     # (Optional) cleanup on shutdown
 

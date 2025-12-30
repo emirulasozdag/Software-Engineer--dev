@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 
 import { ChatMessage, ChatbotCapabilities } from '@/types/communication.types';
 import { communicationService } from '@/services/api/communication.service';
+import { AchievementNotificationContainer } from '@/components/AchievementNotification';
+import { useAchievementNotifications } from '@/hooks/useAchievementNotifications';
 
 const Chatbot: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -12,6 +14,7 @@ const Chatbot: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [capabilities, setCapabilities] = useState<ChatbotCapabilities | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const { newAchievements, clearAchievements, checkForNewAchievements } = useAchievementNotifications();
 
   const welcome: ChatMessage = useMemo(
     () => ({
@@ -84,6 +87,9 @@ const Chatbot: React.FC = () => {
       // Call real API
       const botResponse = await communicationService.sendChatbotMessage(text);
       
+      // Check for new achievements after chatbot interaction
+      await checkForNewAchievements();
+      
       // Replace optimistic message with real one and add bot response
       setMessages((prev) => {
         const withoutOptimistic = prev.filter(m => m.id !== optimisticUserMsg.id);
@@ -121,6 +127,13 @@ const Chatbot: React.FC = () => {
 
   return (
     <div className="container">
+      {newAchievements && newAchievements.length > 0 && (
+        <AchievementNotificationContainer
+          achievements={newAchievements}
+          onClose={clearAchievements}
+        />
+      )}
+      
       <Link to="/student/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>
         ← Back to Dashboard
       </Link>

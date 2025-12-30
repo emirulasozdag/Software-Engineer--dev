@@ -45,10 +45,17 @@ def send_message(
 	user=Depends(require_role(UserRole.STUDENT)),
 	db: Session = Depends(get_db),
 ) -> ChatMessageResponse:
+	from app.application.services.achievement_service import AchievementService
+	
 	student_id = _get_student_id(db, user.userId)
 	controller = ChatbotController(db)
 	session = controller.service.getOrCreateOpenSession(student_id)
 	bot_msg = controller.sendMessage(session.id, payload.message)
+	
+	# Check for first chatbot interaction achievement
+	achievement_service = AchievementService(db)
+	achievement_service.check_and_award_chatbot_interaction(student_id)
+	
 	return _to_response(bot_msg)
 
 

@@ -214,11 +214,21 @@ def complete_test(
 	db: Session = Depends(get_db),
 	user=Depends(get_current_user),
 ):
+	from app.application.services.achievement_service import AchievementService
+	from app.infrastructure.db.models.user import StudentDB
+	from sqlalchemy import select
+	
 	controller = PlacementTestController(PlacementTestService(db))
 	try:
 		res = controller.completeTest(userId=user.userId, testId=testId)
 	except ValueError as e:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+	
+	# Check for first placement test achievement
+	student = db.scalar(select(StudentDB).where(StudentDB.user_id == int(user.userId)))
+	if student:
+		achievement_service = AchievementService(db)
+		achievement_service.check_and_award_placement_test(int(student.id))
 
 	return {
 		"id": str(res.id),
