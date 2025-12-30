@@ -18,6 +18,11 @@ from app.infrastructure.db.models.tests import (
 from app.infrastructure.db.models.results import TestResultDB, SpeakingResultDB
 from app.infrastructure.db.models.progress import ProgressDB, ProgressSnapshotDB
 from app.infrastructure.db.models.assignments import AssignmentDB, StudentAssignmentDB
+from app.infrastructure.db.models.assignment_questions import (
+    AssignmentQuestionDB,
+    QuestionOptionDB,
+    StudentAnswerDB,
+)
 from app.infrastructure.db.models.rewards import RewardDB, StudentRewardDB
 from app.infrastructure.db.models.messaging import MessageDB, AnnouncementDB
 from app.infrastructure.db.models.feedback import FeedbackDB
@@ -55,6 +60,9 @@ __all__ = [
     # Assignments
     "AssignmentDB",
     "StudentAssignmentDB",
+    "AssignmentQuestionDB",
+    "QuestionOptionDB",
+    "StudentAnswerDB",
     # Rewards
     "RewardDB",
     "StudentRewardDB",
