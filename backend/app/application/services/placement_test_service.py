@@ -278,7 +278,7 @@ class PlacementTestService:
         writing_level = self._level_for_module_score("writing", writing_score)
         listening_level = self._level_for_module_score("listening", listening_score)
         speaking_level = self._level_for_module_score("speaking", speaking_score)
-        overall = self._level_for_total_score(total_score)
+        overall = self._average_cefr_levels([reading_level, writing_level, listening_level, speaking_level])
 
         # LLM writing analysis (best-effort; falls back silently).
         llm_writing = self._analyze_writing_with_llm(testId=testId, writing_module=writing)
@@ -760,7 +760,33 @@ class PlacementTestService:
             return LanguageLevel.B1
         return LanguageLevel.B2
 
+    def _average_cefr_levels(self, levels: list[LanguageLevel]) -> LanguageLevel:
+        """Average CEFR levels by converting to numeric values, averaging, and rounding."""
+        if not levels:
+            return LanguageLevel.A1
+        
+        # Map CEFR levels to numeric values
+        level_to_num = {
+            LanguageLevel.A1: 1,
+            LanguageLevel.A2: 2,
+            LanguageLevel.B1: 3,
+            LanguageLevel.B2: 4,
+            LanguageLevel.C1: 5,
+            LanguageLevel.C2: 6,
+        }
+        num_to_level = {v: k for k, v in level_to_num.items()}
+        
+        # Calculate average and round to nearest integer
+        numeric_levels = [level_to_num[level] for level in levels]
+        avg = sum(numeric_levels) / len(numeric_levels)
+        rounded = round(avg)
+        
+        # Clamp to valid range [1, 6]
+        clamped = max(1, min(6, rounded))
+        return num_to_level[clamped]
+
     def _level_for_total_score(self, total: int) -> LanguageLevel:
+        # DEPRECATED: Use _average_cefr_levels instead for proper averaging.
         # Total max is currently 12 points.
         if total <= 2:
             return LanguageLevel.A1
