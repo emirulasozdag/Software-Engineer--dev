@@ -31,3 +31,13 @@ class AssignmentStatus(str, Enum):
     SUBMITTED = "SUBMITTED"
     GRADED = "GRADED"
     LATE = "LATE"
+
+
+class AssignmentContentType(str, Enum):
+    TEXT = "TEXT"
+    TEST = "TEST"
+
+
+class QuestionType(str, Enum):
+    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"
+    TRUE_FALSE = "TRUE_FALSE"

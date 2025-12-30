@@ -9,7 +9,7 @@ from typing import Optional
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.domain.enums import AssignmentStatus
+from app.domain.enums import AssignmentContentType, AssignmentStatus
 from app.infrastructure.db.base import Base, IdMixin, TimestampMixin
 
 
@@ -23,6 +23,8 @@ class AssignmentDB(Base, IdMixin, TimestampMixin):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     due_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     assignment_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    content_type: Mapped[AssignmentContentType] = mapped_column(Enum(AssignmentContentType), nullable=False, default=AssignmentContentType.TEXT)
+    content_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
 
 class StudentAssignmentDB(Base, IdMixin):

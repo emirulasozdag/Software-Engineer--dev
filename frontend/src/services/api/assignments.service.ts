@@ -1,5 +1,40 @@
 import apiClient from './client';
 
+export type AssignmentContentType = 'TEXT' | 'TEST';
+export type QuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE';
+
+export type QuestionOptionCreate = {
+  optionLetter: string;
+  optionText: string;
+};
+
+export type QuestionCreate = {
+  questionType: QuestionType;
+  questionText: string;
+  questionOrder: number;
+  points?: number | null;
+  correctAnswer: string;
+  options?: QuestionOptionCreate[];
+};
+
+export type QuestionOptionOut = {
+  optionLetter: string;
+  optionText: string;
+};
+
+export type QuestionOut = {
+  questionId: number;
+  questionType: QuestionType;
+  questionText: string;
+  questionOrder: number;
+  points: number;
+  options: QuestionOptionOut[];
+};
+
+export type QuestionWithAnswerOut = QuestionOut & {
+  correctAnswer: string;
+};
+
 export type BackendAssignmentOut = {
   assignmentId: number;
   teacherUserId: number;
@@ -7,6 +42,8 @@ export type BackendAssignmentOut = {
   description?: string | null;
   dueDate: string;
   assignmentType: string;
+  contentType: AssignmentContentType;
+  contentText?: string | null;
   createdAt: string;
 };
 
@@ -20,13 +57,29 @@ export type BackendStudentAssignmentOut = {
   assignment?: BackendAssignmentOut | null;
 };
 
+export type StudentAnswerOut = {
+  questionId: number;
+  answer: string;
+  isCorrect?: boolean | null;
+  pointsEarned?: number | null;
+};
+
+export type AssignmentWithAnswersOut = {
+  assignment: BackendAssignmentOut;
+  questions: QuestionWithAnswerOut[];
+  studentAnswers: StudentAnswerOut[];
+  totalScore?: number | null;
+};
+
 export const assignmentsService = {
-  // UC15 teacher: create + optionally assign to students (by userId)
   createAssignment: async (payload: {
     title: string;
     description?: string | null;
-    dueDate: string; // ISO datetime
+    dueDate: string;
     assignmentType: string;
+    contentType: AssignmentContentType;
+    contentText?: string | null;
+    questions?: QuestionCreate[];
     studentUserIds?: number[];
   }): Promise<BackendAssignmentOut> => {
     const response = await apiClient.post('/api/assignments', {
@@ -34,6 +87,9 @@ export const assignmentsService = {
       description: payload.description ?? null,
       dueDate: payload.dueDate,
       assignmentType: payload.assignmentType,
+      contentType: payload.contentType,
+      contentText: payload.contentText ?? null,
+      questions: payload.questions ?? [],
       studentUserIds: payload.studentUserIds ?? [],
     });
     return response.data;
@@ -44,9 +100,18 @@ export const assignmentsService = {
     return response.data;
   },
 
-  // UC15 student: list my assignments
   getMyAssignments: async (): Promise<{ assignments: BackendStudentAssignmentOut[] }> => {
     const response = await apiClient.get('/api/assignments/student/my-assignments');
+    return response.data;
+  },
+
+  getAssignmentQuestions: async (assignmentId: number): Promise<QuestionOut[]> => {
+    const response = await apiClient.get(`/api/assignments/${assignmentId}/questions`);
+    return response.data;
+  },
+
+  getAssignmentDetails: async (studentAssignmentId: number): Promise<AssignmentWithAnswersOut> => {
+    const response = await apiClient.get(`/api/assignments/student-assignments/${studentAssignmentId}/details`);
     return response.data;
   },
 
@@ -54,6 +119,17 @@ export const assignmentsService = {
     const response = await apiClient.post(`/api/assignments/student-assignments/${studentAssignmentId}/submit`);
     return response.data;
   },
+
+  submitTestAnswers: async (
+    studentAssignmentId: number,
+    answers: { questionId: number; answer: string }[]
+  ): Promise<{ updated: boolean; studentAssignmentId: number; status: string }> => {
+    const response = await apiClient.post(`/api/assignments/student-assignments/${studentAssignmentId}/submit-test`, {
+      answers,
+    });
+    return response.data;
+  },
 };
+
 
 
