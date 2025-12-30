@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps.auth import require_role
-from app.api.schemas.communication import ChatMessageResponse, ChatbotSendRequest
+from app.api.schemas.communication import ChatMessageResponse, ChatbotSendRequest, ChatbotCapabilitiesResponse
 from app.application.controllers.chatbot_controller import ChatbotController
 from app.domain.enums import UserRole
 from app.infrastructure.db.models.chatbot import ChatMessageDB
@@ -63,3 +63,15 @@ def new_session(
 	return {"sessionId": str(session.id), "message": "New session started"}
 
 
+@router.get("/capabilities", response_model=ChatbotCapabilitiesResponse)
+def get_capabilities(
+	_=Depends(require_role(UserRole.STUDENT)),
+) -> ChatbotCapabilitiesResponse:
+	"""Get information about chatbot capabilities.
+	
+	Returns details about what the chatbot can do, including:
+	- Context awareness (uses student data)
+	- LLM integration
+	- Learning plan modification capability
+	"""
+	return ChatbotCapabilitiesResponse()

@@ -62,6 +62,31 @@ class ChatMessageResponse(BaseModel):
 
 
 class ChatbotSendRequest(BaseModel):
-	message: str = Field(min_length=1)
+	message: str = Field(min_length=1, description="User's message to the chatbot")
 
 
+class ChatbotCapabilitiesResponse(BaseModel):
+	"""Documents chatbot capabilities for API consumers."""
+	context_aware: bool = True
+	capabilities: list[str] = Field(
+		default_factory=lambda: [
+			"Answer English learning questions",
+			"Provide grammar and vocabulary explanations",
+			"Suggest practice exercises based on student level",
+			"Review student progress and performance",
+			"Update learning plan priorities on request",
+			"Give personalized recommendations based on strengths/weaknesses",
+		]
+	)
+	uses_llm: bool = True
+	can_modify_learning_plan: bool = True
+	context_includes: list[str] = Field(
+		default_factory=lambda: [
+			"Per-module CEFR levels",
+			"Current learning plan and topics",
+			"Placement test results",
+			"Strengths and weaknesses",
+			"AI content completion stats",
+			"Recent feedbacks",
+		]
+	)
