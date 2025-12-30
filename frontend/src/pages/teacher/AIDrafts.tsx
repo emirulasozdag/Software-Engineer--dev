@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { aiContentService, type TeacherDraftContentOut } from '@/services/api/ai-content.service';
+import AILoading from '@/components/AILoading';
 
 const AIDrafts: React.FC = () => {
   const [drafts, setDrafts] = useState<TeacherDraftContentOut[]>([]);
   const [title, setTitle] = useState('');
   const [instructions, setInstructions] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastRationale, setLastRationale] = useState<string | null>(null);
 
@@ -29,6 +31,7 @@ const AIDrafts: React.FC = () => {
 
   const createDraft = async () => {
     setIsLoading(true);
+    setIsGenerating(true);
     setError(null);
     setLastRationale(null);
     try {
@@ -41,6 +44,7 @@ const AIDrafts: React.FC = () => {
       setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to create draft');
     } finally {
       setIsLoading(false);
+      setIsGenerating(false);
     }
   };
 
@@ -59,6 +63,8 @@ const AIDrafts: React.FC = () => {
 
   return (
     <div className="container">
+      {isGenerating && <AILoading message="Generating content draft..." />}
+      
       <Link to="/teacher/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>
         ← Back to Dashboard
       </Link>

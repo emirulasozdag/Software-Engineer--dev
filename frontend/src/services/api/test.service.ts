@@ -25,6 +25,14 @@ export const testService = {
   },
 
   /**
+   * Get listening groups for listening module
+   */
+  getListeningGroups: async (testId: string): Promise<any> => {
+    const response = await apiClient.get(`/api/placement-test/${testId}/module/listening`);
+    return response.data.listeningGroups || [];
+  },
+
+  /**
    * Submit answers for a test module
    */
   submitModule: async (
@@ -61,6 +69,24 @@ export const testService = {
     const response = await apiClient.get(`/api/listening-test/audio/${questionId}`, {
       responseType: 'blob',
     });
+    return response.data;
+  },
+
+  listActiveTests: async (): Promise<{ testId: number; currentStep: number; updatedAt: string }[]> => {
+    const response = await apiClient.get('/api/placement-test/active');
+    return response.data;
+  },
+
+  saveProgress: async (testId: string, currentStep: number, answers: Record<string, any>): Promise<void> => {
+    await apiClient.post('/api/placement-test/save-progress', {
+      testId: parseInt(testId),
+      currentStep,
+      answers,
+    });
+  },
+
+  resumeTest: async (testId: string): Promise<{ testId: string; currentStep: number; answers: Record<string, any> }> => {
+    const response = await apiClient.get(`/api/placement-test/${testId}/resume`);
     return response.data;
   },
 

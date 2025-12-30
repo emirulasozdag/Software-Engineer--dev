@@ -22,6 +22,18 @@ export interface TestQuestion {
   correctAnswer?: string;
 }
 
+export interface ListeningQuestion {
+  id: string;
+  question: string;
+  options: string[];
+}
+
+export interface ListeningQuestionGroup {
+  audioUrl: string;
+  transcript?: string;
+  questions: ListeningQuestion[];
+}
+
 export interface TestSubmission {
   questionId: string;
   answer: string;

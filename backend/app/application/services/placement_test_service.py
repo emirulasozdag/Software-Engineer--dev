@@ -4,15 +4,26 @@ import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domain.enums import LanguageLevel
 from app.infrastructure.db.models.results import TestResultDB
-from app.infrastructure.db.models.tests import PlacementTestDB, QuestionDB, TestDB, TestModuleDB
+from app.infrastructure.db.models.tests import (
+    PlacementTestDB,
+    QuestionDB,
+    TestDB,
+    TestModuleDB,
+    ReadingQuestionDB,
+    WritingQuestionDB,
+    ListeningQuestionDB,
+    TestSessionDB,
+)
 from app.infrastructure.db.models.user import StudentDB
+from app.infrastructure.external.audio_manager import AudioFileManager
+from app.application.services.listening_question_generator_service import ListeningQuestionGeneratorService
 
 
 logger = logging.getLogger(__name__)
@@ -141,13 +152,23 @@ class PlacementTestService:
             ],
         )
 
-    def getModuleQuestions(self, testId: int, moduleType: ModuleType) -> list[QuestionDB]:
+    def getModuleQuestions(self, testId: int, moduleType: ModuleType) -> list[Any]:
         module = self._get_module_for_test(testId, moduleType)
         payload = self._parse_questions_json(module.questions_json)
         question_ids: list[int] = [int(qid) for qid in payload.get("question_ids", [])]
         if not question_ids:
             return []
-        rows = list(self.db.scalars(select(QuestionDB).where(QuestionDB.id.in_(question_ids))).all())
+
+        if moduleType == "reading":
+            model = ReadingQuestionDB
+        elif moduleType == "listening":
+            model = ListeningQuestionDB
+        elif moduleType == "writing":
+            model = WritingQuestionDB
+        else:
+            model = QuestionDB
+
+        rows = list(self.db.scalars(select(model).where(model.id.in_(question_ids))).all())
         by_id = {q.id: q for q in rows}
         return [by_id[qid] for qid in question_ids if qid in by_id]
 
@@ -156,8 +177,14 @@ class PlacementTestService:
         _ = self._require_student(userId)
         module = self._get_module_for_test(testId, moduleType)
         questions = self.getModuleQuestions(testId, moduleType)
-        correct_by_id = {str(q.id): (q.correct_answer or "").strip() for q in questions}
-        points_by_id = {str(q.id): int(q.points or 0) for q in questions}
+        correct_by_id = {str(q.id): (q.correct_answer or "").strip() for q in questions if hasattr(q, 'correct_answer')}
+        
+        points_by_id = {}
+        for q in questions:
+            if hasattr(q, 'points'):
+                points_by_id[str(q.id)] = int(q.points or 0)
+            else:
+                points_by_id[str(q.id)] = 1
 
         score = 0
         for sub in submissions:
@@ -251,7 +278,7 @@ class PlacementTestService:
         writing_level = self._level_for_module_score("writing", writing_score)
         listening_level = self._level_for_module_score("listening", listening_score)
         speaking_level = self._level_for_module_score("speaking", speaking_score)
-        overall = self._level_for_total_score(total_score)
+        overall = self._average_cefr_levels([reading_level, writing_level, listening_level, speaking_level])
 
         # LLM writing analysis (best-effort; falls back silently).
         llm_writing = self._analyze_writing_with_llm(testId=testId, writing_module=writing)
@@ -409,6 +436,39 @@ class PlacementTestService:
             raise ValueError("Module not found")
         return module
 
+    def saveProgress(self, userId: int, testId: int, currentStep: int, answers: dict[str, Any]) -> None:
+        student = self._require_student(userId)
+        session = self.db.scalar(select(TestSessionDB).where(
+            TestSessionDB.student_id == student.id,
+            TestSessionDB.test_id == testId
+        ))
+        if not session:
+            session = TestSessionDB(
+                student_id=student.id,
+                test_id=testId,
+                current_step=currentStep,
+                answers_json=json.dumps(answers)
+            )
+            self.db.add(session)
+        else:
+            session.current_step = currentStep
+            session.answers_json = json.dumps(answers)
+        self.db.commit()
+
+    def getTestSession(self, userId: int, testId: int) -> Optional[TestSessionDB]:
+        student = self._require_student(userId)
+        return self.db.scalar(select(TestSessionDB).where(
+            TestSessionDB.student_id == student.id,
+            TestSessionDB.test_id == testId
+        ))
+
+    def listMyActiveTests(self, userId: int) -> list[TestSessionDB]:
+        student = self._require_student(userId)
+        return list(self.db.scalars(select(TestSessionDB).where(
+            TestSessionDB.student_id == student.id,
+            TestSessionDB.status == "in_progress"
+        )).all())
+
     def _parse_questions_json(self, raw: str | None) -> dict[str, Any]:
         if not raw:
             return {}
@@ -418,103 +478,268 @@ class PlacementTestService:
         except Exception:
             return {}
 
-    def _ensure_seed_questions(self) -> dict[ModuleType, list[QuestionDB]]:
+    def _ensure_seed_questions(self) -> dict[ModuleType, list[Any]]:
         """Create deterministic seed questions if missing."""
-        seed_defs: dict[ModuleType, list[dict[str, Any]]] = {
-            "reading": [
+        # Reading
+        reading_qs = list(self.db.scalars(select(ReadingQuestionDB)).all())
+        if not reading_qs:
+            seeds = [
+                    {
+                      "content": "Mina has a dog. The dog is brown. Mina plays with the dog in the park.",
+                      "question_text": "Where does Mina play with the dog?",
+                      "options_json": "[\"in the park\",\"in the kitchen\",\"at school\",\"in a shop\"]",
+                      "correct_answer": "in the park",
+                      "difficulty": LanguageLevel.A1
+                    },
+                    {
+                      "content": "Tom is hungry. He makes a sandwich with bread and cheese. Then he eats it.",
+                      "question_text": "What does Tom put in his sandwich?",
+                      "options_json": "[\"bread and cheese\",\"rice and fish\",\"milk and sugar\",\"apples and oranges\"]",
+                      "correct_answer": "bread and cheese",
+                      "difficulty": LanguageLevel.A1
+                    },
+                    {
+                      "content": "The weather is cold today. Sara wears a coat and a scarf. She feels warm.",
+                      "question_text": "Why does Sara wear a coat and a scarf?",
+                      "options_json": "[\"Because it is cold\",\"Because it is hot\",\"Because it is raining\",\"Because it is windy\"]",
+                      "correct_answer": "Because it is cold",
+                      "difficulty": LanguageLevel.A1
+                    },
+                    {
+                      "content": "Ali goes to the library on Saturday. He borrows a book about space.",
+                      "question_text": "When does Ali go to the library?",
+                      "options_json": "[\"on Saturday\",\"on Monday\",\"on Friday\",\"on Sunday\"]",
+                      "correct_answer": "on Saturday",
+                      "difficulty": LanguageLevel.A1
+                    },
+                    {
+                      "content": "Emma has two brothers. They like football. Emma likes drawing pictures.",
+                      "question_text": "What does Emma like?",
+                      "options_json": "[\"drawing pictures\",\"football\",\"running\",\"swimming\"]",
+                      "correct_answer": "drawing pictures",
+                      "difficulty": LanguageLevel.A1
+                    },
+                    {
+                      "content": "At 7:30, Ken wakes up and takes a shower. He eats breakfast at 8:00 and leaves home at 8:20.",
+                      "question_text": "What time does Ken leave home?",
+                      "options_json": "[\"8:20\",\"7:30\",\"8:00\",\"9:00\"]",
+                      "correct_answer": "8:20",
+                      "difficulty": LanguageLevel.A2
+                    },
+                    {
+                      "content": "Lina wants to save money. She brings lunch from home instead of buying food every day.",
+                      "question_text": "Why does Lina bring lunch from home?",
+                      "options_json": "[\"To save money\",\"To meet friends\",\"To learn cooking\",\"To travel\"]",
+                      "correct_answer": "To save money",
+                      "difficulty": LanguageLevel.A2
+                    },
+                    {
+                      "content": "The train is late because there is heavy rain. Many passengers wait inside the station.",
+                      "question_text": "What causes the train to be late?",
+                      "options_json": "[\"heavy rain\",\"a party\",\"a holiday\",\"a new timetable\"]",
+                      "correct_answer": "heavy rain",
+                      "difficulty": LanguageLevel.A2
+                    },
+                    {
+                      "content": "Nora visits her grandparents every weekend. She helps them in the garden and drinks tea with them.",
+                      "question_text": "What does Nora do with her grandparents?",
+                      "options_json": "[\"She helps in the garden and drinks tea\",\"She watches movies all night\",\"She studies math\",\"She goes shopping\"]",
+                      "correct_answer": "She helps in the garden and drinks tea",
+                      "difficulty": LanguageLevel.A2
+                    },
+                    {
+                      "content": "This museum is free on Wednesdays. On other days, adults pay 10 dollars and children pay 5 dollars.",
+                      "question_text": "How much does an adult pay on Thursday?",
+                      "options_json": "[\"10 dollars\",\"0 dollars\",\"5 dollars\",\"15 dollars\"]",
+                      "correct_answer": "10 dollars",
+                      "difficulty": LanguageLevel.A2
+                    },
+                    {
+                      "content": "Luis started learning English to talk with customers at work. He practices for 20 minutes every evening.",
+                      "question_text": "What is Luis's main reason for learning English?",
+                      "options_json": "[\"To talk with customers at work\",\"To win a race\",\"To cook better\",\"To change his phone\"]",
+                      "correct_answer": "To talk with customers at work",
+                      "difficulty": LanguageLevel.B1
+                    },
+                    {
+                      "content": "In the city center, a new bike lane opened last month. Many people now cycle to work, and traffic is a little lighter during rush hour.",
+                      "question_text": "What has changed since the bike lane opened?",
+                      "options_json": "[\"More people cycle to work\",\"Buses stopped running\",\"The weather became warmer\",\"Shops closed earlier\"]",
+                      "correct_answer": "More people cycle to work",
+                      "difficulty": LanguageLevel.B1
+                    },
+                    {
+                      "content": "Maya forgot her umbrella at home. When it began to rain, she waited under a shop roof until the rain stopped, and then she walked quickly to the bus stop.",
+                      "question_text": "What did Maya do when it started raining?",
+                      "options_json": "[\"She waited under a shop roof\",\"She went back home immediately\",\"She bought a new coat\",\"She stayed on the bus\"]",
+                      "correct_answer": "She waited under a shop roof",
+                      "difficulty": LanguageLevel.B1
+                    },
+                    {
+                      "content": "A small café near the university offers a discount to students. To get it, students must show their student card when they pay.",
+                      "question_text": "How can students get the discount?",
+                      "options_json": "[\"By showing a student card\",\"By ordering tea only\",\"By coming on Sundays\",\"By paying with cash only\"]",
+                      "correct_answer": "By showing a student card",
+                      "difficulty": LanguageLevel.B1
+                    },
+                    {
+                      "content": "After moving to a new apartment, Hana felt lonely. She joined a local book club, and soon she began to recognize people in her neighborhood and felt more comfortable.",
+                      "question_text": "How did Hana feel after joining the book club?",
+                      "options_json": "[\"More comfortable\",\"More lonely\",\"Angry\",\"Bored\"]",
+                      "correct_answer": "More comfortable",
+                      "difficulty": LanguageLevel.B1
+                    },
+                    {
+                      "content": "The company introduced flexible working hours. Employees can now start between 8:00 and 10:00, as long as they work the same total number of hours each day.",
+                      "question_text": "What is required under the new schedule?",
+                      "options_json": "[\"Working the same total hours each day\",\"Starting exactly at 8:00\",\"Working fewer hours\",\"Working only from home\"]",
+                      "correct_answer": "Working the same total hours each day",
+                      "difficulty": LanguageLevel.B2
+                    },
+                    {
+                      "content": "During the renovation, the library will remain open, but some sections will be closed at different times. Visitors are advised to check the online notice board before coming.",
+                      "question_text": "What should visitors do before visiting the library?",
+                      "options_json": "[\"Check the online notice board\",\"Call the police\",\"Bring their own books\",\"Arrive before sunrise\"]",
+                      "correct_answer": "Check the online notice board",
+                      "difficulty": LanguageLevel.B2
+                    },
+                    {
+                      "content": "Although the new software promised faster performance, many users reported crashes after the update. The developers released a patch two days later to fix the most common issues.",
+                      "question_text": "What did the developers do in response to user reports?",
+                      "options_json": "[\"They released a patch\",\"They removed the software permanently\",\"They increased the price\",\"They stopped answering messages\"]",
+                      "correct_answer": "They released a patch",
+                      "difficulty": LanguageLevel.B2
+                    },
+                    {
+                      "content": "The article argues that urban trees reduce heat by providing shade and releasing moisture into the air. However, it also notes that cities must plan carefully to avoid damaging underground pipes and cables.",
+                      "question_text": "What is a concern mentioned about planting urban trees?",
+                      "options_json": "[\"They can damage underground pipes and cables\",\"They make streets too bright\",\"They attract too many cars\",\"They cause buildings to grow taller\"]",
+                      "correct_answer": "They can damage underground pipes and cables",
+                      "difficulty": LanguageLevel.B2
+                    },
+                    {
+                      "content": "Researchers observed that participants who slept at least seven hours performed better on memory tasks than those who slept less. Still, the study warns that stress levels and diet may also influence the results.",
+                      "question_text": "Which factor could also affect the results besides sleep?",
+                      "options_json": "[\"Stress levels and diet\",\"Shoe size\",\"Hair color\",\"Favorite music\"]",
+                      "correct_answer": "Stress levels and diet",
+                      "difficulty": LanguageLevel.B2
+                    },
+                    {
+                      "content": "The report challenges the assumption that remote work always increases productivity. While some teams benefit from fewer interruptions, others experience slower decision-making due to reduced spontaneous communication. The author concludes that outcomes depend heavily on task type, management practices, and how collaboration tools are used.",
+                      "question_text": "What is the main idea of the report?",
+                      "options_json": "[\"Remote work productivity depends on multiple factors\",\"Remote work always reduces productivity\",\"Office work is never productive\",\"Collaboration tools are unnecessary\"]",
+                      "correct_answer": "Remote work productivity depends on multiple factors",
+                      "difficulty": LanguageLevel.C1
+                    },
+                    {
+                      "content": "In many cities, public transportation subsidies are justified as a social good. Critics argue these funds distort markets and primarily help commuters who would pay anyway. Supporters respond that the broader benefits, such as reduced congestion and lower emissions, accrue to society at large, making strict profit-based comparisons incomplete.",
+                      "question_text": "Why do supporters say profit-based comparisons are incomplete?",
+                      "options_json": "[\"Because public transport creates wider social benefits\",\"Because tickets are free everywhere\",\"Because markets never work\",\"Because commuters refuse to pay\"]",
+                      "correct_answer": "Because public transport creates wider social benefits",
+                      "difficulty": LanguageLevel.C1
+                    },
+                    {
+                      "content": "The historian notes that eyewitness accounts can be vivid yet unreliable, especially when written long after the event. Memory is shaped by later experiences, social pressure, and selective attention. Therefore, the historian recommends cross-checking testimony with independent records before drawing strong conclusions.",
+                      "question_text": "What does the historian recommend doing with eyewitness testimony?",
+                      "options_json": "[\"Cross-check it with independent records\",\"Treat it as perfectly accurate\",\"Ignore all written sources\",\"Use it without question\"]",
+                      "correct_answer": "Cross-check it with independent records",
+                      "difficulty": LanguageLevel.C1
+                    },
+                    {
+                      "content": "A policy proposal suggests raising the carbon tax gradually to give industries time to adapt. The proposal pairs the tax with rebates for low-income households to reduce regressive effects. Its critics claim rebates weaken the incentive to reduce emissions, but the authors argue that price signals remain intact while political feasibility improves.",
+                      "question_text": "What is the purpose of providing rebates in the proposal?",
+                      "options_json": "[\"To reduce regressive effects on low-income households\",\"To eliminate the carbon tax\",\"To increase fuel consumption\",\"To punish companies immediately\"]",
+                      "correct_answer": "To reduce regressive effects on low-income households",
+                      "difficulty": LanguageLevel.C1
+                    },
+                    {
+                      "content": "The essay argues that innovation is often mischaracterized as a sudden breakthrough. In practice, it tends to be cumulative: small refinements, iterative testing, and incremental learning. The author warns that focusing only on dramatic success stories can lead organizations to underinvest in the slow, routine work that makes major advances possible.",
+                      "question_text": "According to the essay, what is a risk of focusing only on dramatic success stories?",
+                      "options_json": "[\"Organizations may underinvest in routine incremental work\",\"Innovation will stop completely\",\"Testing becomes illegal\",\"Employees will never learn\"]",
+                      "correct_answer": "Organizations may underinvest in routine incremental work",
+                      "difficulty": LanguageLevel.C1
+                    },
+            ]
+            for s in seeds:
+                q = ReadingQuestionDB(**s)
+                self.db.add(q)
+            self.db.commit()
+            reading_qs = list(self.db.scalars(select(ReadingQuestionDB)).all())
+
+        # Listening - Use audio files with LLM-generated questions
+        listening_qs = self._generate_listening_questions_for_placement()
+
+        # Writing
+        writing_qs = list(self.db.scalars(select(WritingQuestionDB)).all())
+        if not writing_qs:
+            seeds = [
                 {
-                    "text": "[SEED][READING] Choose the best meaning of: 'efficient'",
-                    "options": ["fast and organized", "very expensive", "confusing", "unfriendly"],
-                    "correct": "fast and organized",
+                    "prompt": "Write 2-3 sentences about your daily routine.",
+                    "min_words": 20,
+                    "difficulty": LanguageLevel.A1
                 },
                 {
-                    "text": "[SEED][READING] Pick the correct sentence:",
-                    "options": [
-                        "She don't like tea.",
-                        "She doesn't like tea.",
-                        "She doesn't likes tea.",
-                        "She not like tea.",
-                    ],
-                    "correct": "She doesn't like tea.",
+                    "prompt": "Write a short opinion: Is studying online effective? Why?",
+                    "min_words": 50,
+                    "difficulty": LanguageLevel.B1
                 },
                 {
-                    "text": "[SEED][READING] In a short email, which greeting is most formal?",
-                    "options": ["Hey!", "Hi", "Dear Mr. Smith,", "Yo"],
-                    "correct": "Dear Mr. Smith,",
-                },
-            ],
-            "listening": [
-                {
-                    "text": "[SEED][LISTENING] (Audio: silence.wav) What number do you hear? (dummy)",
-                    "options": ["One", "Two", "Three", "Four"],
-                    "correct": "Two",
+                    "prompt": "Write a short email asking for an appointment.",
+                    "min_words": 30,
+                    "difficulty": LanguageLevel.A2
                 },
                 {
-                    "text": "[SEED][LISTENING] (Audio: silence.wav) Which word is stressed? (dummy)",
-                    "options": ["record (noun)", "record (verb)", "both", "neither"],
-                    "correct": "record (noun)",
-                },
-                {
-                    "text": "[SEED][LISTENING] (Audio: silence.wav) What is the speaker asking for? (dummy)",
-                    "options": ["directions", "a refund", "a menu", "help with homework"],
-                    "correct": "a menu",
-                },
-            ],
-            "writing": [
-                {
-                    "text": "[SEED][WRITING] Write 2-3 sentences about your daily routine.",
-                    "options": None,
-                    "correct": "N/A",
-                },
-                {
-                    "text": "[SEED][WRITING] Write a short opinion: Is studying online effective? Why?",
-                    "options": None,
-                    "correct": "N/A",
-                },
-                {
-                    "text": "[SEED][WRITING] Write a short email asking for an appointment.",
-                    "options": None,
-                    "correct": "N/A",
-                },
-            ],
-            "speaking": [
+                    "prompt": "Describe your favorite holiday destination and explain why you like it.",
+                    "min_words": 100,
+                    "difficulty": LanguageLevel.B2                    
+                }
+            ]
+            for s in seeds:
+                q = WritingQuestionDB(**s)
+                self.db.add(q)
+            self.db.commit()
+            writing_qs = list(self.db.scalars(select(WritingQuestionDB)).all())
+
+        # Speaking (Legacy QuestionDB for now)
+        speaking_qs = []
+        existing_speaking = list(self.db.scalars(select(QuestionDB).where(QuestionDB.text.like("[SEED][SPEAKING]%"))).all())
+        if not existing_speaking:
+             seeds = [
                 {
                     "text": "[SEED][SPEAKING] Record yourself introducing yourself in 15 seconds (dummy).",
-                    "options": None,
-                    "correct": "N/A",
+                    "options_json": None,
+                    "correct_answer": "N/A",
                 },
                 {
                     "text": "[SEED][SPEAKING] Describe a hobby you enjoy (dummy).",
-                    "options": None,
-                    "correct": "N/A",
+                    "options_json": None,
+                    "correct_answer": "N/A",
+                },
+                {
+                    "text": "[SEED][SPEAKING] Read this sentence aloud: 'The quick brown fox jumps over the lazy dog.'",
+                    "options_json": None,
+                    "correct_answer": "N/A",
                 },
                 {
                     "text": "[SEED][SPEAKING] Explain your favorite movie in 2-3 sentences (dummy).",
-                    "options": None,
-                    "correct": "N/A",
+                    "options_json": None,
+                    "correct_answer": "N/A",
                 },
-            ],
-        }
+            ]
+             for s in seeds:
+                q = QuestionDB(**s)
+                self.db.add(q)
+             self.db.commit()
+             speaking_qs = list(self.db.scalars(select(QuestionDB).where(QuestionDB.text.like("[SEED][SPEAKING]%"))).all())
+        else:
+            speaking_qs = existing_speaking
 
-        out: dict[ModuleType, list[QuestionDB]] = {"reading": [], "writing": [], "listening": [], "speaking": []}
-        for module_type, questions in seed_defs.items():
-            for qdef in questions:
-                text = qdef["text"]
-                existing = self.db.scalar(select(QuestionDB).where(QuestionDB.text == text))
-                if existing:
-                    out[module_type].append(existing)
-                    continue
-                model = QuestionDB(
-                    text=text,
-                    options_json=json.dumps(qdef["options"]) if qdef.get("options") else None,
-                    correct_answer=qdef["correct"],
-                    points=1,
-                )
-                self.db.add(model)
-                self.db.commit()
-                self.db.refresh(model)
-                out[module_type].append(model)
-        return out
+        return {
+            "reading": reading_qs,
+            "listening": listening_qs,
+            "writing": writing_qs,
+            "speaking": speaking_qs,
+        }
 
     def _level_for_module_score(self, moduleType: ModuleType, score: int) -> LanguageLevel:
         # Per-module max is currently 3 points.
@@ -535,7 +760,33 @@ class PlacementTestService:
             return LanguageLevel.B1
         return LanguageLevel.B2
 
+    def _average_cefr_levels(self, levels: list[LanguageLevel]) -> LanguageLevel:
+        """Average CEFR levels by converting to numeric values, averaging, and rounding."""
+        if not levels:
+            return LanguageLevel.A1
+        
+        # Map CEFR levels to numeric values
+        level_to_num = {
+            LanguageLevel.A1: 1,
+            LanguageLevel.A2: 2,
+            LanguageLevel.B1: 3,
+            LanguageLevel.B2: 4,
+            LanguageLevel.C1: 5,
+            LanguageLevel.C2: 6,
+        }
+        num_to_level = {v: k for k, v in level_to_num.items()}
+        
+        # Calculate average and round to nearest integer
+        numeric_levels = [level_to_num[level] for level in levels]
+        avg = sum(numeric_levels) / len(numeric_levels)
+        rounded = round(avg)
+        
+        # Clamp to valid range [1, 6]
+        clamped = max(1, min(6, rounded))
+        return num_to_level[clamped]
+
     def _level_for_total_score(self, total: int) -> LanguageLevel:
+        # DEPRECATED: Use _average_cefr_levels instead for proper averaging.
         # Total max is currently 12 points.
         if total <= 2:
             return LanguageLevel.A1
@@ -591,7 +842,7 @@ class PlacementTestService:
 
         # Pull question text so the LLM sees prompt + answer.
         questions = self.getModuleQuestions(int(testId), "writing")
-        q_by_id: dict[str, str] = {str(q.id): str(q.text) for q in questions}
+        q_by_id: dict[str, str] = {str(q.id): str(getattr(q, "prompt", getattr(q, "text", ""))) for q in questions}
         pairs: list[str] = []
         for sub in subs:
             if not isinstance(sub, dict):
@@ -779,3 +1030,128 @@ class PlacementTestService:
             return json.loads(candidate)
         except Exception:
             return None
+
+    def _generate_listening_questions_for_placement(self) -> list[ListeningQuestionDB]:
+        """Generate listening questions for placement test using audio files and LLM.
+        
+        Randomly selects one audio file per level (A1, A2, B1, B2) and generates
+        3 questions per audio using the LLM.
+        """
+        try:
+            audio_manager = AudioFileManager()
+            question_generator = ListeningQuestionGeneratorService()
+            
+            # Get one random audio for each level
+            audio_by_level = audio_manager.get_random_for_placement_test()
+            
+            all_questions = []
+            
+            for level, audio_file in audio_by_level.items():
+                logger.info(
+                    "Generating listening questions for placement test (level=%s, audio=%s)",
+                    level.value,
+                    audio_file.filename,
+                )
+                
+                # Generate 3 questions per audio
+                questions = question_generator.generate_questions(
+                    script=audio_file.script,
+                    level=level,
+                    num_questions=3,
+                )
+                
+                # Create ListeningQuestionDB objects
+                for q_data in questions:
+                    # Check if question already exists to avoid duplicates
+                    existing = self.db.scalar(
+                        select(ListeningQuestionDB).where(
+                            ListeningQuestionDB.audio_url == audio_manager.get_audio_url(audio_file.filename),
+                            ListeningQuestionDB.question_text == q_data["question"]
+                        )
+                    )
+                    
+                    if existing:
+                        all_questions.append(existing)
+                        continue
+                    
+                    q_obj = ListeningQuestionDB(
+                        audio_url=audio_manager.get_audio_url(audio_file.filename),
+                        transcript=audio_file.script,
+                        question_text=q_data["question"],
+                        options_json=json.dumps(q_data["options"]),
+                        correct_answer=q_data["correct_answer"],
+                        difficulty=level,
+                    )
+                    self.db.add(q_obj)
+                    all_questions.append(q_obj)
+            
+            self.db.commit()
+            
+            # Refresh all objects to get IDs
+            for q in all_questions:
+                self.db.refresh(q)
+            
+            logger.info(
+                "Generated %s listening questions for placement test",
+                len(all_questions)
+            )
+            
+            return all_questions
+        
+        except Exception as e:
+            logger.error(
+                "Failed to generate listening questions for placement test: %s",
+                str(e),
+                exc_info=True
+            )
+            # Fall back to existing questions if available
+            existing_qs = list(self.db.scalars(select(ListeningQuestionDB)).all())
+            if existing_qs:
+                logger.info("Using existing listening questions as fallback")
+                return existing_qs
+            
+            # Last resort: create minimal fallback questions
+            logger.warning("Creating minimal fallback listening questions")
+            return self._create_fallback_listening_questions()
+    
+    def _create_fallback_listening_questions(self) -> list[ListeningQuestionDB]:
+        """Create minimal fallback listening questions when audio generation fails."""
+        seeds = [
+            {
+                "audio_url": "/static/audio/silence.wav",
+                "transcript": "Number two.",
+                "question_text": "What number do you hear? (dummy)",
+                "options_json": json.dumps(["One", "Two", "Three", "Four"]),
+                "correct_answer": "Two",
+                "difficulty": LanguageLevel.A1
+            },
+            {
+                "audio_url": "/static/audio/silence.wav",
+                "transcript": "Can I see the menu please?",
+                "question_text": "What is the speaker asking for? (dummy)",
+                "options_json": json.dumps(["directions", "a refund", "a menu", "help with homework"]),
+                "correct_answer": "a menu",
+                "difficulty": LanguageLevel.A2
+            },
+            {
+                "audio_url": "/static/audio/silence.wav",
+                "transcript": "Please record your name.",
+                "question_text": "Which word is stressed? (dummy)",
+                "options_json": json.dumps(["record (noun)", "record (verb)", "both", "neither"]),
+                "correct_answer": "record (noun)",
+                "difficulty": LanguageLevel.B1
+            },
+        ]
+        
+        questions = []
+        for s in seeds:
+            q = ListeningQuestionDB(**s)
+            self.db.add(q)
+            questions.append(q)
+        
+        self.db.commit()
+        
+        for q in questions:
+            self.db.refresh(q)
+        
+        return questions

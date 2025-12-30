@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -13,8 +13,23 @@ class TestQuestion(BaseModel):
 	id: str
 	type: TestModuleType
 	question: str
+	content: Optional[str] = None
 	options: Optional[list[str]] = None
 	audioUrl: Optional[str] = None
+
+
+class ListeningQuestion(BaseModel):
+	"""A single listening question within a group."""
+	id: str
+	question: str
+	options: list[str]
+
+
+class ListeningQuestionGroup(BaseModel):
+	"""A group of questions for a single audio file."""
+	audioUrl: str
+	transcript: Optional[str] = None
+	questions: list[ListeningQuestion]
 
 
 class TestSubmission(BaseModel):
@@ -31,6 +46,7 @@ class ModuleQuestionsResponse(BaseModel):
 	testId: str
 	moduleType: TestModuleType
 	questions: list[TestQuestion]
+	listeningGroups: Optional[list[ListeningQuestionGroup]] = None
 
 
 class SubmitModuleRequest(BaseModel):
@@ -48,8 +64,21 @@ class PlacementTestResult(BaseModel):
 	id: str
 	studentId: str
 	overallLevel: str
-	readingLevel: str
-	writingLevel: str
-	listeningLevel: str
-	speakingLevel: str
-	completedAt: datetime
+
+
+class SaveProgressRequest(BaseModel):
+	testId: int
+	currentStep: int
+	answers: dict[str, Any]
+
+
+class ResumeTestResponse(BaseModel):
+	testId: int
+	currentStep: int
+	answers: dict[str, Any]
+
+
+class ActiveTestResponse(BaseModel):
+	testId: int
+	currentStep: int
+	updatedAt: datetime

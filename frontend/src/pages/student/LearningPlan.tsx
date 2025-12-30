@@ -2,15 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { learningService } from '@/services/api/learning.service';
 import { LearningPlan as LearningPlanType } from '@/types/learning.types';
+import AILoading from '@/components/AILoading';
 
 const LearningPlan: React.FC = () => {
   const [plan, setPlan] = useState<LearningPlanType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const load = async (refresh: boolean) => {
     setError('');
     setLoading(true);
+    if (refresh) setIsRefreshing(true);
     try {
       const p = await learningService.getMyLearningPlan(refresh);
       setPlan(p);
@@ -23,6 +26,7 @@ const LearningPlan: React.FC = () => {
       setError(msg);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -37,6 +41,8 @@ const LearningPlan: React.FC = () => {
 
   return (
     <div className="container">
+      {isRefreshing && <AILoading message="Generating your personalized plan..." />}
+      
       <Link to="/student/dashboard" className="link mb-16" style={{ display: 'inline-block' }}>
         ← Back to Dashboard
       </Link>
@@ -63,23 +69,6 @@ const LearningPlan: React.FC = () => {
           </div>
 
           <div className="lp-actions">
-            <button
-              className="button button-secondary"
-              onClick={async () => {
-                setError('');
-                setLoading(true);
-                try {
-                  await learningService.seedUc7Demo();
-                  await load(true);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              disabled={loading}
-              title="Dev helper: adds a demo placement test result so UC7 becomes personalized"
-            >
-              Seed Demo Data
-            </button>
             <button className="button button-primary" onClick={() => load(true)} disabled={loading}>
               {loading ? 'Refreshing...' : 'Refresh Plan'}
             </button>
@@ -147,6 +136,17 @@ const LearningPlan: React.FC = () => {
                     <span className="badge">Difficulty: <strong>{t.difficulty}</strong></span>
                   </div>
                 </div>
+                
+                <div style={{ marginTop: 12, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
+                    <span>Progress</span>
+                    <span>{Math.round(t.progress)}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: 8, background: '#eee', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${t.progress}%`, height: '100%', background: '#2ecc71', transition: 'width 0.3s ease' }} />
+                  </div>
+                </div>
+
                 <details style={{ marginTop: 10 }}>
                   <summary className="link" style={{ cursor: 'pointer', display: 'inline-block' }}>
                     Why this topic?

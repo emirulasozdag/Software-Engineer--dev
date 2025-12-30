@@ -13,6 +13,11 @@ from app.api.schemas.placement_test import (
 	SubmitModuleRequest,
 	TestModuleResult,
 	TestQuestion,
+	SaveProgressRequest,
+	ResumeTestResponse,
+	ActiveTestResponse,
+	ListeningQuestionGroup,
+	ListeningQuestion,
 )
 from app.application.controllers.placement_test_controller import PlacementTestController
 from app.application.services.placement_test_service import PlacementTestService
@@ -35,21 +40,33 @@ def _ensure_dummy_audio_files() -> None:
 
 def _to_question(q, module_type: str) -> TestQuestion:
 	options = None
-	if q.options_json:
+	if getattr(q, "options_json", None):
 		try:
 			options = json.loads(q.options_json)
 		except Exception:
 			options = None
 
 	audio_url = None
-	if module_type == "listening":
-		_ensure_dummy_audio_files()
-		audio_url = "/static/audio/silence.wav"
+	content = None
+	text = getattr(q, "text", "")
+
+	if module_type == "reading":
+		content = getattr(q, "content", "")
+		text = getattr(q, "question_text", "")
+	elif module_type == "listening":
+		audio_url = getattr(q, "audio_url", None)
+		text = getattr(q, "question_text", "")
+		if not audio_url:
+			_ensure_dummy_audio_files()
+			audio_url = "/static/audio/silence.wav"
+	elif module_type == "writing":
+		text = getattr(q, "prompt", "")
 
 	return TestQuestion(
 		id=str(q.id),
 		type=module_type,  # type: ignore[arg-type]
-		question=q.text,
+		question=text,
+		content=content,
 		options=options,
 		audioUrl=audio_url,
 	)
@@ -85,10 +102,53 @@ def get_module_questions(
 	except ValueError as e:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+	# For listening module, group questions by audio URL
+	listening_groups = None
+	if moduleType == "listening" and questions:
+		# Group questions by audio URL
+		from collections import defaultdict
+		groups_dict = defaultdict(list)
+		
+		for q in questions:
+			audio_url = getattr(q, "audio_url", None)
+			if audio_url:
+				groups_dict[audio_url].append(q)
+		
+		# Create listening groups
+		listening_groups = []
+		for audio_url, qs in groups_dict.items():
+			# Get transcript from first question (they all share same audio)
+			transcript = getattr(qs[0], "transcript", None) if qs else None
+			
+			listening_questions = []
+			for q in qs:
+				question_text = getattr(q, "question_text", "")
+				options = None
+				if getattr(q, "options_json", None):
+					try:
+						options = json.loads(q.options_json)
+					except Exception:
+						options = []
+				
+				if options:
+					listening_questions.append(ListeningQuestion(
+						id=str(q.id),
+						question=question_text,
+						options=options,
+					))
+			
+			if listening_questions:
+				listening_groups.append(ListeningQuestionGroup(
+					audioUrl=audio_url,
+					transcript=transcript,
+					questions=listening_questions,
+				))
+
 	return ModuleQuestionsResponse(
 		testId=str(testId),
 		moduleType=moduleType,  # type: ignore[arg-type]
 		questions=[_to_question(q, moduleType) for q in questions],
+		listeningGroups=listening_groups,
 	)
 
 
@@ -154,11 +214,21 @@ def complete_test(
 	db: Session = Depends(get_db),
 	user=Depends(get_current_user),
 ):
+	from app.application.services.achievement_service import AchievementService
+	from app.infrastructure.db.models.user import StudentDB
+	from sqlalchemy import select
+	
 	controller = PlacementTestController(PlacementTestService(db))
 	try:
 		res = controller.completeTest(userId=user.userId, testId=testId)
 	except ValueError as e:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+	
+	# Check for first placement test achievement
+	student = db.scalar(select(StudentDB).where(StudentDB.user_id == int(user.userId)))
+	if student:
+		achievement_service = AchievementService(db)
+		achievement_service.check_and_award_placement_test(int(student.id))
 
 	return {
 		"id": str(res.id),
@@ -170,3 +240,56 @@ def complete_test(
 		"speakingLevel": res.speakingLevel.value,
 		"completedAt": res.completedAt,
 	}
+
+
+@router.get("/active", response_model=list[ActiveTestResponse])
+def list_active_tests(
+	db: Session = Depends(get_db),
+	user=Depends(get_current_user),
+):
+	service = PlacementTestService(db)
+	sessions = service.listMyActiveTests(user.userId)
+	return [
+		ActiveTestResponse(
+			testId=s.test_id,
+			currentStep=s.current_step,
+			updatedAt=s.updated_at,
+		)
+		for s in sessions
+	]
+
+
+@router.post("/save-progress")
+def save_progress(
+	payload: SaveProgressRequest,
+	db: Session = Depends(get_db),
+	user=Depends(get_current_user),
+):
+	service = PlacementTestService(db)
+	service.saveProgress(user.userId, payload.testId, payload.currentStep, payload.answers)
+	return {"status": "saved"}
+
+
+@router.get("/{testId}/resume", response_model=ResumeTestResponse)
+def resume_test(
+	testId: int,
+	db: Session = Depends(get_db),
+	user=Depends(get_current_user),
+):
+	service = PlacementTestService(db)
+	session = service.getTestSession(user.userId, testId)
+	if not session:
+		raise HTTPException(status_code=404, detail="Session not found")
+
+	answers = {}
+	if session.answers_json:
+		try:
+			answers = json.loads(session.answers_json)
+		except Exception:
+			pass
+
+	return ResumeTestResponse(
+		testId=session.test_id,
+		currentStep=session.current_step,
+		answers=answers,
+	)

@@ -15,6 +15,7 @@ import PlacementTest from '@/pages/student/PlacementTest';
 import LearningPlan from '@/pages/student/LearningPlan';
 import AIContentDelivery from '@/pages/student/AIContentDelivery';
 import ContentViewer from '@/pages/student/ContentViewer';
+import ContentHistory from '@/pages/student/ContentHistory';
 import Progress from '@/pages/student/Progress';
 import Assignments from '@/pages/student/Assignments';
 import Chatbot from '@/pages/student/Chatbot';
@@ -56,6 +57,7 @@ const App: React.FC = () => {
             <Route path="/student/placement-test" element={<PlacementTest />} />
             <Route path="/student/learning-plan" element={<LearningPlan />} />
             <Route path="/student/ai-content-delivery" element={<AIContentDelivery />} />
+            <Route path="/student/content/history" element={<ContentHistory />} />
             <Route path="/student/content/:contentId" element={<ContentViewer />} />
             <Route path="/student/progress" element={<Progress />} />
             <Route path="/student/assignments" element={<Assignments />} />

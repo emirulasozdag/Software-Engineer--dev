@@ -9,6 +9,7 @@ from typing import Optional
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.domain.enums import LanguageLevel
 from app.infrastructure.db.base import Base, IdMixin, TimestampMixin
 
 
@@ -97,3 +98,48 @@ class WritingTestDB(Base, IdMixin):
     topic: Mapped[str] = mapped_column(Text, nullable=False)
     min_words: Mapped[int] = mapped_column(Integer, default=50)
     max_words: Mapped[int] = mapped_column(Integer, default=500)
+
+
+class ReadingQuestionDB(Base, IdMixin):
+    """Pool of reading questions."""
+    __tablename__ = "reading_questions"
+
+    content: Mapped[str] = mapped_column(Text, nullable=False)  # The reading passage
+    question_text: Mapped[str] = mapped_column(Text, nullable=False)
+    options_json: Mapped[str] = mapped_column(Text, nullable=False)  # JSON list of options
+    correct_answer: Mapped[str] = mapped_column(String(255), nullable=False)
+    difficulty: Mapped[LanguageLevel] = mapped_column(Enum(LanguageLevel), nullable=False)
+
+
+class ListeningQuestionDB(Base, IdMixin):
+    """Pool of listening questions."""
+    __tablename__ = "listening_questions"
+
+    audio_url: Mapped[str] = mapped_column(String(500), nullable=False)
+    transcript: Mapped[str] = mapped_column(Text, nullable=False)
+    question_text: Mapped[str] = mapped_column(Text, nullable=False)
+    options_json: Mapped[str] = mapped_column(Text, nullable=False)
+    correct_answer: Mapped[str] = mapped_column(String(255), nullable=False)
+    difficulty: Mapped[LanguageLevel] = mapped_column(Enum(LanguageLevel), nullable=False)
+
+
+class WritingQuestionDB(Base, IdMixin):
+    """Pool of writing questions."""
+    __tablename__ = "writing_questions"
+
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    min_words: Mapped[int] = mapped_column(Integer, default=50)
+    difficulty: Mapped[LanguageLevel] = mapped_column(Enum(LanguageLevel), nullable=False)
+
+
+class TestSessionDB(Base, IdMixin, TimestampMixin):
+    """Tracks an in-progress test session."""
+    __tablename__ = "test_sessions"
+
+    student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), nullable=False)
+    test_id: Mapped[int] = mapped_column(ForeignKey("tests.id"), nullable=False)
+    current_step: Mapped[int] = mapped_column(Integer, default=0)
+    total_steps: Mapped[int] = mapped_column(Integer, default=0)
+    answers_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Saved answers
+    status: Mapped[str] = mapped_column(String(50), default="in_progress")  # in_progress, completed
+

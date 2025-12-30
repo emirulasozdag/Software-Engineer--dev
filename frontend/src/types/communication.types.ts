@@ -42,3 +42,11 @@ export interface Notification {
   isRead: boolean;
   createdAt: string;
 }
+
+export interface ChatbotCapabilities {
+  context_aware: boolean;
+  uses_llm: boolean;
+  can_modify_learning_plan: boolean;
+  capabilities: string[];
+  context_includes: string[];
+}

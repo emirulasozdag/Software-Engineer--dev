@@ -10,10 +10,10 @@ class StudentAnalysisController:
 
 	def requestPersonalPlan(self, studentUserId: int):
 		# Alias: for now we just generate (or refresh) plan
-		return self.service.generatePersonalPlan(studentUserId)
+		return self.service.generatePersonalPlan(studentUserId, refresh=False)
 
 	def generatePersonalPlan(self, studentUserId: int):
-		return self.service.generatePersonalPlan(studentUserId)
+		return self.service.generatePersonalPlan(studentUserId, refresh=True)
 
 	def updatePersonalPlanView(self, studentId: int, plan):
 		# UI concern - no-op in backend

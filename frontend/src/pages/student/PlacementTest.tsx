@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { testService } from '@/services/api/test.service';
 import type {
@@ -8,9 +8,12 @@ import type {
   TestModuleType,
   TestQuestion,
   TestSubmission,
+  ListeningQuestionGroup,
 } from '@/types/test.types';
+import AILoading from '@/components/AILoading';
 
 const PlacementTest: React.FC = () => {
+  const navigate = useNavigate();
   const [isStarting, setIsStarting] = useState(false);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,6 +23,7 @@ const PlacementTest: React.FC = () => {
   const [modules, setModules] = useState<TestModuleType[]>([]);
   const [moduleIndex, setModuleIndex] = useState<number>(0);
   const [questions, setQuestions] = useState<TestQuestion[]>([]);
+  const [listeningGroups, setListeningGroups] = useState<ListeningQuestionGroup[]>([]);
   const [answersByQuestionId, setAnswersByQuestionId] = useState<Record<string, string>>({});
 
   const [audioByQuestionId, setAudioByQuestionId] = useState<Record<string, Blob>>({});
@@ -32,6 +36,11 @@ const PlacementTest: React.FC = () => {
 
   const [moduleResults, setModuleResults] = useState<Partial<Record<TestModuleType, TestModuleResult>>>({});
   const [finalResult, setFinalResult] = useState<PlacementTestResult | null>(null);
+  const [activeTests, setActiveTests] = useState<{ testId: number; currentStep: number; updatedAt: string }[]>([]);
+
+  useEffect(() => {
+    testService.listActiveTests().then(setActiveTests).catch(console.error);
+  }, []);
 
   const currentModule = useMemo<TestModuleType | null>(() => {
     if (!modules.length) return null;
@@ -55,12 +64,53 @@ const PlacementTest: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleSaveAndExit = async () => {
+    if (!testId) return;
+    try {
+      await testService.saveProgress(testId, moduleIndex, answersByQuestionId);
+      alert('Progress saved!');
+      navigate('/dashboard');
+    } catch (e) {
+      console.error(e);
+      setError('Failed to save progress');
+    }
+  };
+
+  const handleResume = async (tid: number) => {
+    setIsStarting(true);
+    try {
+      const data = await testService.resumeTest(tid.toString());
+      setTestId(data.testId.toString());
+      setModuleIndex(data.currentStep);
+      setAnswersByQuestionId(data.answers);
+      setModules(['reading', 'writing', 'listening', 'speaking']);
+      if (['reading', 'writing', 'listening', 'speaking'][data.currentStep]) {
+        await loadModuleQuestions(
+          data.testId.toString(),
+          ['reading', 'writing', 'listening', 'speaking'][data.currentStep] as TestModuleType
+        );
+      }
+    } catch (e) {
+      setError('Failed to resume test');
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
   const loadModuleQuestions = async (tid: string, moduleType: TestModuleType) => {
     setIsLoadingQuestions(true);
     setError(null);
     try {
-      const qs = await testService.getModuleQuestions(tid, moduleType);
-      setQuestions(qs);
+      // For listening module, load listening groups
+      if (moduleType === 'listening') {
+        const groups = await testService.getListeningGroups(tid);
+        setListeningGroups(groups);
+        setQuestions([]);
+      } else {
+        const qs = await testService.getModuleQuestions(tid, moduleType);
+        setQuestions(qs);
+        setListeningGroups([]);
+      }
       setAnswersByQuestionId({});
 
       // Reset speaking recordings when switching modules.
@@ -183,6 +233,20 @@ const PlacementTest: React.FC = () => {
         // Mark module submitted without sending any notes.
         const res = await testService.submitModule(testId, currentModule, []);
         setModuleResults((prev) => ({ ...prev, [currentModule]: lastSpeakingRes ?? res }));
+      } else if (currentModule === 'listening' && listeningGroups.length > 0) {
+        // For listening module, collect answers from all questions in all groups
+        const submissions: TestSubmission[] = [];
+        listeningGroups.forEach((group) => {
+          group.questions.forEach((q) => {
+            submissions.push({
+              questionId: q.id,
+              answer: answersByQuestionId[q.id] ?? '',
+            });
+          });
+        });
+
+        const res = await testService.submitModule(testId, currentModule, submissions);
+        setModuleResults((prev) => ({ ...prev, [currentModule]: res }));
       } else {
         const submissions: TestSubmission[] = questions.map((q) => ({
           questionId: q.id,
@@ -212,6 +276,8 @@ const PlacementTest: React.FC = () => {
 
   return (
     <div className="container">
+      {isSubmitting && isLastModule && <AILoading message="Analyzing your test results..." />}
+      
       <div
         style={{
           display: 'flex',
@@ -297,6 +363,40 @@ const PlacementTest: React.FC = () => {
             </button>
             <div style={{ color: '#666' }}>Make sure you have time to complete all modules.</div>
           </div>
+
+          {activeTests.length > 0 && (
+            <div style={{ marginTop: 20, borderTop: '1px solid #eee', paddingTop: 20 }}>
+              <h3 style={{ marginBottom: 10 }}>Resume In-Progress Test</h3>
+              {activeTests.map((t) => (
+                <div
+                  key={t.testId}
+                  className="card"
+                  style={{
+                    marginBottom: 10,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: '#f9f9f9',
+                    boxShadow: 'none',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600 }}>Test #{t.testId}</div>
+                    <div style={{ fontSize: '0.9em', color: '#666' }}>
+                      Last updated: {new Date(t.updatedAt).toLocaleString()}
+                    </div>
+                  </div>
+                  <button
+                    className="button button-secondary"
+                    onClick={() => handleResume(t.testId)}
+                    disabled={isStarting}
+                  >
+                    Resume
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -312,8 +412,13 @@ const PlacementTest: React.FC = () => {
             }}
           >
             <h2 style={{ textTransform: 'capitalize', marginBottom: 6 }}>{currentModule} Module</h2>
-            <div style={{ color: '#666' }}>
-              Module {moduleIndex + 1} of {modules.length}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button className="button button-secondary" onClick={handleSaveAndExit}>
+                Save & Exit
+              </button>
+              <div style={{ color: '#666' }}>
+                Module {moduleIndex + 1} of {modules.length}
+              </div>
             </div>
           </div>
 
@@ -325,7 +430,131 @@ const PlacementTest: React.FC = () => {
 
           {isLoadingQuestions ? (
             <p style={{ marginTop: 16, color: '#666' }}>Loading questions...</p>
+          ) : currentModule === 'listening' && listeningGroups.length > 0 ? (
+            // Listening module with grouped questions
+            <div style={{ marginTop: 16 }}>
+              {listeningGroups.map((group, groupIdx) => (
+                <div
+                  key={groupIdx}
+                  className="card"
+                  style={{ background: '#f9f9f9', boxShadow: 'none', marginBottom: 20 }}
+                >
+                  {/* Audio Player Section */}
+                  <div style={{ marginBottom: 20 }}>
+                    <h3 style={{ marginBottom: 12, fontSize: '1.1em' }}>
+                      Audio {groupIdx + 1}
+                    </h3>
+                    <p style={{ color: '#666', marginBottom: 12 }}>
+                      Listen to the audio carefully. You can play it multiple times.
+                    </p>
+                    <audio 
+                      controls 
+                      src={`http://localhost:8000${group.audioUrl}`}
+                      style={{ 
+                        width: '100%', 
+                        marginBottom: 12,
+                        borderRadius: 6,
+                      }}
+                      preload="metadata"
+                    >
+                      Your browser does not support the audio element.
+                    </audio>
+                  </div>
+
+                  {/* Questions for this audio */}
+                  <div style={{ borderTop: '1px solid #e0e0e0', paddingTop: 16 }}>
+                    <h4 style={{ marginBottom: 12, fontSize: '1em', color: '#555' }}>
+                      Questions for Audio {groupIdx + 1}
+                    </h4>
+                    {group.questions.map((q, qIdx) => (
+                      <div
+                        key={q.id}
+                        className="card"
+                        style={{ 
+                          background: '#fff', 
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
+                          marginBottom: 12,
+                          padding: 16,
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, marginBottom: 10 }}>
+                          {qIdx + 1}. {q.question}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {q.options.map((opt) => (
+                            <label
+                              key={opt}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 10,
+                                cursor: 'pointer',
+                                padding: 10,
+                                borderRadius: 6,
+                                background: '#f9f9f9',
+                                border: answersByQuestionId[q.id] === opt 
+                                  ? '2px solid #007bff' 
+                                  : '2px solid transparent',
+                                transition: 'all 0.2s',
+                              }}
+                            >
+                              <input
+                                type="radio"
+                                name={`q-${q.id}`}
+                                value={opt}
+                                checked={(answersByQuestionId[q.id] ?? '') === opt}
+                                onChange={(e) =>
+                                  setAnswersByQuestionId((prev) => ({ ...prev, [q.id]: e.target.value }))
+                                }
+                                style={{ marginTop: 2 }}
+                              />
+                              <div>{opt}</div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12,
+                  marginTop: 10,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ color: '#666' }}>
+                  {isLastModule ? 'Final step: submit and complete the test.' : 'Submit to continue to the next module.'}
+                </div>
+                <button
+                  className="button button-primary"
+                  onClick={submitCurrentModule}
+                  disabled={isSubmitting || isLoadingQuestions}
+                >
+                  {isSubmitting ? 'Submitting...' : isLastModule ? 'Submit & Complete' : 'Submit Module'}
+                </button>
+              </div>
+
+              {currentModule && moduleResults[currentModule] && (
+                <div className="card" style={{ marginTop: 16, background: '#f9f9f9', boxShadow: 'none' }}>
+                  <div style={{ fontWeight: 600, marginBottom: 6 }}>Last submission result</div>
+                  <div>
+                    {moduleResults[currentModule]?.level} (score {moduleResults[currentModule]?.score})
+                  </div>
+                  {moduleResults[currentModule]?.feedback && (
+                    <div style={{ marginTop: 8, color: '#555' }}>{moduleResults[currentModule]?.feedback}</div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
+            // Other modules (reading, writing, speaking)
             <div style={{ marginTop: 16 }}>
               {questions.map((q, idx) => (
                 <div
@@ -333,6 +562,22 @@ const PlacementTest: React.FC = () => {
                   className="card"
                   style={{ background: '#f9f9f9', boxShadow: 'none', marginBottom: 12 }}
                 >
+                  {q.content && (
+                    <div
+                      style={{
+                        marginBottom: 12,
+                        padding: 10,
+                        background: '#eee',
+                        borderRadius: 6,
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      {q.content}
+                    </div>
+                  )}
+
                   <div style={{ fontWeight: 600, marginBottom: 10 }}>
                     {idx + 1}. {q.question}
                   </div>

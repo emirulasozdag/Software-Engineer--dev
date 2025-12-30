@@ -5,6 +5,7 @@ import {
   ChatMessage,
   Contact,
   Notification,
+  ChatbotCapabilities,
 } from '@/types/communication.types';
 
 export const communicationService = {
@@ -101,6 +102,14 @@ export const communicationService = {
    */
   getChatHistory: async (): Promise<ChatMessage[]> => {
     const response = await apiClient.get('/api/chatbot/history');
+    return response.data;
+  },
+
+  /**
+   * Get chatbot capabilities
+   */
+  getChatbotCapabilities: async (): Promise<ChatbotCapabilities> => {
+    const response = await apiClient.get('/api/chatbot/capabilities');
     return response.data;
   },
 

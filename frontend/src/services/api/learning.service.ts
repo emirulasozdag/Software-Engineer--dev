@@ -11,6 +11,19 @@ export type BackendContentOut = {
   createdBy: number;
   createdAt: string;
   isDraft: boolean;
+  isCompleted?: boolean;
+  userAnswers?: string | null;
+  feedback?: string | null;
+  completedAt?: string | null;
+};
+
+export type ContentHistoryItem = {
+  contentId: number;
+  title: string;
+  contentType: string;
+  level: string | null;
+  completedAt: string | null;
+  hasFeedback: boolean;
 };
 
 export const learningService = {
@@ -50,8 +63,8 @@ export const learningService = {
   /**
    * Mark content as completed
    */
-  completeContent: async (contentId: string): Promise<{ message: string }> => {
-    const response = await apiClient.post(`/api/content-delivery/${contentId}/complete`);
+  completeContent: async (contentId: string, payload?: any): Promise<{ message: string }> => {
+    const response = await apiClient.post(`/api/content-delivery/${contentId}/complete`, payload ?? null);
     return response.data;
   },
 
@@ -147,6 +160,30 @@ export const learningService = {
    */
   getDeliveredContentById: async (contentId: string): Promise<BackendContentOut> => {
     const response = await apiClient.get(`/api/content-delivery/${contentId}`);
+    return response.data;
+  },
+
+  /**
+   * Complete content with answers and score
+   */
+  completeContent: async (contentId: string, result: any): Promise<{ message: string; feedback?: any }> => {
+    const response = await apiClient.post(`/api/content-delivery/${contentId}/complete`, result);
+    return response.data;
+  },
+
+  /**
+   * Get feedback for a completed content
+   */
+  getFeedback: async (contentId: string): Promise<{ contentId: number; feedbackJson: string | null; completedAt: string | null }> => {
+    const response = await apiClient.get(`/api/automatic-feedback/${contentId}`);
+    return response.data;
+  },
+
+  /**
+   * Get content history for the current student
+   */
+  getContentHistory: async (): Promise<{ history: ContentHistoryItem[] }> => {
+    const response = await apiClient.get('/api/content-delivery/history');
     return response.data;
   },
 };

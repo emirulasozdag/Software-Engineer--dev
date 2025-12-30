@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { communicationService, learningService, testService } from '@/services/api';
 import { LearningPlan } from '@/types/learning.types';
 import { PlacementTestResult } from '@/types/test.types';
+import { AchievementNotificationContainer } from '@/components/AchievementNotification';
+import { useAchievementNotifications } from '@/hooks/useAchievementNotifications';
 
 const StudentDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -11,6 +13,7 @@ const StudentDashboard: React.FC = () => {
   const [results, setResults] = useState<PlacementTestResult[]>([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { newAchievements, clearAchievements, checkForNewAchievements } = useAchievementNotifications();
 
   const load = async () => {
     setLoading(true);
@@ -32,6 +35,10 @@ const StudentDashboard: React.FC = () => {
 
   useEffect(() => {
     load();
+    // Check for new achievements after dashboard loads
+    checkForNewAchievements().catch(() => {
+      // Silently fail if achievements endpoint is not available
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -42,6 +49,13 @@ const StudentDashboard: React.FC = () => {
 
   return (
     <div className="container">
+      {newAchievements && newAchievements.length > 0 && (
+        <AchievementNotificationContainer
+          achievements={newAchievements}
+          onClose={clearAchievements}
+        />
+      )}
+      
       <div className="card dash-hero">
         <div className="hero-row">
           <div>

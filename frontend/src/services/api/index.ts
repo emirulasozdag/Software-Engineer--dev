@@ -9,3 +9,4 @@ export { default as apiClient } from './client';
 
 // Progress tracking + export (UC10–UC11)
 export { progressService } from './progress.service';
+export { rewardsService } from './rewards.service';

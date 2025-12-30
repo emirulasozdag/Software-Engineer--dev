@@ -15,6 +15,7 @@ class TopicRecommendation(BaseModel):
 	priority: int
 	reason: str
 	evidence: list[str] = []
+	progress: float = 0.0
 
 
 class LessonPlanResponse(BaseModel):
