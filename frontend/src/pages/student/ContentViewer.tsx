@@ -3,6 +3,7 @@ import { useLocation, useParams, Link, useNavigate } from 'react-router-dom';
 import { learningService, BackendContentOut } from '@/services/api/learning.service';
 import { useAuth } from '@/contexts/AuthContext';
 import AILoading from '@/components/AILoading';
+import AudioRecorder from '@/components/AudioRecorder';
 import { AchievementNotificationContainer } from '@/components/AchievementNotification';
 import { useAchievementNotifications } from '@/hooks/useAchievementNotifications';
 
@@ -36,6 +37,13 @@ type ContentBlock =
       question: string;
       options: string[];
       correctAnswer: string;
+    }
+  | {
+      type: 'speaking';
+      id: string;
+      prompt: string;
+      title?: string;
+      maxDuration?: number;
     };
 
 type StructuredContentBody = {
@@ -104,6 +112,18 @@ const ContentViewer: React.FC = () => {
         } else {
           setAnswers({});
         }
+
+        // If completed, load speaking feedback from saved feedback
+        if (c.isCompleted && c.feedback) {
+          try {
+            const savedFeedback = JSON.parse(c.feedback);
+            if (savedFeedback.speakingFeedback) {
+              setSpeakingFeedback(savedFeedback.speakingFeedback);
+            }
+          } catch {
+            // Ignore parsing errors
+          }
+        }
       } catch (e: any) {
         setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to load content');
       } finally {
@@ -171,6 +191,135 @@ const ContentViewer: React.FC = () => {
   };
 
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+  const [speakingFeedback, setSpeakingFeedback] = useState<Record<string, any>>({});
+  const [speakingLoading, setSpeakingLoading] = useState<Record<string, boolean>>({});
+  const [speakingAudio, setSpeakingAudio] = useState<Record<string, Blob>>({});
+
+  const renderSpeaking = (b: Extract<ContentBlock, { type: 'speaking' }>) => {
+    const isCompleted = content?.isCompleted || false;
+    const hasFeedback = speakingFeedback[b.id];
+    const isAnalyzing = speakingLoading[b.id];
+    const hasRecording = speakingAudio[b.id];
+
+    const handleRecordingComplete = (audioBlob: Blob) => {
+      // Just store the audio, don't submit yet
+      setSpeakingAudio(prev => ({ ...prev, [b.id]: audioBlob }));
+      setAnswers(prev => ({ ...prev, [b.id]: { audioRecorded: true } }));
+    };
+
+    return (
+      <div style={{ marginTop: '20px', padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eee' }}>
+        <h4 style={{ marginBottom: '12px' }}>🎤 Speaking Exercise</h4>
+        {b.title && <div style={{ fontWeight: 600, marginBottom: 8 }}>{b.title}</div>}
+        <p style={{ color: '#666', marginBottom: '16px' }}>{b.prompt}</p>
+        
+        {!isCompleted && !hasFeedback && !isAnalyzing && (
+          <AudioRecorder
+            onRecordingComplete={handleRecordingComplete}
+            maxDuration={b.maxDuration || 120}
+            disabled={isCompleted}
+          />
+        )}
+
+        {hasRecording && !hasFeedback && !isAnalyzing && (
+          <div style={{ 
+            marginTop: '12px', 
+            padding: '12px', 
+            background: '#d1ecf1', 
+            border: '1px solid #bee5eb',
+            borderRadius: '6px',
+            color: '#0c5460'
+          }}>
+            ✓ Recording saved! Click <strong>"Submit & Complete"</strong> below to get feedback.
+          </div>
+        )}
+
+        {isAnalyzing && (
+          <div style={{ padding: '20px', textAlign: 'center' }}>
+            <AILoading message="Analyzing your speaking..." />
+          </div>
+        )}
+
+        {hasFeedback && (
+          <div style={{ marginTop: '20px' }}>
+            <div style={{ 
+              padding: '16px', 
+              background: '#d4edda', 
+              border: '1px solid #c3e6cb',
+              borderRadius: '6px',
+              marginBottom: '16px'
+            }}>
+              <strong>✓ Audio analyzed successfully!</strong>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <h5 style={{ marginBottom: '8px' }}>Transcript:</h5>
+              <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '6px', fontStyle: 'italic' }}>
+                "{hasFeedback.transcript}"
+              </div>
+            </div>
+
+            <h5 style={{ marginTop: '20px', marginBottom: '12px' }}>Detailed Feedback:</h5>
+            
+            {/* Pronunciation */}
+            <div style={{ marginBottom: '16px', padding: '12px', background: '#fff', border: '1px solid #eee', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <strong>Pronunciation</strong>
+                <span style={{ padding: '4px 12px', background: '#007bff', color: 'white', borderRadius: '12px', fontSize: '0.9em' }}>
+                  {hasFeedback.feedback.pronunciation.score.toFixed(0)}/100
+                </span>
+              </div>
+              <p style={{ color: '#666', margin: 0 }}>{hasFeedback.feedback.pronunciation.feedback}</p>
+            </div>
+
+            {/* Fluency */}
+            <div style={{ marginBottom: '16px', padding: '12px', background: '#fff', border: '1px solid #eee', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <strong>Fluency</strong>
+                <span style={{ padding: '4px 12px', background: '#007bff', color: 'white', borderRadius: '12px', fontSize: '0.9em' }}>
+                  {hasFeedback.feedback.fluency.score.toFixed(0)}/100
+                </span>
+              </div>
+              <p style={{ color: '#666', margin: 0 }}>{hasFeedback.feedback.fluency.feedback}</p>
+            </div>
+
+            {/* Grammar */}
+            <div style={{ marginBottom: '16px', padding: '12px', background: '#fff', border: '1px solid #eee', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <strong>Grammar</strong>
+                <span style={{ padding: '4px 12px', background: '#007bff', color: 'white', borderRadius: '12px', fontSize: '0.9em' }}>
+                  {hasFeedback.feedback.grammar.score.toFixed(0)}/100
+                </span>
+              </div>
+              <p style={{ color: '#666', margin: 0 }}>{hasFeedback.feedback.grammar.feedback}</p>
+            </div>
+
+            {/* Vocabulary */}
+            <div style={{ marginBottom: '16px', padding: '12px', background: '#fff', border: '1px solid #eee', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <strong>Vocabulary</strong>
+                <span style={{ padding: '4px 12px', background: '#007bff', color: 'white', borderRadius: '12px', fontSize: '0.9em' }}>
+                  {hasFeedback.feedback.vocabulary.score.toFixed(0)}/100
+                </span>
+              </div>
+              <p style={{ color: '#666', margin: 0 }}>{hasFeedback.feedback.vocabulary.feedback}</p>
+            </div>
+
+            {/* Overall */}
+            <div style={{ padding: '16px', background: '#e3f2fd', border: '1px solid #90caf9', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <strong>Overall Assessment</strong>
+                <span style={{ padding: '4px 12px', background: '#2196F3', color: 'white', borderRadius: '12px', fontSize: '1em' }}>
+                  {hasFeedback.feedback.overall.score.toFixed(0)}/100
+                </span>
+              </div>
+              <p style={{ color: '#1976d2', margin: 0, fontWeight: 500 }}>{hasFeedback.feedback.overall.feedback}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderAudio = (b: Extract<ContentBlock, { type: 'audio' }>) => {
     return (
@@ -371,15 +520,61 @@ const ContentViewer: React.FC = () => {
     setIsCompleting(true);
     setCompleteMsg(null);
     try {
-      const response = await learningService.completeContent(contentId, {
-        answers
-      });
+      // First, analyze any speaking audio
+      const speakingBlocks = structured?.blocks.filter((b: ContentBlock) => b.type === 'speaking') || [];
+      const speakingResults: Record<string, any> = {};
+      const hasSpeakingContent = speakingBlocks.length > 0;
+      
+      for (const block of speakingBlocks) {
+        const audioBlob = speakingAudio[block.id];
+        if (audioBlob) {
+          setSpeakingLoading(prev => ({ ...prev, [block.id]: true }));
+          try {
+            const speakingBlock = block as Extract<ContentBlock, { type: 'speaking' }>;
+            const feedback = await learningService.submitSpeakingAudio(
+              contentId,
+              block.id,
+              audioBlob,
+              speakingBlock.prompt
+            );
+            speakingResults[block.id] = feedback;
+            setSpeakingFeedback(prev => ({ ...prev, [block.id]: feedback }));
+          } catch (err: any) {
+            console.error(`Failed to analyze speaking block ${block.id}:`, err);
+          } finally {
+            setSpeakingLoading(prev => ({ ...prev, [block.id]: false }));
+          }
+        }
+      }
+
+      // Include speaking results in answers
+      const finalAnswers = { ...answers };
+      for (const [blockId, feedback] of Object.entries(speakingResults)) {
+        finalAnswers[blockId] = {
+          audioSubmitted: true,
+          feedback: feedback
+        };
+      }
+
+      // For speaking content, pass the speaking feedback to be saved
+      const completionPayload: any = { answers: finalAnswers };
+      if (hasSpeakingContent && Object.keys(speakingResults).length > 0) {
+        completionPayload.speakingFeedback = speakingResults;
+      }
+
+      const response = await learningService.completeContent(contentId, completionPayload);
 
       // Check for new achievements after content completion
       await checkForNewAchievements();
 
-      // Check if feedback was returned
-      if (response.feedback) {
+      // For speaking content, don't show the feedback popup - feedback is already displayed inline
+      if (hasSpeakingContent && Object.keys(speakingResults).length > 0) {
+        setCompleteMsg('Speaking exercise completed! Your feedback is displayed above.');
+        // Refresh content to show completion state
+        const updatedContent = await learningService.getDeliveredContentById(contentId);
+        setContent(updatedContent);
+      } else if (response.feedback) {
+        // Non-speaking content: show feedback popup
         setFeedbackData(response.feedback);
         setShowFeedback(true);
       } else {
@@ -500,9 +695,18 @@ const ContentViewer: React.FC = () => {
             )}
 
             {completeMsg && (
-              <p style={{ marginTop: '10px', color: '#2ecc71' }}>
-                <strong>{completeMsg}</strong>
-              </p>
+              <div style={{ marginTop: '10px', padding: '15px', background: '#d4edda', borderRadius: '6px', border: '1px solid #c3e6cb' }}>
+                <strong style={{ color: '#155724' }}>{completeMsg}</strong>
+                <div style={{ marginTop: '12px' }}>
+                  <button
+                    className="button button-primary"
+                    onClick={proceedToNext}
+                    disabled={isLoadingNext}
+                  >
+                    {isLoadingNext ? 'Loading...' : 'Continue to Next Lesson →'}
+                  </button>
+                </div>
+              </div>
             )}
             
             <div style={{ marginTop: '20px', padding: '20px', background: '#f9f9f9', borderRadius: '4px' }}>
@@ -535,6 +739,7 @@ const ContentViewer: React.FC = () => {
                       );
                     }
                     if (b.type === 'audio') return <div key={b.id}>{renderAudio(b)}</div>;
+                    if (b.type === 'speaking') return <div key={b.id}>{renderSpeaking(b)}</div>;
                     if (b.type === 'multiple_choice') return <div key={b.id}>{renderMultipleChoice(b)}</div>;
                     if (b.type === 'matching') return <div key={b.id}>{renderMatching(b)}</div>;
                     if (b.type === 'fill_blanks') return <div key={b.id}>{renderFillBlanks(b)}</div>;
@@ -557,24 +762,35 @@ const ContentViewer: React.FC = () => {
             {content.isCompleted && (
               <div style={{ marginTop: '20px', padding: '15px', background: '#eafaf1', borderRadius: '4px', border: '1px solid #2ecc71' }}>
                 <strong style={{ color: '#27ae60' }}>✓ Completed on {new Date(content.completedAt || '').toLocaleDateString()}</strong>
-                {content.feedback && (
-                  <div style={{ marginTop: '10px' }}>
-                    <button 
-                      className="button button-secondary"
-                      onClick={() => {
-                        try {
-                          const parsed = JSON.parse(content.feedback!);
-                          setFeedbackData(parsed);
-                          setShowFeedback(true);
-                        } catch (e) {
-                          alert('Feedback not available');
-                        }
-                      }}
-                    >
-                      View Feedback
-                    </button>
-                  </div>
-                )}
+                {content.feedback && (() => {
+                  try {
+                    const parsed = JSON.parse(content.feedback);
+                    // Check if this is speaking feedback (displayed inline above) or other feedback
+                    if (parsed.speakingFeedback) {
+                      return (
+                        <div style={{ marginTop: '8px', color: '#666', fontSize: '0.9em' }}>
+                          Speaking feedback is displayed above with your recordings.
+                        </div>
+                      );
+                    }
+                    // For other feedback types, show the View Feedback button
+                    return (
+                      <div style={{ marginTop: '10px' }}>
+                        <button 
+                          className="button button-secondary"
+                          onClick={() => {
+                            setFeedbackData(parsed);
+                            setShowFeedback(true);
+                          }}
+                        >
+                          View Feedback
+                        </button>
+                      </div>
+                    );
+                  } catch (e) {
+                    return null;
+                  }
+                })()}
               </div>
             )}
 

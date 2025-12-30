@@ -2,6 +2,8 @@
 
 ## Run (venv)
 
+For speaking modules: FFmpeg is required, https://www.ffmpeg.org/download.html or choco install ffpmeg(if you have Chocolatey)
+
 From the `backend/` folder:
 
 ### Windows (PowerShell)

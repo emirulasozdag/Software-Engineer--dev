@@ -220,22 +220,49 @@ class PlacementTestService:
         audioBytes: bytes,
         contentType: str | None,
     ) -> PlacementModuleResultView:
-        """Client uploads audio for speaking module; dummy speech recognition for now."""
+        """Client uploads audio for speaking module; uses Gemini API for analysis."""
+        from app.config.settings import get_settings
+        from app.infrastructure.external.llm.audio_analyzer import AudioAnalyzer
+        
         _ = self._require_student(userId)
         module = self._get_module_for_test(testId, "speaking")
         payload = self._parse_questions_json(module.questions_json)
 
-        # Dummy speech recognition: accept any non-empty bytes and return a fake transcript.
         audio_len = len(audioBytes or b"")
-        ok = audio_len > 0
-        transcript = "(dummy transcript)" if ok else "(no audio received)"
-        analysis = {
-            "questionId": str(questionId),
-            "receivedBytes": audio_len,
-            "contentType": contentType,
-            "transcript": transcript,
-            "pronunciationScore": 0.72 if ok else 0.0,
-        }
+        if audio_len == 0:
+            raise ValueError("No audio data received")
+        
+        # Get the question text to pass to the analyzer
+        questions = self.getModuleQuestions(testId, "speaking")
+        q_by_id: dict[str, str] = {str(q.id): str(getattr(q, "prompt", getattr(q, "text", ""))) for q in questions}
+        question_text = q_by_id.get(str(questionId), None)
+        
+        settings = get_settings()
+        
+        # Use Gemini API to analyze audio
+        try:
+            analyzer = AudioAnalyzer(api_key=settings.google_api_key or "")
+            result = analyzer.analyze_for_placement(audioBytes, contentType, question=question_text)
+            
+            analysis = {
+                "questionId": str(questionId),
+                "receivedBytes": audio_len,
+                "contentType": contentType,
+                "transcript": result.transcript,
+                "pronunciationScore": result.pronunciation_score,
+                "fluencyScore": result.fluency_score,
+                "grammarScore": result.grammar_score,
+                "vocabularyScore": result.vocabulary_score,
+                "overallScore": result.overall_score,
+                "cefrLevel": result.cefr_level,
+                "strengthTags": result.strength_tags,
+                "weaknessTags": result.weakness_tags,
+            }
+        except Exception as e:
+            # If Gemini API fails, return error
+            logger.error(f"Failed to analyze speaking audio: {str(e)}")
+            raise ValueError(f"Audio analysis failed: {str(e)}")
+        
         items = payload.get("speaking_audio", [])
         if not isinstance(items, list):
             items = []
@@ -243,15 +270,40 @@ class PlacementTestService:
         items = [it for it in items if not (isinstance(it, dict) and str(it.get("questionId")) == str(questionId))]
         items.append(analysis)
         payload["speaking_audio"] = items
+        
+        # Store the CEFR level in payload for later retrieval
+        payload["cefr_level"] = result.cefr_level
+        payload["strength_tags"] = result.strength_tags
+        payload["weakness_tags"] = result.weakness_tags
+        
         module.questions_json = json.dumps(payload)
 
-        # Dummy scoring: 1 point per uploaded question up to 3.
-        module.score = min(3, len(items))
+        # Score based on overall score from Gemini (0-100 scale, convert to 0-3)
+        module.score = int(result.overall_score / 100 * 3)
         self.db.commit()
 
-        level = self._level_for_module_score("speaking", int(module.score))
-        feedback = f"Dummy speech recognition: {len(items)} recording(s) received. Last transcript: {transcript}"
-        return PlacementModuleResultView(moduleType="speaking", level=level, score=int(module.score), feedback=feedback)
+        # Convert CEFR level to LanguageLevel enum
+        level_map = {
+            "A1": LanguageLevel.A1,
+            "A2": LanguageLevel.A2,
+            "B1": LanguageLevel.B1,
+            "B2": LanguageLevel.B2,
+            "C1": LanguageLevel.C1,
+            "C2": LanguageLevel.C2,
+        }
+        level = level_map.get(result.cefr_level, LanguageLevel.A1)
+        
+        # Format feedback from strengths and weaknesses
+        strengths_str = ", ".join(result.strength_tags) if result.strength_tags else "N/A"
+        weaknesses_str = ", ".join(result.weakness_tags) if result.weakness_tags else "N/A"
+        feedback = f"Strengths: {strengths_str}. Areas to improve: {weaknesses_str}."
+        
+        return PlacementModuleResultView(
+            moduleType="speaking",
+            level=level,
+            score=int(module.score),
+            feedback=feedback
+        )
 
     def completeTest(self, userId: int, testId: int) -> PlacementTestResultView:
         """UC6: analyze results + insert into test_results.
@@ -277,7 +329,23 @@ class PlacementTestService:
         reading_level = self._level_for_module_score("reading", reading_score)
         writing_level = self._level_for_module_score("writing", writing_score)
         listening_level = self._level_for_module_score("listening", listening_score)
+        
+        # For speaking, use the CEFR level from Gemini if available
         speaking_level = self._level_for_module_score("speaking", speaking_score)
+        if speaking and speaking.questions_json:
+            speaking_payload = self._parse_questions_json(speaking.questions_json)
+            cefr_level = speaking_payload.get("cefr_level")
+            if cefr_level:
+                level_map = {
+                    "A1": LanguageLevel.A1,
+                    "A2": LanguageLevel.A2,
+                    "B1": LanguageLevel.B1,
+                    "B2": LanguageLevel.B2,
+                    "C1": LanguageLevel.C1,
+                    "C2": LanguageLevel.C2,
+                }
+                speaking_level = level_map.get(cefr_level, speaking_level)
+        
         overall = self._average_cefr_levels([reading_level, writing_level, listening_level, speaking_level])
 
         # LLM writing analysis (best-effort; falls back silently).
@@ -702,26 +770,11 @@ class PlacementTestService:
 
         # Speaking (Legacy QuestionDB for now)
         speaking_qs = []
-        existing_speaking = list(self.db.scalars(select(QuestionDB).where(QuestionDB.text.like("[SEED][SPEAKING]%"))).all())
+        existing_speaking = list(self.db.scalars(select(QuestionDB).where(QuestionDB.text.like("[SPEAKING]%"))).all())
         if not existing_speaking:
              seeds = [
                 {
-                    "text": "[SEED][SPEAKING] Record yourself introducing yourself in 15 seconds (dummy).",
-                    "options_json": None,
-                    "correct_answer": "N/A",
-                },
-                {
-                    "text": "[SEED][SPEAKING] Describe a hobby you enjoy (dummy).",
-                    "options_json": None,
-                    "correct_answer": "N/A",
-                },
-                {
-                    "text": "[SEED][SPEAKING] Read this sentence aloud: 'The quick brown fox jumps over the lazy dog.'",
-                    "options_json": None,
-                    "correct_answer": "N/A",
-                },
-                {
-                    "text": "[SEED][SPEAKING] Explain your favorite movie in 2-3 sentences (dummy).",
+                    "text": "[SPEAKING] Introduce yourself and talk about a day in your life (maximum 30 seconds).",
                     "options_json": None,
                     "correct_answer": "N/A",
                 },
@@ -730,7 +783,7 @@ class PlacementTestService:
                 q = QuestionDB(**s)
                 self.db.add(q)
              self.db.commit()
-             speaking_qs = list(self.db.scalars(select(QuestionDB).where(QuestionDB.text.like("[SEED][SPEAKING]%"))).all())
+             speaking_qs = list(self.db.scalars(select(QuestionDB).where(QuestionDB.text.like("[SPEAKING]%"))).all())
         else:
             speaking_qs = existing_speaking
 

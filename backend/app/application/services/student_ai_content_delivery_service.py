@@ -225,6 +225,10 @@ class StudentAIContentDeliveryService:
 		if result and "answers" in result:
 			row.user_answers_json = json.dumps(result["answers"])
 
+		# Check if speaking feedback was provided directly (from speaking-feedback endpoint)
+		# In this case, we use it directly instead of running analysis
+		speaking_feedback = result.get("speakingFeedback") if result else None
+		
 		row.is_active = False
 		row.completed_at = datetime.utcnow()
 		self.db.commit()
@@ -232,7 +236,13 @@ class StudentAIContentDeliveryService:
 		# Update topic progress
 		self._update_topic_progress(studentUserId, row, result)
 
-		# Generate feedback and update strengths/weaknesses
+		# For speaking content with pre-analyzed feedback, just store it
+		if speaking_feedback:
+			row.feedback_json = json.dumps({"speakingFeedback": speaking_feedback})
+			self.db.commit()
+			return {"feedback": {"speakingFeedback": speaking_feedback}, "score": result.get("score") if result else None}
+
+		# Generate feedback and update strengths/weaknesses for non-speaking content
 		feedback_data = None
 		try:
 			feedback = self._analyze_and_update_strengths_weaknesses(
@@ -530,29 +540,30 @@ class StudentAIContentDeliveryService:
 				prompt_ctx["listening_transcript"] = lq.transcript
 				prompt_ctx["listening_audio_url"] = lq.audio_url
 
-		# Dummy for speaking (still dummy as per original code, but listening is now enhanced)
+		# Generate speaking questions using LLM
 		if target_skill == "speaking":
-			title = f"{contentType.value.title()} (Dummy)"
+			speaking_questions = self._generate_speaking_questions(
+				snapshot=snapshot,
+				contentType=contentType,
+				target_topic=target_topic,
+			)
+			title = f"{contentType.value.title()}: Speaking Practice"
 			payload = {
 				"formatVersion": 1,
 				"title": title,
-				"rationale": "Speaking content is currently dummy.",
+				"rationale": f"Speaking practice targeting {target_skill} skill at {snapshot.overall_level.value} level",
 				"blocks": [
 					{
 						"type": "text",
-						"id": "t1",
-						"text": (
-							"This module is a placeholder for now.\n\n"
-							f"Target: {target_skill}\n"
-							f"Strengths considered: {', '.join(snapshot.strengths[:3]) if snapshot.strengths else 'N/A'}\n"
-							f"Weaknesses considered: {', '.join(snapshot.weaknesses[:3]) if snapshot.weaknesses else 'N/A'}\n"
-						),
+						"id": "intro",
+						"text": f"Practice your speaking skills with these questions. Record your responses and get feedback on pronunciation, fluency, grammar, and vocabulary.",
 					}
-				],
+				] + speaking_questions,
 			}
 			body = json.dumps(payload, ensure_ascii=False)
 			rationale = payload["rationale"]
-			prompt_ctx["llmUsed"] = False
+			prompt_ctx["llmUsed"] = True
+			prompt_ctx["speakingQuestions"] = len(speaking_questions)
 			return title, body, rationale, prompt_ctx
 
 		system = (
@@ -774,3 +785,108 @@ class StudentAIContentDeliveryService:
 
 		except Exception as e:
 			logger.error(f"Failed to update topic progress: {e}")
+
+	def _generate_speaking_questions(
+		self,
+		*,
+		snapshot: StudentSnapshot,
+		contentType: ContentType,
+		target_topic: str | dict | None = None,
+	) -> list[dict]:
+		"""Generate 2-3 speaking questions appropriate for the student's level."""
+		import random
+		
+		level = snapshot.overall_level.value
+		weaknesses = snapshot.weaknesses[:2] if snapshot.weaknesses else []
+		
+		# Extract topic name if target_topic is a dict
+		topic_name = None
+		if isinstance(target_topic, dict):
+			topic_name = target_topic.get("name") or target_topic.get("topic")
+		elif isinstance(target_topic, str):
+			topic_name = target_topic
+		
+		# Question templates by level
+		question_templates = {
+			"A1": [
+				"Introduce yourself. What is your name and where are you from?",
+				"Describe your daily routine. What do you do every day?",
+				"Talk about your family. Who lives with you?",
+				"What is your favorite food? Why do you like it?",
+				"Describe your home. What does it look like?",
+			],
+			"A2": [
+				"Describe your last weekend. What did you do?",
+				"Talk about your hobbies and interests. What do you enjoy doing in your free time?",
+				"Describe a place you like to visit. Why do you like going there?",
+				"Tell me about your best friend. What do you do together?",
+				"What are your plans for the next holiday?",
+			],
+			"B1": [
+				"Describe a memorable experience from your childhood. Why was it special?",
+				"Discuss the advantages and disadvantages of living in a city vs. the countryside.",
+				"Talk about a skill you would like to learn. Why is it important to you?",
+				"Describe a problem you faced recently and how you solved it.",
+				"What changes would you make to improve your local community?",
+			],
+			"B2": [
+				"Discuss how technology has changed the way people communicate.",
+				"Describe a time when you had to adapt to a difficult situation. What did you learn?",
+				"What role should governments play in protecting the environment?",
+				"Discuss the importance of work-life balance in modern society.",
+				"How has globalization affected your country or community?",
+			],
+			"C1": [
+				"Analyze the impact of social media on modern relationships and social interactions.",
+				"Discuss the ethical implications of artificial intelligence in decision-making.",
+				"Evaluate the effectiveness of current education systems in preparing students for the future.",
+				"What are the most significant challenges facing your generation, and how can they be addressed?",
+				"Discuss the relationship between economic growth and environmental sustainability.",
+			],
+			"C2": [
+				"Critically evaluate the notion that cultural diversity enriches society.",
+				"Discuss the extent to which individual freedom should be balanced against collective security.",
+				"Analyze the role of art and literature in shaping social consciousness.",
+				"Evaluate the argument that scientific progress always leads to social progress.",
+				"Discuss the philosophical and practical implications of universal basic income.",
+			],
+		}
+		
+		# Get questions for the student's level, fallback to B1 if not found
+		templates = question_templates.get(level, question_templates["B1"])
+		
+		# Topic-specific questions if a topic is provided
+		if topic_name:
+			topic_lower = topic_name.lower()
+			# Add topic-specific question as first question
+			topic_questions = {
+				"travel": f"Describe your ideal travel destination. What would you do there?",
+				"work": f"Talk about your ideal job or career. What makes it attractive to you?",
+				"health": f"How do you maintain a healthy lifestyle? What habits are important?",
+				"education": f"Discuss the role of education in personal development.",
+				"environment": f"What environmental issues concern you most? Why?",
+				"technology": f"How has technology changed your daily life?",
+				"culture": f"Describe a cultural tradition that is important to you.",
+				"food": f"Talk about traditional foods from your country or region.",
+			}
+			for key, question in topic_questions.items():
+				if key in topic_lower:
+					templates = [question] + templates
+					break
+		
+		# Select a question randomly
+		num_questions = random.randint(1, 1)
+		selected = random.sample(templates, min(num_questions, len(templates)))
+		
+		# Build speaking blocks
+		blocks = []
+		for idx, question in enumerate(selected, 1):
+			blocks.append({
+				"type": "speaking",
+				"id": f"speak{idx}",
+				"prompt": question,
+				"maxDuration": 120,  # 2 minutes
+			})
+		
+		return blocks
+

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -286,3 +286,69 @@ def complete_content(contentId: int, payload: dict[str, Any] | None = None, user
 		"score": result.get("score"),
 		"newAchievements": new_achievement_ids
 	}
+
+
+@router.post("/{contentId}/speaking-feedback")
+async def get_speaking_feedback(
+	contentId: int,
+	questionId: str = Form(...),
+	audio: UploadFile = File(...),
+	prompt: str = Form(None),
+	user=Depends(require_role(UserRole.STUDENT)),
+	db: Session = Depends(get_db),
+) -> dict:
+	"""Submit speaking audio and get detailed feedback."""
+	from app.infrastructure.external.llm.audio_analyzer import AudioAnalyzer
+	
+	# Verify student has access to this content
+	student = db.scalar(select(StudentDB).where(StudentDB.user_id == int(user.userId)))
+	if not student:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+	
+	# Verify content exists and is assigned to student
+	content = db.get(ContentDB, int(contentId))
+	if not content:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
+	
+	# Get audio bytes
+	audio_bytes = await audio.read()
+	if not audio_bytes:
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No audio data received")
+	
+	# Analyze audio using Gemini
+	settings = get_settings()
+	try:
+		analyzer = AudioAnalyzer(api_key=settings.google_api_key or "")
+		result = analyzer.analyze_for_feedback(audio_bytes, audio.content_type, question=prompt)
+		
+		return {
+			"questionId": questionId,
+			"transcript": result.transcript,
+			"feedback": {
+				"pronunciation": {
+					"score": result.pronunciation_score,
+					"feedback": result.pronunciation_feedback,
+				},
+				"fluency": {
+					"score": result.fluency_score,
+					"feedback": result.fluency_feedback,
+				},
+				"grammar": {
+					"score": result.grammar_score,
+					"feedback": result.grammar_feedback,
+				},
+				"vocabulary": {
+					"score": result.vocabulary_score,
+					"feedback": result.vocabulary_feedback,
+				},
+				"overall": {
+					"score": result.overall_score,
+					"feedback": result.overall_feedback,
+				},
+			},
+		}
+	except Exception as e:
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail=f"Failed to analyze audio: {str(e)}"
+		)

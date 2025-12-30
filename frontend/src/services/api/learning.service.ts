@@ -186,4 +186,32 @@ export const learningService = {
     const response = await apiClient.get('/api/content-delivery/history');
     return response.data;
   },
+
+  /**
+   * Submit speaking audio for feedback
+   */
+  submitSpeakingAudio: async (
+    contentId: string,
+    questionId: string,
+    audioBlob: Blob,
+    prompt?: string
+  ): Promise<any> => {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'recording.webm');
+    formData.append('questionId', questionId);
+    if (prompt) {
+      formData.append('prompt', prompt);
+    }
+    
+    const response = await apiClient.post(
+      `/api/content-delivery/${contentId}/speaking-feedback`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
 };
