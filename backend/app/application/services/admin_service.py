@@ -1,13 +1,18 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.domain.enums import UserRole
 from app.infrastructure.db.models.system import MaintenanceLogDB, SystemPerformanceDB
+from app.infrastructure.db.models.system import MaintenanceLogDB, SystemPerformanceDB
 from app.infrastructure.db.models.user import AdminDB, StudentDB, TeacherDB, UserDB
+from app.infrastructure.db.models.results import TestResultDB
+from app.infrastructure.db.models.assignments import AssignmentDB
+from app.infrastructure.db.models.student_ai_content import StudentAIContentDB
+
 
 class AdminService:
 	def __init__(self, db: Session):
@@ -83,6 +88,36 @@ class AdminService:
 				"recordedAt": last_perf.recorded_at,
 			}
 
+		# New stats
+		seven_days_ago = datetime.utcnow() - timedelta(days=7)
+		new_users_7d = int(self.db.scalar(select(func.count()).select_from(UserDB).where(UserDB.created_at >= seven_days_ago)) or 0)
+
+		# Learning Activity
+		tests_completed = int(self.db.scalar(select(func.count()).select_from(TestResultDB)) or 0)
+		lessons_completed = int(self.db.scalar(select(func.count()).select_from(StudentAIContentDB).where(StudentAIContentDB.completed_at.is_not(None))) or 0)
+		assignments_created = int(self.db.scalar(select(func.count()).select_from(AssignmentDB)) or 0)
+		ai_content_generated = int(self.db.scalar(select(func.count()).select_from(StudentAIContentDB)) or 0)
+
+		# Usage History (Last 7 days)
+		history = []
+		today = datetime.utcnow().date()
+		for i in range(6, -1, -1):
+			day = today - timedelta(days=i)
+			day_start = datetime.combine(day, datetime.min.time())
+			day_end = datetime.combine(day, datetime.max.time())
+			
+			# Count activities for this day
+			new_users = self.db.scalar(select(func.count()).select_from(UserDB).where(UserDB.created_at >= day_start, UserDB.created_at <= day_end)) or 0
+			tests = self.db.scalar(select(func.count()).select_from(TestResultDB).where(TestResultDB.completed_at >= day_start, TestResultDB.completed_at <= day_end)) or 0
+			lessons = self.db.scalar(select(func.count()).select_from(StudentAIContentDB).where(StudentAIContentDB.completed_at >= day_start, StudentAIContentDB.completed_at <= day_end)) or 0
+			
+			history.append({
+				"date": day.strftime("%Y-%m-%d"),
+				"day": day.strftime("%a"),
+				"users": new_users,
+				"activity": tests + lessons
+			})
+
 		return {
 			"totalUsers": total_users,
 			"totalStudents": total_students,
@@ -92,6 +127,14 @@ class AdminService:
 			"maintenanceEnabled": bool(maintenance["enabled"]),
 			"maintenanceReason": maintenance.get("reason"),
 			"lastPerformance": last_perf_out,
+			"newUsers7d": new_users_7d,
+			"learningActivity": {
+				"testsCompleted": tests_completed,
+				"lessonsCompleted": lessons_completed,
+				"assignmentsCreated": assignments_created,
+				"aiContentGenerated": ai_content_generated,
+			},
+			"usageHistory": history,
 		}
 
 	def getMaintenanceStatus(self) -> dict:

@@ -14,6 +14,19 @@ export interface SystemStats {
   maintenanceEnabled: boolean;
   maintenanceReason?: string | null;
   lastPerformance?: SystemPerformanceSnapshot | null;
+  newUsers7d?: number;
+  learningActivity?: {
+    testsCompleted: number;
+    lessonsCompleted: number;
+    assignmentsCreated: number;
+    aiContentGenerated: number;
+  };
+  usageHistory?: Array<{
+    date: string;
+    day: string;
+    users: number;
+    activity: number;
+  }>;
 }
 
 export interface UserAccount {

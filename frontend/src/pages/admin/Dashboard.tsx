@@ -109,11 +109,12 @@ const AdminDashboard: React.FC = () => {
           </div>
         </Link>
 
+
         <div className="card col-8">
           <div className="toolbar">
             <div>
               <h2 style={{ marginBottom: 6 }}>Quick Stats</h2>
-              <div className="text-muted">Demo numbers (replace with API later)</div>
+              <div className="text-muted">Real-time system data</div>
             </div>
             <span className="pill">Overview</span>
           </div>
@@ -121,19 +122,19 @@ const AdminDashboard: React.FC = () => {
           <div className="kpis">
             <div className="kpi">
               <div className="label">Total Users</div>
-              <div className="value">1,247</div>
+              <div className="value">{stats?.totalUsers ?? '-'}</div>
             </div>
             <div className="kpi">
               <div className="label">Active Students</div>
-              <div className="value">892</div>
+              <div className="value">{stats?.totalStudents ?? '-'}</div>
             </div>
             <div className="kpi">
               <div className="label">Teachers</div>
-              <div className="value">45</div>
+              <div className="value">{stats?.totalTeachers ?? '-'}</div>
             </div>
             <div className="kpi">
-              <div className="label">Uptime</div>
-              <div className="value">99.8%</div>
+              <div className="label">Verified Users</div>
+              <div className="value">{stats?.verifiedUsers ?? '-'}</div>
             </div>
           </div>
         </div>
@@ -157,7 +158,7 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
