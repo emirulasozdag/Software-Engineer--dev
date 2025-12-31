@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
 import { teacherService } from '@/services/api';
+import { progressService } from '@/services/api/progress.service';
 import { communicationService } from '@/services/api/communication.service';
 import { PlacementTestResult } from '@/types/test.types';
 import { StudentOverview, TeacherDirective } from '@/types/teacher.types';
+import { ProgressResponse } from '@/types/progress.types';
 
 type TeacherTestResult = PlacementTestResult & {
   testId?: string;
@@ -15,6 +17,7 @@ const StudentDetails: React.FC = () => {
   const { studentId } = useParams<{ studentId: string }>();
   const [student, setStudent] = useState<StudentOverview | null>(null);
   const [results, setResults] = useState<TeacherTestResult[]>([]);
+  const [progress, setProgress] = useState<ProgressResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -24,18 +27,21 @@ const StudentDetails: React.FC = () => {
   const [focusAreas, setFocusAreas] = useState('');
   const [instructions, setInstructions] = useState('');
   const [sendingDirective, setSendingDirective] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const load = async () => {
     if (!studentId) return;
     setLoading(true);
     setError(null);
     try {
-      const [details, testResults] = await Promise.all([
+      const [details, testResults, progressData] = await Promise.all([
         teacherService.getStudentDetails(studentId),
         teacherService.getStudentTestResults(studentId),
+        progressService.getStudentProgress(parseInt(studentId)),
       ]);
       setStudent(details);
       setResults(testResults);
+      setProgress(progressData);
     } catch (e: any) {
       setError(e?.response?.data?.detail || 'Student details could not be loaded.');
     } finally {
@@ -109,6 +115,27 @@ const StudentDetails: React.FC = () => {
       setError(e?.response?.data?.detail || 'Failed to save AI directive.');
     } finally {
       setSendingDirective(false);
+    }
+  };
+
+  const downloadPdf = async () => {
+    if (!studentId) return;
+    setIsDownloadingPdf(true);
+    setError(null);
+    try {
+      const blob = await progressService.exportProgressPdf(parseInt(studentId));
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `progress-${studentId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || e?.message || 'Failed to export PDF');
+    } finally {
+      setIsDownloadingPdf(false);
     }
   };
 
@@ -232,6 +259,157 @@ const StudentDetails: React.FC = () => {
       </div>
 
       <div className="card">
+        <h2>Learning Statistics</h2>
+        {progress ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginTop: '20px' }}>
+            <div style={{ padding: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+              <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>Daily Streak</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{progress.dailyStreak || 0}</div>
+              <div style={{ fontSize: '12px', opacity: 0.8 }}>days</div>
+            </div>
+            <div style={{ padding: '20px', background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+              <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>Content Completed</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{progress.completedContentCount || 0}</div>
+              <div style={{ fontSize: '12px', opacity: 0.8 }}>pieces</div>
+            </div>
+            <div style={{ padding: '20px', background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+              <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>Current Level</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{progress.currentLevel || 'N/A'}</div>
+              <div style={{ fontSize: '12px', opacity: 0.8 }}>CEFR</div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-muted">Loading progress data...</p>
+        )}
+      </div>
+
+      <div className="card">
+        <h2>Progress Over Time</h2>
+        <p style={{ color: '#666', marginBottom: '20px' }}>Track the student's learning journey with completed content and CEFR level progression</p>
+
+        {progress && progress.timeline.length > 0 ? (
+          <div style={{ overflowX: 'auto', marginTop: '20px' }}>
+            <div style={{ minWidth: '600px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', height: '300px', gap: '8px', padding: '20px', background: '#f9f9f9', borderRadius: '8px' }}>
+                {progress.timeline.map((point, idx) => {
+                  const maxContent = Math.max(...progress.timeline.map(p => p.completedContentCount), 1);
+                  const height = (point.completedContentCount / maxContent) * 100;
+
+                  return (
+                    <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: `${height}%`,
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          borderRadius: '4px 4px 0 0',
+                          position: 'relative',
+                          minHeight: '4px',
+                          transition: 'all 0.3s ease',
+                        }}
+                        title={`${point.completedContentCount} content pieces\n${point.cefrLevel || 'No level'}`}
+                      >
+                        <div style={{
+                          position: 'absolute',
+                          top: '-25px',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {point.completedContentCount}
+                        </div>
+                        {point.cefrLevel && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '-45px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            fontSize: '11px',
+                            color: '#3498db',
+                            fontWeight: 'bold',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {point.cefrLevel}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ marginTop: '8px', fontSize: '11px', color: '#666', transform: 'rotate(-45deg)', whiteSpace: 'nowrap' }}>
+                        {new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ marginTop: '20px', padding: '15px', background: '#f0f0f0', borderRadius: '8px' }}>
+                <h4 style={{ marginTop: 0, marginBottom: '10px' }}>Legend</h4>
+                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '20px', height: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '4px' }}></div>
+                    <span style={{ fontSize: '14px' }}>Completed Content Count</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '14px', color: '#3498db', fontWeight: 'bold' }}>Level Tag:</span>
+                    <span style={{ fontSize: '14px' }}>CEFR Level at that point</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p style={{ color: '#999', padding: '40px', textAlign: 'center', background: '#f9f9f9', borderRadius: '8px' }}>
+            {loading ? 'Loading progress data…' : 'No timeline data available yet. Student needs to complete some content to see progress!'}
+          </p>
+        )}
+      </div>
+
+      {/* Content Type Progress */}
+      {progress && progress.contentTypeProgress.length > 0 && (
+        <div className="card">
+          <h2>Content Completion by Type</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', marginTop: '20px' }}>
+            {progress.contentTypeProgress.map((ct) => (
+              <div key={ct.contentType} style={{ padding: '15px', background: '#f9f9f9', borderRadius: '8px', textAlign: 'center', border: '2px solid #e0e0e0' }}>
+                <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px', textTransform: 'capitalize' }}>{ct.contentType}</div>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#3498db' }}>{ct.completedCount}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Personal Plan Topic Progress */}
+      {progress && progress.topicProgress.length > 0 && (
+        <div className="card">
+          <h2>Personal Plan Topic Progress</h2>
+          <div style={{ marginTop: '20px' }}>
+            {progress.topicProgress.map((topic) => (
+              <div key={topic.topicName} style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '15px' }}>{topic.topicName}</span>
+                  <span style={{ color: '#666', fontSize: '14px' }}>
+                    {topic.completedCount}/{topic.totalCount} ({Math.round(topic.progress * 100)}%)
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: '12px', background: '#e0e0e0', borderRadius: '6px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      width: `${topic.progress * 100}%`,
+                      height: '100%',
+                      background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                      transition: 'width 0.3s ease',
+                    }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="card">
         <h2>Strengths & Weaknesses</h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '15px' }}>
           <div>
@@ -258,13 +436,6 @@ const StudentDetails: React.FC = () => {
               <div className="text-muted">No weaknesses detected yet.</div>
             )}
           </div>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Progress Chart</h2>
-        <div style={{ height: '200px', background: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' }}>
-          <p style={{ color: '#999' }}>[Student progress visualization will be displayed here]</p>
         </div>
       </div>
 
@@ -306,8 +477,9 @@ const StudentDetails: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-        <button className="button button-primary">Export Progress (PDF)</button>
-        <button className="button button-secondary">Export Progress (CSV)</button>
+        <button className="button button-primary" onClick={downloadPdf} disabled={isDownloadingPdf}>
+          {isDownloadingPdf ? 'Preparing PDF…' : 'Export Progress (PDF)'}
+        </button>
       </div>
     </div>
   );

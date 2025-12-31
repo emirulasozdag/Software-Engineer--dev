@@ -32,6 +32,62 @@ def _resolve_student_db_id(db: Session, user_id: int) -> int:
 	return int(student_id)
 
 
+def _calculate_daily_streak(db: Session, student_id: int) -> int:
+	"""Calculate daily streak based on consecutive days with completed content."""
+	# Get all completion dates from student_ai_contents
+	completed_content = db.scalars(
+		select(StudentAIContentDB)
+		.where(
+			StudentAIContentDB.student_id == student_id,
+			StudentAIContentDB.is_active == False,  # noqa: E712
+			StudentAIContentDB.completed_at.isnot(None)
+		)
+	).all()
+	
+	if not completed_content:
+		return 0
+	
+	# Extract unique dates when content was completed
+	completion_dates: set[date] = set()
+	for content in completed_content:
+		if content.completed_at:
+			completion_dates.add(content.completed_at.date())
+	
+	if not completion_dates:
+		return 0
+	
+	# Sort dates in descending order (most recent first)
+	sorted_dates = sorted(completion_dates, reverse=True)
+	
+	# Check if the streak includes today or yesterday
+	today = date.today()
+	yesterday = today - timedelta(days=1)
+	
+	# Streak must start from today or yesterday to be valid
+	if sorted_dates[0] < yesterday:
+		return 0
+	
+	# Count consecutive days
+	streak = 1
+	for i in range(1, len(sorted_dates)):
+		expected_date = sorted_dates[i - 1] - timedelta(days=1)
+		if sorted_dates[i] == expected_date:
+			streak += 1
+		else:
+			break
+	
+	return streak
+
+
+def _update_student_daily_streak(db: Session, student: StudentDB) -> int:
+	"""Calculate and update student's daily streak in the database."""
+	new_streak = _calculate_daily_streak(db, student.id)
+	if student.daily_streak != new_streak:
+		student.daily_streak = new_streak
+		db.commit()
+	return new_streak
+
+
 @router.get("/me", response_model=ProgressResponse)
 def get_my_progress(user=Depends(get_current_user), db: Session = Depends(get_db)) -> ProgressResponse:
 	_require_student(user)
@@ -47,9 +103,13 @@ def get_my_progress(user=Depends(get_current_user), db: Session = Depends(get_db
 
 	# Get student info for daily streak, points, and level
 	student = db.get(StudentDB, student_id)
-	daily_streak = student.daily_streak if student else 0
-	total_points = student.total_points if student else 0
-	current_level = student.level.value if student and student.level else None
+	if not student:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+	
+	# Calculate and update daily streak based on completed AI contents
+	daily_streak = _update_student_daily_streak(db, student)
+	total_points = student.total_points
+	current_level = student.level.value if student.level else None
 
 	# Get completed content count and type breakdown
 	completed_content = db.scalars(

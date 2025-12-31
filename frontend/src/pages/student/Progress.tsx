@@ -109,11 +109,6 @@ const Progress: React.FC = () => {
             <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{liveProgress?.currentLevel || 'N/A'}</div>
             <div style={{ fontSize: '12px', opacity: 0.8 }}>CEFR</div>
           </div>
-          <div style={{ padding: '20px', background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', color: 'white', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-            <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>Total Points</div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{liveProgress?.totalPoints || 0}</div>
-            <div style={{ fontSize: '12px', opacity: 0.8 }}>points</div>
-          </div>
         </div>
       </div>
 

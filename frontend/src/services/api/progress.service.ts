@@ -47,4 +47,14 @@ export const progressService = {
     });
     return response.data;
   },
+
+  /**
+   * UC11 (Teacher/Admin): Export a student's progress as PDF
+   */
+  exportProgressPdf: async (studentId: number): Promise<Blob> => {
+    const response = await apiClient.get(`/api/export/progress/${studentId}.pdf`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };
