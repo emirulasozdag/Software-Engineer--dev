@@ -148,9 +148,11 @@ def get_my_progress(user=Depends(get_current_user), db: Session = Depends(get_db
 			cefrLevel=cefr_level
 		))
 	
-	if not timeline and last_updated:
+	if not timeline:
+		# Ensure we have at least one point for the graph
+		fallback_date = last_updated.date() if last_updated else date.today()
 		timeline = [ProgressTimelinePoint(
-			date=last_updated.date(),
+			date=fallback_date,
 			correctAnswerRate=correct_rate,
 			completedContentCount=completed_content_count,
 			cefrLevel=current_level
@@ -286,9 +288,10 @@ def get_student_progress(student_id: int, db: Session = Depends(get_db)) -> Prog
 			cefrLevel=cefr_level
 		))
 	
-	if not timeline and last_updated:
+	if not timeline:
+		fallback_date = last_updated.date() if last_updated else date.today()
 		timeline = [ProgressTimelinePoint(
-			date=last_updated.date(),
+			date=fallback_date,
 			correctAnswerRate=correct_rate,
 			completedContentCount=completed_content_count,
 			cefrLevel=current_level
