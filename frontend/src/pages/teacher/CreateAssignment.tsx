@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { assignmentsService, type AssignmentContentType, type QuestionCreate, type QuestionType } from '@/services/api/assignments.service';
+import { teacherService } from '@/services/api';
+import type { StudentOverview } from '@/types/teacher.types';
 
 type Question = {
   id: string;
@@ -18,14 +20,57 @@ const CreateAssignment: React.FC = () => {
     title: '',
     description: '',
     dueDate: '',
-    studentUserIdsCsv: '',
   });
+  const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
+  const [students, setStudents] = useState<StudentOverview[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(true);
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [contentType, setContentType] = useState<AssignmentContentType>('TEXT');
   const [contentText, setContentText] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pointError, setPointError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const data = await teacherService.getMyStudents();
+        setStudents(data);
+      } catch (e) {
+        console.error('Failed to load students:', e);
+      } finally {
+        setStudentsLoading(false);
+      }
+    };
+    fetchStudents();
+  }, []);
+
+  const filteredStudents = students.filter((s) => {
+    const q = studentSearchQuery.toLowerCase();
+    return s.name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
+  });
+
+  const toggleStudent = (studentId: number) => {
+    setSelectedStudentIds((prev) =>
+      prev.includes(studentId)
+        ? prev.filter((id) => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const selectAllStudents = () => {
+    const allIds = filteredStudents.map((s) => Number(s.id));
+    setSelectedStudentIds((prev) => {
+      const newIds = allIds.filter((id) => !prev.includes(id));
+      return [...prev, ...newIds];
+    });
+  };
+
+  const deselectAllStudents = () => {
+    const filteredIds = filteredStudents.map((s) => Number(s.id));
+    setSelectedStudentIds((prev) => prev.filter((id) => !filteredIds.includes(id)));
+  };
 
   const addQuestion = (type: QuestionType) => {
     const newQuestion: Question = {
@@ -139,12 +184,7 @@ const CreateAssignment: React.FC = () => {
       }
 
       const due = formData.dueDate ? new Date(`${formData.dueDate}T00:00:00.000Z`).toISOString() : new Date().toISOString();
-      const ids = formData.studentUserIdsCsv
-        .split(',')
-        .map((x) => x.trim())
-        .filter(Boolean)
-        .map((x) => Number(x))
-        .filter((n) => Number.isFinite(n) && n > 0);
+      const ids = selectedStudentIds;
 
       const questionsPayload: QuestionCreate[] = questions.map((q, idx) => ({
         questionType: q.questionType,
@@ -241,17 +281,67 @@ const CreateAssignment: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Assign To (Student User IDs)</label>
-              <input
-                className="input"
-                type="text"
-                value={formData.studentUserIdsCsv}
-                onChange={(e) => setFormData({ ...formData, studentUserIdsCsv: e.target.value })}
-                placeholder="e.g., 12, 15, 22"
-              />
-              <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '5px' }}>
-                Comma-separated user IDs (from Admin → User Management)
-              </p>
+              <label className="form-label">Assign To Students</label>
+              {studentsLoading ? (
+                <p>Loading students...</p>
+              ) : students.length === 0 ? (
+                <p style={{ color: '#666' }}>No students found. You may not have any students assigned to you.</p>
+              ) : (
+                <>
+                  <input
+                    className="input"
+                    type="text"
+                    value={studentSearchQuery}
+                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                    placeholder="Search by name or email..."
+                    style={{ marginBottom: '10px' }}
+                  />
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                    <button type="button" className="button button-secondary" style={{ fontSize: '0.85rem', padding: '6px 12px' }} onClick={selectAllStudents}>
+                      Select All
+                    </button>
+                    <button type="button" className="button button-secondary" style={{ fontSize: '0.85rem', padding: '6px 12px' }} onClick={deselectAllStudents}>
+                      Deselect All
+                    </button>
+                    <span style={{ marginLeft: 'auto', color: '#666', fontSize: '0.9rem' }}>
+                      {selectedStudentIds.length} selected
+                    </span>
+                  </div>
+                  <div style={{ border: '1px solid #ddd', borderRadius: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                    {filteredStudents.map((student) => {
+                      const isSelected = selectedStudentIds.includes(Number(student.id));
+                      return (
+                        <label
+                          key={student.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '10px 12px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #eee',
+                            background: isSelected ? '#e8f4ff' : 'transparent',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleStudent(Number(student.id))}
+                            style={{ marginRight: '12px', width: '18px', height: '18px' }}
+                          />
+                          <div>
+                            <div style={{ fontWeight: 600 }}>{student.name}</div>
+                            <div style={{ fontSize: '0.85rem', color: '#666' }}>{student.email}</div>
+                          </div>
+                          <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: '#999' }}>ID: {student.id}</span>
+                        </label>
+                      );
+                    })}
+                    {filteredStudents.length === 0 && (
+                      <p style={{ padding: '15px', textAlign: 'center', color: '#666' }}>No students match your search.</p>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="form-group">
@@ -448,7 +538,9 @@ const CreateAssignment: React.FC = () => {
               <p><strong>Description:</strong> {formData.description || 'None'}</p>
               <p><strong>Due Date:</strong> {formData.dueDate}</p>
               <p><strong>Type:</strong> {contentType}</p>
-              <p><strong>Students:</strong> {formData.studentUserIdsCsv || 'None'}</p>
+              <p><strong>Students:</strong> {selectedStudentIds.length > 0 
+                ? students.filter(s => selectedStudentIds.includes(Number(s.id))).map(s => s.name).join(', ') 
+                : 'None'}</p>
 
               {contentType === 'TEXT' && (
                 <div>
