@@ -4,13 +4,12 @@
 
 For speaking modules: FFmpeg is required, https://www.ffmpeg.org/download.html or choco install ffpmeg(if you have Chocolatey)
 
-From the `backend/` folder:
-
 ### Windows (PowerShell)
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
+cd backend
 python -m pip install -r requirements.txt
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -20,6 +19,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+cd backend
 python -m pip install -r requirements.txt
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
