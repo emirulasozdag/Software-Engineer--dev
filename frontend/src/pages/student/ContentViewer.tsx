@@ -633,7 +633,7 @@ const ContentViewer: React.FC = () => {
       </div>
       
       {/* Feedback Modal */}
-      {showFeedback && feedbackData && (
+      {showFeedback && feedbackData && !isLoadingNext && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -694,7 +694,7 @@ const ContentViewer: React.FC = () => {
               </p>
             )}
 
-            {completeMsg && (
+            {completeMsg && !isLoadingNext && (
               <div style={{ marginTop: '10px', padding: '15px', background: '#d4edda', borderRadius: '6px', border: '1px solid #c3e6cb' }}>
                 <strong style={{ color: '#155724' }}>{completeMsg}</strong>
                 <div style={{ marginTop: '12px' }}>
@@ -703,7 +703,7 @@ const ContentViewer: React.FC = () => {
                     onClick={proceedToNext}
                     disabled={isLoadingNext}
                   >
-                    {isLoadingNext ? 'Loading...' : 'Continue to Next Lesson →'}
+                    Continue to Next Lesson →
                   </button>
                 </div>
               </div>

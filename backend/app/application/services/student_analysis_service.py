@@ -12,6 +12,7 @@ from app.domain.enums import LanguageLevel
 from app.infrastructure.db.models.content import LessonPlanDB, TopicDB
 from app.infrastructure.db.models.results import TestResultDB
 from app.infrastructure.db.models.user import StudentDB
+from app.application.services.teacher_directive_service import TeacherDirectiveService
 
 
 class StudentAnalysisService:
@@ -57,7 +58,11 @@ class StudentAnalysisService:
 		level = self._resolve_level(student, results)
 		is_general = len(results) == 0
 
-		recommendations = self.createTopicRecommendations(level, weakness_items, strength_items, is_general=is_general)
+		recommendations = self.createTopicRecommendations(
+			level, weakness_items, strength_items,
+			is_general=is_general,
+			student_user_id=studentUserId,
+		)
 		topics_json = json.dumps(recommendations)
 
 		if existing:
@@ -133,8 +138,23 @@ class StudentAnalysisService:
 		strength_items: list[dict[str, Any]],
 		*,
 		is_general: bool,
+		student_user_id: int | None = None,
 	) -> list[dict[str, Any]]:
-		"""Create topic recommendations based on level + weaknesses using LLM."""
+		"""Create topic recommendations based on level + weaknesses using LLM.
+		
+		Args:
+			level: The student's CEFR level
+			weakness_items: List of identified weaknesses
+			strength_items: List of identified strengths
+			is_general: Whether this is a general plan (no test results yet)
+			student_user_id: The user ID of the student (for fetching teacher directives)
+		"""
+
+		# Get teacher directives if student_user_id is provided (FR35)
+		teacher_directives_text = ""
+		if student_user_id:
+			directive_service = TeacherDirectiveService(self.db)
+			teacher_directives_text = directive_service.format_directives_for_prompt(student_user_id)
 
 		# Prepare context for LLM
 		weakness_summary = []
@@ -164,10 +184,17 @@ class StudentAnalysisService:
 		weakness_text = "\n".join(weakness_summary) if weakness_summary else "No specific weaknesses identified."
 		strength_text = "\n".join(strength_summary) if strength_summary else "No specific strengths identified."
 
+		# Include teacher directives in prompt if available (FR35)
+		directives_section = ""
+		if teacher_directives_text:
+			directives_section = f"\n{teacher_directives_text}\n"
+
 		prompt = (
 			f"Generate a personalized English learning plan for a student at {level.value} level.\n"
 			f"Identified weaknesses:\n{weakness_text}\nIdentified strengths:\n{strength_text}\n\n"
+			f"{directives_section}"
 			"A weakness overrides a strength if they conflict.\n"
+			"IMPORTANT: If teacher directives are provided above, you MUST incorporate them into the learning plan.\n"
 			"Create 5 specific learning topics. For each topic, provide:\n"
 			"- name: A clear, engaging title.\n"
 			"- category: One of [GRAMMAR, VOCABULARY, PRONUNCIATION, LISTENING, READING, WRITING, SPEAKING].\n"
@@ -227,7 +254,7 @@ class StudentAnalysisService:
 
 		# If LLM failed or returned empty, use fallback (existing logic)
 		if not picks:
-			 return self._createTopicRecommendationsFallback(level, weakness_items, is_general=is_general)
+			return self._createTopicRecommendationsFallback(level, weakness_items, is_general=is_general)
 
 		# Ensure topics exist in TopicDB
 		for item in picks:

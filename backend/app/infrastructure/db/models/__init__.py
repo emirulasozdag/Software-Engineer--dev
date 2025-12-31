@@ -30,6 +30,7 @@ from app.infrastructure.db.models.chatbot import ChatSessionDB, ChatMessageDB
 from app.infrastructure.db.models.system import SystemPerformanceDB, MaintenanceLogDB
 from app.infrastructure.db.models.system_feedback import SystemFeedbackDB
 from app.infrastructure.db.models.student_ai_content import StudentAIContentDB
+from app.infrastructure.db.models.teacher_directive import TeacherDirectiveDB
 
 __all__ = [
     # User hierarchy
@@ -79,4 +80,6 @@ __all__ = [
     "SystemPerformanceDB",
     "MaintenanceLogDB",
     "SystemFeedbackDB",
+    # Teacher Directives
+    "TeacherDirectiveDB",
 ]

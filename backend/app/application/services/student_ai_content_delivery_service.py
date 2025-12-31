@@ -20,6 +20,7 @@ from app.infrastructure.db.models.user import StudentDB
 from app.infrastructure.external.llm import LLMChatRequest, LLMMessage, get_llm_client
 from app.infrastructure.external.audio_manager import AudioFileManager
 from app.application.services.listening_question_generator_service import ListeningQuestionGeneratorService
+from app.application.services.teacher_directive_service import TeacherDirectiveService
 
 
 logger = logging.getLogger(__name__)
@@ -87,6 +88,7 @@ class StudentAIContentDeliveryService:
 	- Keep at most 1 active (incomplete) item per student.
 	- Generate a new batch only when there are 0 active items.
 	- Listening/speaking modules are dummy for now.
+	- Teacher directives (FR35) are included in all LLM prompts.
 	"""
 
 	ACTIVE_LIMIT = 1
@@ -95,6 +97,7 @@ class StudentAIContentDeliveryService:
 		self.db = db
 		self.settings = settings
 		self.llm = get_llm_client(settings)
+		self.directive_service = TeacherDirectiveService(db)
 
 	def prepareContentForStudent(
 		self,
@@ -454,6 +457,10 @@ class StudentAIContentDeliveryService:
 
 		print(f"Resolved target skill: {target_skill}")
 
+		# Get teacher directives for this student (FR35)
+		teacher_directives = self.directive_service.get_directives_as_dict(student_user_id)
+		teacher_directives_prompt = self.directive_service.format_directives_for_prompt(student_user_id)
+
 		prompt_ctx: dict[str, Any] = {
 			"studentUserId": int(student_user_id),
 			"contentType": contentType.value,
@@ -471,6 +478,7 @@ class StudentAIContentDeliveryService:
 			"targetSkill": target_skill,
 			"generatedAt": datetime.utcnow().isoformat(),
 			"targetTopic": target_topic,
+			"teacherDirectives": teacher_directives,  # Include directives in context for traceability
 		}
 
 		# Handle Listening: fetch transcript and generate questions
@@ -584,8 +592,13 @@ class StudentAIContentDeliveryService:
 			"Rules:\n"
 			"- Use at least one interactive block (matching or fill_blanks) when contentType is EXERCISE/LESSON.\n"
 			"- For fill_blanks, use placeholders like {{b1}}, {{b2}} inside textWithBlanks.\n"
-			"- Keep ids stable and unique within the JSON."
+			"- Keep ids stable and unique within the JSON.\n"
+			"- IMPORTANT: If teacher directives are provided below, you MUST follow them when generating content."
 		)
+
+		# Add teacher directives to system prompt if present (FR35)
+		if teacher_directives_prompt:
+			system += f"\n\n{teacher_directives_prompt}"
 
 		topic_info = ""
 		if target_topic:

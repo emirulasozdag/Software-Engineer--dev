@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { teacherService } from '@/services/api';
 import { communicationService } from '@/services/api/communication.service';
 import { PlacementTestResult } from '@/types/test.types';
-import { StudentOverview } from '@/types/teacher.types';
+import { StudentOverview, TeacherDirective } from '@/types/teacher.types';
 
 type TeacherTestResult = PlacementTestResult & {
   testId?: string;
@@ -19,6 +19,11 @@ const StudentDetails: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [sendingReminder, setSendingReminder] = useState(false);
+
+  // AI Directive state
+  const [focusAreas, setFocusAreas] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [sendingDirective, setSendingDirective] = useState(false);
 
   const load = async () => {
     if (!studentId) return;
@@ -67,6 +72,43 @@ const StudentDetails: React.FC = () => {
       setError(e?.response?.data?.detail || 'Reminder message could not be sent.');
     } finally {
       setSendingReminder(false);
+    }
+  };
+
+  const sendAIDirective = async () => {
+    if (!studentId) return;
+    if (!instructions.trim()) {
+      setError('Please provide instructions for the AI engine.');
+      return;
+    }
+
+    setSendingDirective(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      // Parse focus areas from comma-separated string
+      const focusAreasList = focusAreas
+        .split(',')
+        .map((area) => area.trim())
+        .filter((area) => area.length > 0);
+
+      const directive: TeacherDirective = {
+        studentId: studentId,
+        contentType: 'general', // Default content type
+        focusAreas: focusAreasList,
+        instructions: instructions.trim(),
+      };
+
+      await teacherService.sendAIDirective(directive);
+      setNotice('AI Content Directive saved successfully (FR35). It will be applied to all future content generated for this student.');
+      // Clear the form
+      setFocusAreas('');
+      setInstructions('');
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || 'Failed to save AI directive.');
+    } finally {
+      setSendingDirective(false);
     }
   };
 
@@ -228,21 +270,39 @@ const StudentDetails: React.FC = () => {
 
       <div className="card">
         <h2>AI Content Directive</h2>
-        <p>Provide instructions to the AI engine for personalized content generation</p>
+        <p>Provide instructions to the AI engine for personalized content generation (FR35)</p>
+        <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '15px' }}>
+          These directives will be saved and included in all future AI-generated content for this student.
+          Examples: "Provide easier questions", "Focus on speaking fluency", "Challenge with B2-level content".
+        </p>
         <div className="form-group">
-          <label className="form-label">Focus Areas</label>
-          <input className="input" type="text" placeholder="e.g., Speaking practice, Advanced grammar" />
+          <label className="form-label">Focus Areas (comma-separated)</label>
+          <input
+            className="input"
+            type="text"
+            placeholder="e.g., Speaking practice, Advanced grammar, Pronunciation"
+            value={focusAreas}
+            onChange={(e) => setFocusAreas(e.target.value)}
+          />
         </div>
         <div className="form-group">
           <label className="form-label">Special Instructions</label>
           <textarea
             className="input"
             rows={4}
-            placeholder="Specific guidance for AI content generation..."
+            placeholder="Specific guidance for AI content generation... e.g., 'Provide lighter questions as the student struggles with complex grammar' or 'Challenge with above-level content to prepare for B2 exam'"
             style={{ resize: 'vertical' }}
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
           />
         </div>
-        <button className="button button-primary">Send Directive to AI</button>
+        <button
+          className="button button-primary"
+          onClick={sendAIDirective}
+          disabled={sendingDirective || !instructions.trim()}
+        >
+          {sendingDirective ? 'Saving…' : 'Send Directive to AI'}
+        </button>
       </div>
 
       <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>

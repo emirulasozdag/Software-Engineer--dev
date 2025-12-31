@@ -7,6 +7,7 @@ This service aggregates student data to provide the chatbot with full context:
 - Strengths and weaknesses
 - AI content completion count and feedbacks
 - Student name and general info
+- Teacher directives (FR35)
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from app.infrastructure.db.models.progress import ProgressDB
 from app.infrastructure.db.models.results import TestResultDB
 from app.infrastructure.db.models.student_ai_content import StudentAIContentDB
 from app.infrastructure.db.models.user import StudentDB, UserDB
+from app.application.services.teacher_directive_service import TeacherDirectiveService
 
 
 class ChatbotContextService:
@@ -83,6 +85,10 @@ class ChatbotContextService:
         # Get recent feedbacks
         feedbacks = self._get_recent_feedbacks(student_id)
         context["recent_feedbacks"] = feedbacks
+
+        # Get teacher directives (FR35)
+        teacher_directives = self._get_teacher_directives(student.user_id)
+        context["teacher_directives"] = teacher_directives
 
         return context
 
@@ -327,6 +333,18 @@ class ChatbotContextService:
 
         return result
 
+    def _get_teacher_directives(self, student_user_id: int) -> list[dict[str, Any]]:
+        """Get active teacher directives for a student (FR35).
+        
+        Args:
+            student_user_id: The user ID of the student (not student.id)
+            
+        Returns:
+            List of active teacher directives with teacher names
+        """
+        directive_service = TeacherDirectiveService(self.db)
+        return directive_service.get_directives_as_dict(student_user_id)
+
     def format_context_for_prompt(self, context: dict[str, Any]) -> str:
         """Format the context dictionary into a readable prompt section.
 
@@ -414,5 +432,22 @@ class ChatbotContextService:
                     lines.append(f"- {items[:2]}")  # Show first 2 items
         else:
             lines.append("- No test feedbacks yet")
+
+        # Add teacher directives (FR35) - IMPORTANT section
+        teacher_directives = context.get("teacher_directives", [])
+        if teacher_directives:
+            lines.append("")
+            lines.append("## TEACHER DIRECTIVES (IMPORTANT - Follow these instructions)")
+            lines.append("The student's teacher has provided the following directives that you MUST follow:")
+            lines.append("")
+            for i, directive in enumerate(teacher_directives, 1):
+                lines.append(f"### Directive {i}")
+                if directive.get("contentType"):
+                    lines.append(f"- Content Type Focus: {directive['contentType']}")
+                if directive.get("focusAreas"):
+                    lines.append(f"- Focus Areas: {', '.join(directive['focusAreas'])}")
+                lines.append(f"- Instructions: {directive.get('instructions', '')}")
+                lines.append("")
+            lines.append("**You must respect and follow these teacher directives when helping this student.**")
 
         return "\n".join(lines)
