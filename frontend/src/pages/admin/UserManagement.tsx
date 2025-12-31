@@ -109,7 +109,7 @@ const UserManagement: React.FC = () => {
               </tr>
             )}
             {filteredUsers.map((user) => (
-              <tr key={user.id}>
+              <tr key={user.userId}>
                 <td>{user.name}</td>
                 <td>{user.email}</td>
                 <td>
@@ -118,14 +118,14 @@ const UserManagement: React.FC = () => {
                   </span>
                 </td>
                 <td>
-                  <span className={user.isActive ? 'badge-success' : 'badge-muted'}>
-                    {user.isActive ? 'Active' : 'Inactive'}
+                  <span className={user.isVerified ? 'badge-success' : 'badge-muted'}>
+                    {user.isVerified ? 'Verified' : 'Unverified'}
                   </span>
                 </td>
                 <td>{user.createdAt}</td>
                 <td>
                   <div className="actions">
-                    <button className="button button-primary button-sm" type="button">Edit</button>
+
                     <button className="button button-danger button-sm" type="button">Delete</button>
                   </div>
                 </td>

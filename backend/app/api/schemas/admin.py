@@ -38,6 +38,9 @@ class SystemStatsOut(BaseModel):
 	maintenanceEnabled: bool
 	maintenanceReason: str | None = None
 	lastPerformance: dict | None = None
+	newUsers7d: int = 0
+	learningActivity: dict = Field(default_factory=dict)
+	usageHistory: list[dict] = Field(default_factory=list)
 
 
 class MaintenanceStatusOut(BaseModel):

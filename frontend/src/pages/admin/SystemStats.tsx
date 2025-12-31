@@ -41,45 +41,23 @@ const SystemStats: React.FC = () => {
       </div>
 
       <div className="card">
-        <h2>System Health</h2>
-        <div className="kpis" style={{ marginTop: 12 }}>
-          <div className="kpi">
-            <div className="label">System Uptime</div>
-            <div className="value">99.8%</div>
-          </div>
-          <div className="kpi">
-            <div className="label">Avg Response Time</div>
-            <div className="value">125ms</div>
-          </div>
-          <div className="kpi">
-            <div className="label">Active Sessions</div>
-            <div className="value">342</div>
-          </div>
-          <div className="kpi">
-            <div className="label">API Calls (24h)</div>
-            <div className="value">15,847</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="card">
         <h2>User Statistics</h2>
         <div className="kpis" style={{ marginTop: 12 }}>
           <div className="kpi">
             <div className="label">Total Users</div>
-            <div className="value">1,247</div>
+            <div className="value">{stats?.totalUsers ?? '-'}</div>
           </div>
           <div className="kpi">
             <div className="label">Active Students</div>
-            <div className="value">892</div>
+            <div className="value">{stats?.totalStudents ?? '-'}</div>
           </div>
           <div className="kpi">
             <div className="label">Active Teachers</div>
-            <div className="value">45</div>
+            <div className="value">{stats?.totalTeachers ?? '-'}</div>
           </div>
           <div className="kpi">
             <div className="label">New Users (7d)</div>
-            <div className="value">28</div>
+            <div className="value">{stats?.newUsers7d ?? '-'}</div>
           </div>
         </div>
       </div>
@@ -89,26 +67,56 @@ const SystemStats: React.FC = () => {
         <div className="kpis" style={{ marginTop: 12 }}>
           <div className="kpi">
             <div className="label">Tests Completed</div>
-            <div className="value">3,421</div>
+            <div className="value">{stats?.learningActivity?.testsCompleted ?? '-'}</div>
           </div>
           <div className="kpi">
             <div className="label">Lessons Completed</div>
-            <div className="value">12,589</div>
+            <div className="value">{stats?.learningActivity?.lessonsCompleted ?? '-'}</div>
           </div>
           <div className="kpi">
             <div className="label">Assignments Created</div>
-            <div className="value">567</div>
+            <div className="value">{stats?.learningActivity?.assignmentsCreated ?? '-'}</div>
           </div>
           <div className="kpi">
             <div className="label">AI Content Generated</div>
-            <div className="value">8,943</div>
+            <div className="value">{stats?.learningActivity?.aiContentGenerated ?? '-'}</div>
           </div>
         </div>
       </div>
 
       <div className="card">
         <h2>Usage Over Time</h2>
-        <div className="placeholder">[Usage chart visualization will be displayed here]</div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', height: 200, gap: 12, paddingTop: 20, paddingBottom: 5 }}>
+          {(stats?.usageHistory ?? []).map((day, i) => {
+            const maxVal = Math.max(1, ...((stats?.usageHistory ?? []).map((d) => d.activity + d.users)));
+            const total = day.activity + day.users;
+            const height = Math.round((total / maxVal) * 100);
+            return (
+              <div key={day.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', width: '100%', justifyContent: 'center' }}>
+                  <div
+                    style={{
+                      width: '60%',
+                      height: `${height}%`,
+                      backgroundColor: '#3b82f6',
+                      borderRadius: '4px 4px 0 0',
+                      minHeight: 4,
+                      position: 'relative',
+                      transition: 'height 0.3s ease',
+                    }}
+                    title={`Date: ${day.date}\nActivity: ${day.activity}\nNew Users: ${day.users}`}
+                  />
+                </div>
+                <div style={{ marginTop: 8, fontSize: 12, color: '#64748b', fontWeight: 500 }}>{day.day}</div>
+              </div>
+            );
+          })}
+          {(!stats?.usageHistory || stats.usageHistory.length === 0) && (
+            <div style={{ width: '100%', textAlign: 'center', color: '#94a3b8', alignSelf: 'center' }}>
+              No activity data available for the last 7 days.
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="card">

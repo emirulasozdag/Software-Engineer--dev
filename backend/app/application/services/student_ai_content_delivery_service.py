@@ -236,6 +236,39 @@ class StudentAIContentDeliveryService:
 		row.completed_at = datetime.utcnow()
 		self.db.commit()
 
+
+		# Update Daily Streak
+		# We check the LATEST completed content (excluding this one, which is currently being completed)
+		# Actually, since we just marked this one as completed in memory (but potentially not flushed query-wise for "latest"?), 
+		# let's look at the student's *previous* last activity via the same table.
+		last_completed = self.db.scalar(
+			select(StudentAIContentDB)
+			.where(
+				StudentAIContentDB.student_id == student.id,
+				StudentAIContentDB.is_active == False, # noqa: E712
+				StudentAIContentDB.completed_at.is_not(None),
+				StudentAIContentDB.id != row.id # Exclude current one just in case
+			)
+			.order_by(StudentAIContentDB.completed_at.desc())
+			.limit(1)
+		)
+
+		now_date = datetime.utcnow().date()
+		last_date = last_completed.completed_at.date() if last_completed and last_completed.completed_at else None
+
+		if last_date == now_date:
+			# Already active today, streak doesn't change
+			pass
+		elif last_date == (now_date - timedelta(days=1)):
+			# Active yesterday, increment streak
+			student.daily_streak = (student.daily_streak or 0) + 1
+		else:
+			# Missed a day or first time, reset/start at 1
+			# Note: if they had a streak but missed a day, it resets to 1 (for today)
+			student.daily_streak = 1
+		
+		# Commit happens below
+
 		# Update topic progress
 		self._update_topic_progress(studentUserId, row, result)
 

@@ -29,6 +29,16 @@ export const progressService = {
   },
 
   /**
+   * Export current student's progress as PDF
+   */
+  exportMyProgressPdf: async (): Promise<Blob> => {
+    const response = await apiClient.get('/api/export/progress/me.pdf', {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  /**
    * UC11 (Teacher/Admin): Export a student's progress as CSV
    */
   exportProgressCsv: async (studentId: number): Promise<Blob> => {

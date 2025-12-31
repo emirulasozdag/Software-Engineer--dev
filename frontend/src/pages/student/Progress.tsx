@@ -11,7 +11,7 @@ const Progress: React.FC = () => {
   const [achievements, setAchievements] = React.useState<Achievement[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [isDownloadingCsv, setIsDownloadingCsv] = React.useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false);
 
   const loadLiveProgress = React.useCallback(async () => {
     setIsLoading(true);
@@ -40,23 +40,23 @@ const Progress: React.FC = () => {
     loadAchievements();
   }, [loadLiveProgress, loadAchievements]);
 
-  const downloadCsv = React.useCallback(async () => {
-    setIsDownloadingCsv(true);
+  const downloadPdf = React.useCallback(async () => {
+    setIsDownloadingPdf(true);
     setError(null);
     try {
-      const blob = await progressService.exportMyProgressCsv();
+      const blob = await progressService.exportMyProgressPdf();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'my-progress.csv';
+      a.download = 'my-progress.pdf';
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || 'Failed to export CSV');
+      setError(e?.response?.data?.detail || e?.message || 'Failed to export PDF');
     } finally {
-      setIsDownloadingCsv(false);
+      setIsDownloadingPdf(false);
     }
   }, []);
 
@@ -87,7 +87,7 @@ const Progress: React.FC = () => {
   return (
     <div className="container">
       <Link to="/student/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>← Back to Dashboard</Link>
-      
+
       <h1 className="page-title">My Progress</h1>
 
       {/* Key Metrics */}
@@ -121,13 +121,13 @@ const Progress: React.FC = () => {
       <div className="card">
         <h2>Progress Over Time</h2>
         <p style={{ color: '#666', marginBottom: '20px' }}>Track your learning journey with completed content and CEFR level progression</p>
-        
+
         <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', alignItems: 'center' }}>
           <button className="button button-secondary" onClick={loadLiveProgress} disabled={isLoading}>
             {isLoading ? 'Refreshing…' : 'Refresh Data'}
           </button>
-          <button className="button button-primary" onClick={downloadCsv} disabled={isDownloadingCsv}>
-            {isDownloadingCsv ? 'Preparing CSV…' : 'Export CSV'}
+          <button className="button button-primary" onClick={downloadPdf} disabled={isDownloadingPdf}>
+            {isDownloadingPdf ? 'Preparing PDF…' : 'Export PDF'}
           </button>
           {error ? <span style={{ color: '#e74c3c', fontSize: '14px' }}>{error}</span> : null}
         </div>
@@ -140,7 +140,7 @@ const Progress: React.FC = () => {
                 {liveProgress.timeline.map((point, idx) => {
                   const maxContent = Math.max(...liveProgress.timeline.map(p => p.completedContentCount), 1);
                   const height = (point.completedContentCount / maxContent) * 100;
-                  
+
                   return (
                     <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                       <div
@@ -188,7 +188,7 @@ const Progress: React.FC = () => {
                   );
                 })}
               </div>
-              
+
               <div style={{ marginTop: '20px', padding: '15px', background: '#f0f0f0', borderRadius: '8px' }}>
                 <h4 style={{ marginTop: 0, marginBottom: '10px' }}>Legend</h4>
                 <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
@@ -261,7 +261,7 @@ const Progress: React.FC = () => {
         <p style={{ color: '#666', marginBottom: '20px' }}>
           You've earned {achievements.length} achievement{achievements.length !== 1 ? 's' : ''}!
         </p>
-        
+
         {achievements.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', background: '#f9f9f9', borderRadius: '8px' }}>
             <div style={{ fontSize: '60px', marginBottom: '15px' }}>🎯</div>
