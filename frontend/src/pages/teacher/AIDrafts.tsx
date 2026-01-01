@@ -70,7 +70,7 @@ const AIDrafts: React.FC = () => {
       </Link>
 
       <h1 className="page-title">Teacher–AI Draft Content</h1>
-      <p style={{ color: '#666' }}>UC19 (FR35): teacher directives → AI draft → publish.</p>
+      <p style={{ color: '#666' }}>Teacher directives → AI draft → publish.</p>
 
       {error && (
         <div className="card" style={{ borderLeft: '4px solid #e74c3c' }}>

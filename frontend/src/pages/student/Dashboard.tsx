@@ -61,7 +61,7 @@ const StudentDashboard: React.FC = () => {
           <div>
             <h1 className="hero-title">Welcome, {user?.name}</h1>
             <div className="hero-sub">
-              Hızlı özet: seviyen, planın ve mesajların burada.
+              Quick summary: your level, plan, and messages are here.
             </div>
             <div className="action-meta" style={{ marginTop: 12 }}>
               <span className="pill">Email: {user?.email}</span>
@@ -93,7 +93,7 @@ const StudentDashboard: React.FC = () => {
         </div>
 
         <div className="card col-4">
-          <div className="text-muted">Learning Plan (UC7)</div>
+          <div className="text-muted">Learning Plan</div>
           <div className="kpi" style={{ marginTop: 10 }}>
             <div className="label">Recommended</div>
             <div className="value">{plan?.recommendedLevel || '—'}</div>
@@ -106,7 +106,7 @@ const StudentDashboard: React.FC = () => {
         </div>
 
         <div className="card col-4">
-          <div className="text-muted">Messages (UC18)</div>
+          <div className="text-muted">Messages</div>
           <div className="kpi" style={{ marginTop: 10 }}>
             <div className="label">Unread</div>
             <div className="value">{loading ? '…' : unread}</div>
@@ -119,10 +119,10 @@ const StudentDashboard: React.FC = () => {
           <div className="card click-card action-card">
             <span className="action-icon">AI</span>
             <div>
-              <h3 className="action-title">AI Content Delivery (UC8–UC9)</h3>
-              <div className="action-desc">Plan’a göre içerik al, progress’e göre güncelle ve “neden seçildi” açıklamasını gör.</div>
+              <h3 className="action-title">AI Content Delivery</h3>
+              <div className="action-desc">Get content based on your plan, update it based on your progress, and see the "why" rationale.</div>
               <div className="action-meta">
-                <span className="pill">FR17 rationale</span>
+                <span className="pill">Rationale</span>
                 <span className="pill">Update by progress</span>
               </div>
             </div>
@@ -133,8 +133,8 @@ const StudentDashboard: React.FC = () => {
           <div className="card click-card action-card">
             <span className="action-icon green">PG</span>
             <div>
-              <h3 className="action-title">My Progress (UC10)</h3>
-              <div className="action-desc">Grafik ve timeline ile ilerlemeni takip et.</div>
+              <h3 className="action-title">My Progress</h3>
+              <div className="action-desc">Track your progress with charts and a timeline.</div>
               <div className="action-meta">
                 <span className="pill">Charts</span>
                 <span className="pill">Timeline</span>
@@ -148,7 +148,7 @@ const StudentDashboard: React.FC = () => {
             <span className="action-icon amber">AS</span>
             <div>
               <h3 className="action-title">Assignments</h3>
-              <div className="action-desc">Ödevlerini görüntüle ve tamamla.</div>
+              <div className="action-desc">View and complete your assignments.</div>
             </div>
           </div>
         </Link>
@@ -157,8 +157,8 @@ const StudentDashboard: React.FC = () => {
           <div className="card click-card action-card">
             <span className="action-icon">CB</span>
             <div>
-              <h3 className="action-title">Chatbot (UC20)</h3>
-              <div className="action-desc">Şu an mock modunda: soru sor, örnek açıklama + mini alıştırma al.</div>
+              <h3 className="action-title">Chatbot</h3>
+              <div className="action-desc">Currently in mock mode: ask questions and get example explanations + mini practice.</div>
             </div>
           </div>
         </Link>

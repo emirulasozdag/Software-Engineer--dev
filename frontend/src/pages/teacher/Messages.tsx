@@ -41,7 +41,7 @@ const TeacherMessages: React.FC = () => {
       setAnnouncements(anns);
       setContacts(conts);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Veriler yüklenemedi.');
+      setError(e?.response?.data?.detail || 'Failed to load data.');
     } finally {
       setLoading(false);
     }
@@ -108,7 +108,7 @@ const TeacherMessages: React.FC = () => {
       if (selectedId === id) setSelectedId(null);
       setNotice('Message deleted.');
     } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Silinemedi.');
+      setError(e?.response?.data?.detail || 'Could not be deleted.');
     }
   };
 
@@ -134,7 +134,7 @@ const TeacherMessages: React.FC = () => {
 
   const send = async () => {
     if (!compose.receiverId || !compose.content.trim()) {
-      setError('Lütfen alıcı ve mesaj içeriği gir.');
+      setError('Please provide a recipient and message content.');
       return;
     }
     setSending(true);
@@ -147,7 +147,7 @@ const TeacherMessages: React.FC = () => {
       setTab('messages');
       setNotice('Message sent.');
     } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Mesaj gönderilemedi.');
+      setError(e?.response?.data?.detail || 'Message could not be sent.');
     } finally {
       setSending(false);
     }
@@ -155,7 +155,7 @@ const TeacherMessages: React.FC = () => {
 
   const postAnnouncement = async () => {
     if (!announceForm.title.trim() || !announceForm.content.trim()) {
-      setError('Duyuru için başlık ve içerik zorunlu.');
+      setError('Title and content are required for an announcement.');
       return;
     }
     setPosting(true);
@@ -167,7 +167,7 @@ const TeacherMessages: React.FC = () => {
       setTab('announcements');
       setNotice('Announcement posted.');
     } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Duyuru yayınlanamadı.');
+      setError(e?.response?.data?.detail || 'Announcement could not be posted.');
     } finally {
       setPosting(false);
     }
@@ -179,8 +179,8 @@ const TeacherMessages: React.FC = () => {
       
       <div className="toolbar">
         <div>
-          <h1 className="page-title" style={{ marginBottom: 0 }}>Teacher Communication (UC18)</h1>
-          <div className="subtitle">Öğrencilerle mesajlaş, duyuru yayınla.</div>
+          <h1 className="page-title" style={{ marginBottom: 0 }}>Teacher Communication</h1>
+          <div className="subtitle">Message students and post announcements.</div>
         </div>
         <div className="actions">
           <div className="tabs">
@@ -313,7 +313,7 @@ const TeacherMessages: React.FC = () => {
         <div className="toolbar">
           <div>
             <h2 style={{ marginBottom: 6 }}>Compose</h2>
-            <div className="text-muted">Öğrenciye yeni bir mesaj gönder.</div>
+            <div className="text-muted">Send a new message to a student.</div>
           </div>
           <div className="pill">Draft</div>
         </div>
@@ -341,8 +341,8 @@ const TeacherMessages: React.FC = () => {
           </select>
           {contacts.length === 0 && (
             <div className="text-muted" style={{ marginTop: 6 }}>
-              Bu dropdown boş çünkü sistemde henüz <strong>Student</strong> hesabı yok (veya login değilsin). En az bir
-              öğrenci hesabı oluşturunca burada görünecek.
+              This dropdown is empty because there are no <strong>Student</strong> accounts yet (or you're not logged in).
+              Once you create at least one student account, it will appear here.
             </div>
           )}
             </div>
@@ -369,7 +369,7 @@ const TeacherMessages: React.FC = () => {
             onChange={(e) => setCompose((p) => ({ ...p, content: e.target.value }))}
           />
           <div className="text-muted" style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-            <span>Tip: Reply butonu seçili mesajdan otomatik doldurur.</span>
+            <span>Tip: The Reply button auto-fills from the selected message.</span>
             <span>{compose.content.length} chars</span>
           </div>
         </div>
@@ -384,7 +384,7 @@ const TeacherMessages: React.FC = () => {
         <div className="toolbar">
           <div>
             <h2 style={{ marginBottom: 6 }}>Create Announcement</h2>
-            <div className="text-muted">Duyuru yayınla (UC18 / FR32).</div>
+            <div className="text-muted">Post an announcement.</div>
           </div>
           <div className="pill">Teacher</div>
         </div>
@@ -463,7 +463,7 @@ const TeacherMessages: React.FC = () => {
           <div className="toolbar">
             <div>
               <h2 style={{ marginBottom: 6 }}>Announcements Feed</h2>
-              <div className="text-muted">Yayınlanan duyuruların listesi.</div>
+              <div className="text-muted">List of published announcements.</div>
             </div>
             <span className="pill">{announcements.length} items</span>
           </div>

@@ -38,7 +38,7 @@ const Messages: React.FC = () => {
       setAnnouncements(anns);
       setContacts(conts);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Veriler yüklenemedi.');
+      setError(e?.response?.data?.detail || 'Failed to load data.');
     } finally {
       setLoading(false);
     }
@@ -105,7 +105,7 @@ const Messages: React.FC = () => {
       if (selectedId === id) setSelectedId(null);
       setNotice('Message deleted.');
     } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Silinemedi.');
+      setError(e?.response?.data?.detail || 'Could not be deleted.');
     }
   };
 
@@ -131,7 +131,7 @@ const Messages: React.FC = () => {
 
   const send = async () => {
     if (!compose.receiverId || !compose.content.trim()) {
-      setError('Lütfen alıcı ve mesaj içeriği gir.');
+      setError('Please provide a recipient and message content.');
       return;
     }
     setSending(true);
@@ -144,7 +144,7 @@ const Messages: React.FC = () => {
       setTab('messages');
       setNotice('Message sent.');
     } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Mesaj gönderilemedi.');
+      setError(e?.response?.data?.detail || 'Message could not be sent.');
     } finally {
       setSending(false);
     }
@@ -156,8 +156,8 @@ const Messages: React.FC = () => {
       
       <div className="toolbar">
         <div>
-          <h1 className="page-title" style={{ marginBottom: 0 }}>Communication (UC18)</h1>
-          <div className="subtitle">Teacher ile mesajlaş ve duyuruları takip et.</div>
+          <h1 className="page-title" style={{ marginBottom: 0 }}>Communication</h1>
+          <div className="subtitle">Message your teacher and follow announcements.</div>
         </div>
         <div className="actions">
           <div className="tabs">
@@ -290,7 +290,7 @@ const Messages: React.FC = () => {
         <div className="toolbar">
           <div>
             <h2 style={{ marginBottom: 6 }}>Compose</h2>
-            <div className="text-muted">Teacher’a yeni bir mesaj yaz.</div>
+            <div className="text-muted">Write a new message to your teacher.</div>
           </div>
           <div className="pill">Draft</div>
         </div>
@@ -318,8 +318,8 @@ const Messages: React.FC = () => {
           </select>
           {contacts.length === 0 && (
             <div className="text-muted" style={{ marginTop: 6 }}>
-              Bu dropdown boş çünkü sistemde henüz <strong>Teacher</strong> hesabı yok. Bir tane Teacher kaydı oluşturup
-              giriş yapınca burada listelenecek.
+              This dropdown is empty because there is no <strong>Teacher</strong> account yet. Create a Teacher account and
+              log in; it will be listed here.
             </div>
           )}
             </div>
@@ -346,7 +346,7 @@ const Messages: React.FC = () => {
             onChange={(e) => setCompose((p) => ({ ...p, content: e.target.value }))}
           />
           <div className="text-muted" style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-            <span>Tip: Reply butonu seçili mesajdan otomatik doldurur.</span>
+            <span>Tip: The Reply button auto-fills from the selected message.</span>
             <span>{compose.content.length} chars</span>
           </div>
         </div>
@@ -361,7 +361,7 @@ const Messages: React.FC = () => {
           <div className="toolbar">
             <div>
               <h2 style={{ marginBottom: 6 }}>Announcements</h2>
-              <div className="text-muted">Ders duyuruları ve önemli hatırlatmalar.</div>
+              <div className="text-muted">Class announcements and important reminders.</div>
             </div>
             <span className="pill">{announcements.length} items</span>
           </div>

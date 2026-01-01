@@ -140,7 +140,7 @@ const Chatbot: React.FC = () => {
       
       <div className="toolbar">
         <div>
-          <h1 className="page-title" style={{ marginBottom: 0 }}>AI Chatbot Tutor (UC20)</h1>
+          <h1 className="page-title" style={{ marginBottom: 0 }}>AI Chatbot Tutor</h1>
           <div className="subtitle">
             {capabilities?.uses_llm 
               ? `🤖 Context-aware AI assistant ${capabilities.can_modify_learning_plan ? '(can update your learning plan)' : ''}`
