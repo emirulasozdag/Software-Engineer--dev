@@ -64,16 +64,16 @@ const StudentDetails: React.FC = () => {
     setError(null);
     setNotice(null);
     try {
-      const subject = 'Placement Test Reminder (UC6)';
+      const subject = 'Placement Test Reminder';
       const content =
         `Hi ${student.name},\n\n` +
         `I noticed you haven't completed your placement test yet.\n` +
         `Please go to: Student Dashboard → Placement Test, and finish all modules (Reading/Writing/Listening/Speaking).\n\n` +
-        `Why: We use your results to determine your level and generate a personalized plan (UC7) and content (UC8–UC9).\n\n` +
+        `Why: We use your results to determine your level and generate a personalized plan and content.\n\n` +
         `Thank you!`;
 
       await communicationService.sendMessage(String(studentId), subject, content);
-      setNotice('Reminder message sent to the student (UC18).');
+      setNotice('Reminder message sent to the student.');
     } catch (e: any) {
       setError(e?.response?.data?.detail || 'Reminder message could not be sent.');
     } finally {
@@ -107,7 +107,7 @@ const StudentDetails: React.FC = () => {
       };
 
       await teacherService.sendAIDirective(directive);
-      setNotice('AI Content Directive saved successfully (FR35). It will be applied to all future content generated for this student.');
+      setNotice('AI Content Directive saved successfully. It will be applied to all future content generated for this student.');
       // Clear the form
       setFocusAreas('');
       setInstructions('');
@@ -147,8 +147,8 @@ const StudentDetails: React.FC = () => {
       
       <div className="toolbar">
         <div>
-          <h1 className="page-title" style={{ marginBottom: 0 }}>Student Details (UC6)</h1>
-          <div className="subtitle">Öğrencinin placement test sonuçlarını görüntüle.</div>
+          <h1 className="page-title" style={{ marginBottom: 0 }}>Student Details</h1>
+          <div className="subtitle">View the student's placement test results.</div>
         </div>
         <div className="actions">
           <button className="button button-primary" onClick={load} disabled={loading}>
@@ -192,7 +192,6 @@ const StudentDetails: React.FC = () => {
         <div className="toolbar">
           <div>
             <h2 style={{ marginBottom: 6 }}>Placement Test Results</h2>
-            <div className="text-muted">UC6: teacher result view</div>
           </div>
           <span className="pill">{sorted.length} results</span>
         </div>
@@ -205,12 +204,12 @@ const StudentDetails: React.FC = () => {
             <div className="list-item" style={{ cursor: 'default' }}>
               <div style={{ fontWeight: 900 }}>No test results yet</div>
               <div className="text-muted" style={{ marginTop: 6 }}>
-                Öğrenci placement testi tamamlamadığı için UC6 sonucu oluşmamış.
+                No results yet because the student hasn't completed the placement test.
               </div>
               <div className="divider" />
               <div className="actions">
                 <button className="button button-primary" onClick={sendPlacementReminder} disabled={sendingReminder}>
-                  {sendingReminder ? 'Sending…' : 'Send Reminder (UC18)'}
+                  {sendingReminder ? 'Sending…' : 'Send Reminder'}
                 </button>
                 <Link to="/teacher/messages" className="link" style={{ alignSelf: 'center' }}>
                   Go to Messages
@@ -441,7 +440,7 @@ const StudentDetails: React.FC = () => {
 
       <div className="card">
         <h2>AI Content Directive</h2>
-        <p>Provide instructions to the AI engine for personalized content generation (FR35)</p>
+        <p>Provide instructions to the AI engine for personalized content generation</p>
         <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '15px' }}>
           These directives will be saved and included in all future AI-generated content for this student.
           Examples: "Provide easier questions", "Focus on speaking fluency", "Challenge with B2-level content".

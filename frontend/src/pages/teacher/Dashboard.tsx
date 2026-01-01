@@ -37,7 +37,7 @@ const TeacherDashboard: React.FC = () => {
           <div>
             <h1 className="hero-title">Welcome, {user?.name}</h1>
             <div className="hero-sub">
-              Öğrenci sonuçlarını (UC6), mesajları (UC18) ve ödevleri tek yerden yönet.
+              Manage student results, messages, and assignments in one place.
             </div>
             <div className="action-meta" style={{ marginTop: 12 }}>
               <span className="pill">Email: {user?.email}</span>
@@ -60,8 +60,8 @@ const TeacherDashboard: React.FC = () => {
           <div className="card click-card action-card">
             <span className="action-icon green">ST</span>
             <div>
-              <h3 className="action-title">My Students (UC6)</h3>
-              <div className="action-desc">Öğrenci seç, placement test sonuçlarını ve güçlü/zayıf alanları gör.</div>
+              <h3 className="action-title">My Students</h3>
+              <div className="action-desc">Select a student to view placement test results and strengths/weaknesses.</div>
               <div className="action-meta">
                 <span className="pill">Results</span>
                 <span className="pill">Levels</span>
@@ -74,8 +74,8 @@ const TeacherDashboard: React.FC = () => {
           <div className="card click-card action-card">
             <span className="action-icon">MS</span>
             <div>
-              <h3 className="action-title">Messages & Announcements (UC18)</h3>
-              <div className="action-desc">Öğrencilerle iletişim kur, duyuru yayınla.</div>
+              <h3 className="action-title">Messages & Announcements</h3>
+              <div className="action-desc">Message students and post announcements.</div>
               <div className="action-meta">
                 <span className="pill">Unread: {loading ? '…' : unread}</span>
               </div>
@@ -88,7 +88,7 @@ const TeacherDashboard: React.FC = () => {
             <span className="action-icon amber">HW</span>
             <div>
               <h3 className="action-title">Create Assignment</h3>
-              <div className="action-desc">Ödev oluştur ve öğrencilere ata.</div>
+              <div className="action-desc">Create assignments and assign them to students.</div>
             </div>
           </div>
         </Link>
@@ -97,22 +97,22 @@ const TeacherDashboard: React.FC = () => {
           <div className="toolbar">
             <div>
               <h2 style={{ marginBottom: 6 }}>Next Steps</h2>
-              <div className="text-muted">Önerilen kısa akış</div>
+              <div className="text-muted">Suggested quick flow</div>
             </div>
             <span className="pill">Checklist</span>
           </div>
           <div className="divider" />
           <div className="list">
             <div className="list-item" style={{ cursor: 'default' }}>
-              <div style={{ fontWeight: 900 }}>1) UC6 sonuçları kontrol et</div>
+              <div style={{ fontWeight: 900 }}>1) Review results</div>
               <div className="text-muted" style={{ marginTop: 6 }}>
-                Placement testi tamamlamayan öğrenciye StudentDetails ekranından hatırlatma gönder (UC18).
+                Send a reminder from the Student Details page if a student hasn't completed the placement test.
               </div>
             </div>
             <div className="list-item" style={{ cursor: 'default' }}>
-              <div style={{ fontWeight: 900 }}>2) UC7 planı gözden geçir</div>
+              <div style={{ fontWeight: 900 }}>2) Review the plan</div>
               <div className="text-muted" style={{ marginTop: 6 }}>
-                Zayıflıklara göre plan topic’leri güncellensin.
+                Update plan topics based on the student's weaknesses.
               </div>
             </div>
           </div>

@@ -41,8 +41,8 @@ const StudentList: React.FC = () => {
       
       <div className="toolbar">
         <div>
-          <h1 className="page-title" style={{ marginBottom: 0 }}>My Students (UC6)</h1>
-          <div className="subtitle">Öğrenci seç → test sonuçlarını ve planını incele.</div>
+          <h1 className="page-title" style={{ marginBottom: 0 }}>My Students</h1>
+          <div className="subtitle">Select a student → review test results and the learning plan.</div>
         </div>
         <div className="actions">
           <button className="button button-primary" onClick={load} disabled={loading}>
@@ -95,7 +95,7 @@ const StudentList: React.FC = () => {
                   <td style={{ padding: '10px' }}>
                     <Link to={`/teacher/students/${student.id}`}>
                       <button className="button button-primary" style={{ fontSize: '0.9rem', padding: '8px 12px' }}>
-                        View UC6 Results
+                        View Results
                       </button>
                     </Link>
                   </td>

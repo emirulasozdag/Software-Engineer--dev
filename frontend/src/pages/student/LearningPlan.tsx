@@ -46,7 +46,7 @@ const LearningPlan: React.FC = () => {
       <Link to="/student/dashboard" className="link mb-16" style={{ display: 'inline-block' }}>
         ← Back to Dashboard
       </Link>
-      <h1 className="page-title">Learning Plan (UC7)</h1>
+      <h1 className="page-title">Learning Plan</h1>
 
       <div className="card lp-hero">
         <div className="lp-topbar">
@@ -84,7 +84,7 @@ const LearningPlan: React.FC = () => {
         )}
         {error && <p className="error-message mt-12">{error}</p>}
         <p className="text-muted mt-12">
-          This page implements <strong>UC7</strong>: analyze placement test results (strengths/weaknesses) and generate a personalized lesson plan.
+          This page analyzes placement test results (strengths/weaknesses) and generates a personalized lesson plan.
         </p>
       </div>
 
@@ -118,7 +118,7 @@ const LearningPlan: React.FC = () => {
         <div className="card lp-col-12">
           <h2>Recommended Topics</h2>
           <p className="text-muted" style={{ marginTop: 6 }}>
-            Each topic includes a short rationale (FR17-style explanation) derived from weaknesses.
+            Each topic includes a short rationale derived from weaknesses.
           </p>
 
         {!loading && plan && sortedTopics.length === 0 && (
