@@ -1,9 +1,58 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
 import { progressService, rewardsService } from '@/services/api';
 import { ProgressResponse } from '@/types/progress.types';
 import { Achievement } from '@/types/rewards.types';
+
+type ProgressChartTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ value?: number; payload?: any }>;
+};
+
+const ProgressChartTooltip: React.FC<ProgressChartTooltipProps> = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+
+  const point = payload[0]?.payload as any;
+  const value = payload[0]?.value ?? point?.value;
+  const dateText = point?.date ? new Date(point.date).toLocaleDateString() : '';
+
+  return (
+    <div
+      style={{
+        background: 'rgba(15, 23, 42, 0.86)',
+        color: '#ffffff',
+        padding: '10px 12px',
+        borderRadius: 12,
+        boxShadow: '0 18px 48px rgba(0, 0, 0, 0.28)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        minWidth: 170,
+      }}
+    >
+      {dateText ? <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>{dateText}</div> : null}
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
+        <div style={{ fontSize: 12, opacity: 0.85 }}>Completed</div>
+        <div style={{ fontSize: 16, fontWeight: 800 }}>{Number(value ?? 0).toLocaleString()}</div>
+      </div>
+      {point?.cefrLevel ? (
+        <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
+          Level: <span style={{ fontWeight: 800, opacity: 1 }}>{point.cefrLevel}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+};
 
 const Progress: React.FC = () => {
 
@@ -128,74 +177,69 @@ const Progress: React.FC = () => {
         </div>
 
         {liveProgress && liveProgress.timeline.length > 0 ? (
-          <div style={{ overflowX: 'auto', marginTop: '20px' }}>
-            {/* Simple bar chart visualization */}
-            <div style={{ minWidth: '600px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-end', height: '300px', gap: '8px', padding: '20px', background: '#f9f9f9', borderRadius: '8px' }}>
-                {liveProgress.timeline.map((point, idx) => {
-                  const maxContent = Math.max(...liveProgress.timeline.map(p => p.completedContentCount), 1);
-                  const height = (point.completedContentCount / maxContent) * 100;
+          <div style={{ marginTop: '20px', overflow: 'hidden' }}>
+            <div style={{ width: '100%', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: 300, overflow: 'hidden' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={liveProgress.timeline.map((p) => ({
+                      ...p,
+                      value: p.completedContentCount,
+                      label: new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    }))}
+                    margin={{ top: 12, right: 18, bottom: 8, left: 6 }}
+                  >
+                    <defs>
+                      <linearGradient id="progressGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#667EEA" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="#667EEA" stopOpacity={0.06} />
+                      </linearGradient>
+                      <filter id="progressShadow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#667EEA" floodOpacity="0.18" />
+                      </filter>
+                    </defs>
 
-                  return (
-                    <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <div
-                        style={{
-                          width: '100%',
-                          height: `${height}%`,
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          borderRadius: '4px 4px 0 0',
-                          position: 'relative',
-                          minHeight: '4px',
-                          transition: 'all 0.3s ease',
-                        }}
-                        title={`${point.completedContentCount} content pieces\n${point.cefrLevel || 'No level'}`}
-                      >
-                        <div style={{
-                          position: 'absolute',
-                          top: '-25px',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          whiteSpace: 'nowrap',
-                        }}>
-                          {point.completedContentCount}
-                        </div>
-                        {point.cefrLevel && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '-45px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            fontSize: '11px',
-                            color: '#3498db',
-                            fontWeight: 'bold',
-                            whiteSpace: 'nowrap',
-                          }}>
-                            {point.cefrLevel}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ marginTop: '8px', fontSize: '11px', color: '#666', transform: 'rotate(-45deg)', whiteSpace: 'nowrap' }}>
-                        {new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    <CartesianGrid
+                      vertical={false}
+                      stroke="#E2E8F0"
+                      strokeDasharray="3 3"
+                      opacity={0.65}
+                    />
 
-              <div style={{ marginTop: '20px', padding: '15px', background: '#f0f0f0', borderRadius: '8px' }}>
-                <h4 style={{ marginTop: 0, marginBottom: '10px' }}>Legend</h4>
-                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '20px', height: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '4px' }}></div>
-                    <span style={{ fontSize: '14px' }}>Completed Content Count</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '14px', color: '#3498db', fontWeight: 'bold' }}>Level Tag:</span>
-                    <span style={{ fontSize: '14px' }}>CEFR Level at that point</span>
-                  </div>
-                </div>
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fill: '#64748B', fontSize: 12, fontWeight: 500 }}
+                      axisLine={false}
+                      tickLine={false}
+                      padding={{ left: 8, right: 8 }}
+                    />
+
+                    <YAxis
+                      dataKey="value"
+                      tick={{ fill: '#64748B', fontSize: 12, fontWeight: 500 }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={44}
+                    />
+
+                    <Tooltip
+                      content={<ProgressChartTooltip />}
+                      cursor={{ stroke: 'rgba(102, 126, 234, 0.18)', strokeWidth: 1 }}
+                    />
+
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#667EEA"
+                      strokeWidth={3}
+                      fill="url(#progressGradient)"
+                      fillOpacity={1}
+                      dot={false}
+                      activeDot={{ r: 6, fill: '#ffffff', stroke: '#667EEA', strokeWidth: 3 }}
+                      filter="url(#progressShadow)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
@@ -227,26 +271,198 @@ const Progress: React.FC = () => {
           <h2>Personal Plan Topic Progress</h2>
           <div style={{ marginTop: '20px' }}>
             {liveProgress.topicProgress.map((topic) => (
-              <div key={topic.topicName} style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold', fontSize: '15px' }}>{topic.topicName}</span>
-                  <span style={{ color: '#666', fontSize: '14px' }}>
-                    {topic.completedCount}/{topic.totalCount} ({Math.round(topic.progress * 100)}%)
-                  </span>
+              <div
+                key={topic.topicName}
+                className="topic-row topic-row-group"
+                style={{
+                  marginBottom: 12,
+                  background: '#FFFFFF',
+                  border: '1px solid transparent',
+                  borderRadius: 16,
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.06)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 999,
+                        background: 'linear-gradient(135deg, #6366F1 0%, #7C3AED 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flex: '0 0 auto',
+                        boxShadow: '0 10px 20px rgba(99, 102, 241, 0.22)',
+                      }}
+                      aria-hidden="true"
+                    >
+                      {topic.progress > 0 ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path
+                            d="M12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22Z"
+                            stroke="#FFFFFF"
+                            strokeWidth="2"
+                          />
+                          <path
+                            d="M10 8.5V15.5L16 12L10 8.5Z"
+                            fill="#FFFFFF"
+                          />
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path
+                            d="M7 4H17C18.1046 4 19 4.89543 19 6V20L12 16.5L5 20V6C5 4.89543 5.89543 4 7 4Z"
+                            stroke="#FFFFFF"
+                            strokeWidth="2"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M9 8H15"
+                            stroke="#FFFFFF"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                          <path
+                            d="M9 11H14"
+                            stroke="#FFFFFF"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      )}
+                    </div>
+
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          fontSize: 15,
+                          color: '#0F172A',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                        title={topic.topicName}
+                      >
+                        {topic.topicName}
+                      </div>
+                      <div style={{ marginTop: 4, color: '#64748B', fontSize: 13, fontWeight: 500 }}>
+                        {topic.completedCount}/{topic.totalCount} • {Math.round(topic.progress * 100)}%
+                      </div>
+                    </div>
+                  </div>
+
+                  {topic.progress >= 0.999 ? (
+                    <span
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: 999,
+                        background: '#DCFCE7',
+                        color: '#15803D',
+                        fontSize: 12,
+                        fontWeight: 800,
+                        letterSpacing: '0.01em',
+                        flex: '0 0 auto',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M20 6L9 17L4 12" stroke="#15803D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Completed
+                    </span>
+                  ) : topic.progress === 0 ? (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flex: '0 0 auto' }}>
+                      <span
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 999,
+                          background: '#F1F5F9',
+                          color: '#64748B',
+                          fontSize: 12,
+                          fontWeight: 800,
+                          letterSpacing: '0.01em',
+                        }}
+                      >
+                        Not Started
+                      </span>
+                      <span className="topic-cta" aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'center', color: '#9CA3AF' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    </div>
+                  ) : (
+                    <span
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: 999,
+                        background: 'rgba(102, 126, 234, 0.14)',
+                        color: '#4F46E5',
+                        fontSize: 12,
+                        fontWeight: 800,
+                        letterSpacing: '0.01em',
+                        flex: '0 0 auto',
+                      }}
+                    >
+                      In Progress
+                    </span>
+                  )}
                 </div>
-                <div style={{ width: '100%', height: '12px', background: '#e0e0e0', borderRadius: '6px', overflow: 'hidden' }}>
+
+                <div style={{ marginTop: 12 }}>
                   <div
                     style={{
-                      width: `${topic.progress * 100}%`,
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-                      transition: 'width 0.3s ease',
+                      width: '100%',
+                      height: 14,
+                      background: '#F1F5F9',
+                      borderRadius: 999,
+                      overflow: 'hidden',
                     }}
-                  ></div>
+                    aria-label={`Topic progress: ${Math.round(topic.progress * 100)}%`}
+                  >
+                    <div
+                      style={{
+                        width: `${Math.max(0, Math.min(100, topic.progress * 100))}%`,
+                        height: '100%',
+                        background: 'linear-gradient(90deg, #6366F1 0%, #A855F7 100%)',
+                        borderRadius: 999,
+                        transition: 'width 0.35s ease',
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             ))}
           </div>
+
+          <style>{`
+            .topic-row {
+              transition: all 200ms ease;
+            }
+
+            .topic-row:hover {
+              background: rgba(79, 70, 229, 0.06);
+              box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+              transform: translateY(-2px);
+              border-color: #E0E7FF;
+            }
+
+            .topic-cta {
+              transition: transform 200ms ease, color 200ms ease;
+            }
+
+            .topic-row:hover .topic-cta {
+              color: #4F46E5;
+              transform: translateX(4px);
+            }
+          `}</style>
         </div>
       )}
 

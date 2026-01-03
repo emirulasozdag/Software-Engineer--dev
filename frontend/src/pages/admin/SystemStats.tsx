@@ -2,6 +2,51 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminService } from '@/services/api/admin.service';
 import type { SystemStats } from '@/types/admin.types';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+
+type ActivityTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ value?: number; payload?: any }>;
+  label?: string;
+};
+
+const ActivityTooltip: React.FC<ActivityTooltipProps> = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+
+  const point = payload[0]?.payload as any;
+  const hours = payload[0]?.value ?? point?.hours;
+  const dateText = point?.date ? new Date(point.date).toLocaleDateString() : point?.day;
+
+  return (
+    <div
+      style={{
+        background: 'rgba(15, 23, 42, 0.86)',
+        color: '#ffffff',
+        padding: '10px 12px',
+        borderRadius: 12,
+        boxShadow: '0 18px 48px rgba(0, 0, 0, 0.28)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        minWidth: 140,
+      }}
+    >
+      <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>{dateText}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
+        <div style={{ fontSize: 12, opacity: 0.85 }}>Hours</div>
+        <div style={{ fontSize: 16, fontWeight: 800 }}>{Number(hours ?? 0).toLocaleString()}</div>
+      </div>
+    </div>
+  );
+};
 
 const SystemStats: React.FC = () => {
   const [stats, setStats] = useState<SystemStats | null>(null);
@@ -86,37 +131,83 @@ const SystemStats: React.FC = () => {
 
       <div className="card">
         <h2>Usage Over Time</h2>
-        <div style={{ display: 'flex', alignItems: 'flex-end', height: 200, gap: 12, paddingTop: 20, paddingBottom: 5 }}>
-          {(stats?.usageHistory ?? []).map((day, i) => {
-            const maxVal = Math.max(1, ...((stats?.usageHistory ?? []).map((d) => d.activity + d.users)));
-            const total = day.activity + day.users;
-            const height = Math.round((total / maxVal) * 100);
-            return (
-              <div key={day.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', width: '100%', justifyContent: 'center' }}>
-                  <div
-                    style={{
-                      width: '60%',
-                      height: `${height}%`,
-                      backgroundColor: '#3b82f6',
-                      borderRadius: '4px 4px 0 0',
-                      minHeight: 4,
-                      position: 'relative',
-                      transition: 'height 0.3s ease',
-                    }}
-                    title={`Date: ${day.date}\nActivity: ${day.activity}\nNew Users: ${day.users}`}
-                  />
-                </div>
-                <div style={{ marginTop: 8, fontSize: 12, color: '#64748b', fontWeight: 500 }}>{day.day}</div>
-              </div>
-            );
-          })}
-          {(!stats?.usageHistory || stats.usageHistory.length === 0) && (
-            <div style={{ width: '100%', textAlign: 'center', color: '#94a3b8', alignSelf: 'center' }}>
-              No activity data available for the last 7 days.
-            </div>
-          )}
-        </div>
+        {isLoading ? (
+          <div style={{ width: '100%', textAlign: 'center', color: '#94a3b8', padding: '28px 0' }}>
+            Loading activity…
+          </div>
+        ) : error ? (
+          <div style={{ width: '100%', textAlign: 'center', color: '#e74c3c', padding: '28px 0', fontWeight: 600 }}>
+            {error}
+          </div>
+        ) : (stats?.usageHistory?.length ?? 0) > 0 ? (
+          <div style={{ width: '100%', height: 260 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={(stats?.usageHistory ?? []).map((d) => ({
+                  ...d,
+                  hours: d.activity,
+                  label: d.day,
+                }))}
+                margin={{ top: 12, right: 18, bottom: 8, left: 6 }}
+              >
+                <defs>
+                  <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#667EEA" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#667EEA" stopOpacity={0.06} />
+                  </linearGradient>
+                  <filter id="activityShadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#667EEA" floodOpacity="0.18" />
+                  </filter>
+                </defs>
+
+                <CartesianGrid
+                  vertical={false}
+                  stroke="#E2E8F0"
+                  strokeDasharray="3 3"
+                  opacity={0.65}
+                />
+
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: '#64748B', fontSize: 12, fontWeight: 500 }}
+                  axisLine={false}
+                  tickLine={false}
+                  padding={{ left: 8, right: 8 }}
+                />
+
+                <YAxis
+                  dataKey="hours"
+                  tick={{ fill: '#64748B', fontSize: 12, fontWeight: 500 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={44}
+                  label={{ value: 'Hours', angle: -90, position: 'insideLeft', fill: '#64748B', fontSize: 12 }}
+                />
+
+                <Tooltip
+                  content={<ActivityTooltip />}
+                  cursor={{ stroke: 'rgba(102, 126, 234, 0.18)', strokeWidth: 1 }}
+                />
+
+                <Area
+                  type="monotone"
+                  dataKey="hours"
+                  stroke="#667EEA"
+                  strokeWidth={3}
+                  fill="url(#activityGradient)"
+                  fillOpacity={1}
+                  dot={false}
+                  activeDot={{ r: 6, fill: '#ffffff', stroke: '#667EEA', strokeWidth: 3 }}
+                  filter="url(#activityShadow)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div style={{ width: '100%', textAlign: 'center', color: '#94a3b8', padding: '28px 0' }}>
+            No activity data available for the last 7 days.
+          </div>
+        )}
       </div>
 
       <div className="card">
