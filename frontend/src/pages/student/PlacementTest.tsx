@@ -479,8 +479,6 @@ const PlacementTest: React.FC = () => {
                               className="placement-pill"
                               style={{ marginTop: 12, padding: 16 }}
                             >
-                                }
-                                style={{ marginTop: 2 }}
                               <div className="question-title">
                                 {qIdx + 1}. {q.question}
                               </div>
@@ -527,13 +525,15 @@ const PlacementTest: React.FC = () => {
                       </button>
                     </div>
 
-                    {idx + 1}. {q.question}
                     {currentModule && moduleResults[currentModule] && (
                       <div className="card" style={{ marginTop: 16, background: '#f9f9f9', boxShadow: 'none' }}>
+                        <div style={{ fontWeight: 600, marginBottom: 6 }}>Last submission result</div>
                         <div>
                           {moduleResults[currentModule]?.level} (score {moduleResults[currentModule]?.score})
                         </div>
                         {moduleResults[currentModule]?.feedback && (
+                          <div style={{ marginTop: 8, color: '#555' }}>{moduleResults[currentModule]?.feedback}</div>
+                        )}
                       </div>
                     )}
                   </div>
