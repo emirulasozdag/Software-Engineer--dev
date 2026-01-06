@@ -47,122 +47,183 @@ const StudentDashboard: React.FC = () => {
     return [...results].sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())[0];
   }, [results]);
 
+  const displayName = user?.name ?? 'Student';
+  const firstName = displayName.split(' ')[0] || displayName;
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join('');
+
+  const planTopicsCount = plan?.topics?.length ?? 0;
+  const planPct = Math.max(18, Math.min(100, 18 + planTopicsCount * 10));
+
   return (
-    <div className="container">
+    <div className="sd-layout">
       {newAchievements && newAchievements.length > 0 && (
-        <AchievementNotificationContainer
-          achievements={newAchievements}
-          onClose={clearAchievements}
-        />
+        <AchievementNotificationContainer achievements={newAchievements} onClose={clearAchievements} />
       )}
-      
-      <div className="card dash-hero">
-        <div className="hero-row">
-          <div>
-            <h1 className="hero-title">Welcome, {user?.name}</h1>
-            <div className="hero-sub">
-              Quick summary: your level, plan, and messages are here.
-            </div>
-            <div className="action-meta" style={{ marginTop: 12 }}>
-              <span className="pill">Email: {user?.email}</span>
-              <span className="pill">Role: {user?.role}</span>
-              <span className="pill">Unread: {loading ? '…' : unread}</span>
-            </div>
+
+      <aside className="sd-sidebar">
+        <div className="sd-brand">
+          <div className="sd-brand-mark" aria-hidden="true">AI</div>
+          <div className="sd-brand-text">
+            <div className="sd-brand-name">AI Learning</div>
+            <div className="sd-brand-sub">Student</div>
           </div>
-          <div className="hero-actions">
-            <button className="button button-secondary" onClick={load} disabled={loading}>
-              {loading ? 'Loading…' : 'Refresh'}
+        </div>
+
+        <nav className="sd-nav">
+          <Link to="/student/dashboard" className="sd-nav-link is-active">
+            <span className="sd-nav-ico" aria-hidden="true">▦</span>
+            <span>Dashboard</span>
+          </Link>
+          <Link to="/student/learning-plan" className="sd-nav-link">
+            <span className="sd-nav-ico" aria-hidden="true">📘</span>
+            <span>Learning Plan</span>
+          </Link>
+          <Link to="/student/messages" className="sd-nav-link">
+            <span className="sd-nav-ico" aria-hidden="true">✉</span>
+            <span>Messages</span>
+            <span className="sd-badge" aria-label={`Unread messages: ${loading ? 'loading' : unread}`}>{loading ? '…' : unread}</span>
+          </Link>
+          <Link to="/student/progress" className="sd-nav-link">
+            <span className="sd-nav-ico" aria-hidden="true">📈</span>
+            <span>My Progress</span>
+          </Link>
+          <Link to="/student/ai-content-delivery" className="sd-nav-link">
+            <span className="sd-nav-ico" aria-hidden="true">✦</span>
+            <span>AI Delivery</span>
+          </Link>
+        </nav>
+
+        <div className="sd-sidebar-footer">
+          <button className="sd-logout" onClick={logout}>
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      <main className="sd-main">
+        <div className="sd-topbar">
+          <div className="sd-search" role="search">
+            <span className="sd-search-ico" aria-hidden="true">⌕</span>
+            <input className="sd-search-input" placeholder="Search…" aria-label="Search" />
+          </div>
+
+          <div className="sd-topbar-right">
+            <button className="sd-icon-btn" onClick={load} disabled={loading} aria-label="Refresh">
+              {loading ? '…' : '⟳'}
             </button>
-            <button className="button button-primary" onClick={logout}>Logout</button>
-          </div>
-        </div>
-      </div>
-
-      <div className="dash-grid">
-        <div className="card col-4">
-          <div className="text-muted">Latest Placement</div>
-          <div className="kpi" style={{ marginTop: 10 }}>
-            <div className="label">Overall</div>
-            <div className="value">{latestResult?.overallLevel || '—'}</div>
-          </div>
-          <div className="text-muted" style={{ marginTop: 10 }}>
-            {latestResult?.completedAt ? new Date(latestResult.completedAt).toLocaleString() : 'No results yet'}
-          </div>
-          <div className="divider" />
-          <Link to="/student/placement-test" className="link">Go to Placement Test</Link>
-        </div>
-
-        <div className="card col-4">
-          <div className="text-muted">Learning Plan</div>
-          <div className="kpi" style={{ marginTop: 10 }}>
-            <div className="label">Recommended</div>
-            <div className="value">{plan?.recommendedLevel || '—'}</div>
-          </div>
-          <div className="text-muted" style={{ marginTop: 10 }}>
-            Topics: {plan?.topics?.length ?? 0}
-          </div>
-          <div className="divider" />
-          <Link to="/student/learning-plan" className="link">Open Learning Plan</Link>
-        </div>
-
-        <div className="card col-4">
-          <div className="text-muted">Messages</div>
-          <div className="kpi" style={{ marginTop: 10 }}>
-            <div className="label">Unread</div>
-            <div className="value">{loading ? '…' : unread}</div>
-          </div>
-          <div className="divider" />
-          <Link to="/student/messages" className="link">Open Messages</Link>
-        </div>
-
-        <Link to="/student/ai-content-delivery" style={{ textDecoration: 'none' }} className="col-6">
-          <div className="card click-card action-card">
-            <span className="action-icon">AI</span>
-            <div>
-              <h3 className="action-title">AI Content Delivery</h3>
-              <div className="action-desc">Get content based on your plan, update it based on your progress, and see the "why" rationale.</div>
-              <div className="action-meta">
-                <span className="pill">Rationale</span>
-                <span className="pill">Update by progress</span>
+            <div className="sd-user">
+              <div className="sd-avatar" aria-hidden="true">{initials || 'U'}</div>
+              <div className="sd-user-meta">
+                <div className="sd-user-name">{displayName}</div>
+                <div className="sd-user-role">{user?.role ?? 'student'}</div>
               </div>
             </div>
           </div>
-        </Link>
+        </div>
 
-        <Link to="/student/progress" style={{ textDecoration: 'none' }} className="col-6">
-          <div className="card click-card action-card">
-            <span className="action-icon green">PG</span>
-            <div>
-              <h3 className="action-title">My Progress</h3>
-              <div className="action-desc">Track your progress with charts and a timeline.</div>
-              <div className="action-meta">
-                <span className="pill">Charts</span>
-                <span className="pill">Timeline</span>
+        <section className="sd-hero" aria-label="Welcome">
+          <div className="sd-hero-inner">
+            <div className="sd-hero-title">Welcome back, {firstName}</div>
+            <div className="sd-hero-actions">
+              <Link to="/student/dashboard" className="sd-hero-chip sd-hero-chip-solid">
+                Welcome back
+              </Link>
+              <Link to="/student/placement-test" className="sd-hero-chip sd-hero-chip-outline">
+                Get Started
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="sd-grid" aria-label="Dashboard Cards">
+          <div className="sd-row sd-row-3">
+            <div className="sd-card sd-card-sm">
+              <div className="sd-card-head">
+                <div className="sd-card-title">Learning Plan</div>
+                <Link to="/student/learning-plan" className="sd-card-action" aria-label="Open learning plan">≡</Link>
+              </div>
+
+              <div className="sd-level">
+                <div className="sd-level-value">{plan?.recommendedLevel || '—'}</div>
+                <div className="sd-level-sub">Level {plan?.recommendedLevel || '—'}</div>
+              </div>
+
+              <div className="sd-progress">
+                <div className="sd-progress-track" aria-hidden="true">
+                  <div className="sd-progress-fill" style={{ width: `${planPct}%` }} />
+                </div>
+                <div className="sd-progress-meta">Topics: {planTopicsCount}</div>
+              </div>
+            </div>
+
+            <div className="sd-card sd-card-sm">
+              <div className="sd-card-head">
+                <div className="sd-card-title">AI Content Delivery</div>
+                <Link to="/student/ai-content-delivery" className="sd-card-action" aria-label="Open AI content delivery">✦</Link>
+              </div>
+              <div className="sd-card-desc">Learn in waves with rotating tasks.</div>
+              <div className="sd-pill-row">
+                <span className="sd-pill sd-pill-cool">Adaptive</span>
+                <span className="sd-pill sd-pill-warm">Updated</span>
+              </div>
+            </div>
+
+            <div className="sd-card sd-card-sm">
+              <div className="sd-card-head">
+                <div className="sd-card-title">Messages</div>
+                <Link to="/student/messages" className="sd-card-action" aria-label="Open messages">💬</Link>
+              </div>
+              <div className="sd-metric">{loading ? '…' : unread}</div>
+              <div className="sd-card-desc">Unread</div>
+            </div>
+          </div>
+
+          <div className="sd-row sd-row-2">
+            <div className="sd-card sd-card-lg">
+              <div className="sd-card-head">
+                <div className="sd-card-title">My Progress</div>
+                <Link to="/student/progress" className="sd-card-action" aria-label="Open progress">📊</Link>
+              </div>
+              <div className="sd-spark" aria-hidden="true">
+                <span className="sd-bar" />
+                <span className="sd-bar" />
+                <span className="sd-bar" />
+                <span className="sd-bar is-accent" />
+                <span className="sd-bar" />
+                <span className="sd-bar" />
+                <span className="sd-bar" />
+              </div>
+            </div>
+
+            <div className="sd-card sd-card-lg">
+              <div className="sd-card-head">
+                <div className="sd-card-title">Assignments</div>
+                <Link to="/student/assignments" className="sd-card-action" aria-label="Open assignments">🗓</Link>
+              </div>
+
+              <div className="sd-list">
+                <div className="sd-list-item">
+                  <div className="sd-list-title">Open assignments</div>
+                  <div className="sd-list-sub">View tasks and due dates</div>
+                </div>
+                <div className="sd-list-item">
+                  <div className="sd-list-title">Latest placement</div>
+                  <div className="sd-list-sub">{latestResult?.overallLevel ? `Level ${latestResult.overallLevel}` : 'No results yet'}</div>
+                </div>
+                <div className="sd-list-item">
+                  <div className="sd-list-title">Next step</div>
+                  <div className="sd-list-sub">Start with a quick placement test</div>
+                </div>
               </div>
             </div>
           </div>
-        </Link>
-
-        <Link to="/student/assignments" style={{ textDecoration: 'none' }} className="col-6">
-          <div className="card click-card action-card">
-            <span className="action-icon amber">AS</span>
-            <div>
-              <h3 className="action-title">Assignments</h3>
-              <div className="action-desc">View and complete your assignments.</div>
-            </div>
-          </div>
-        </Link>
-
-        <Link to="/student/chatbot" style={{ textDecoration: 'none' }} className="col-6">
-          <div className="card click-card action-card">
-            <span className="action-icon">CB</span>
-            <div>
-              <h3 className="action-title">Chatbot</h3>
-              <div className="action-desc">Currently in mock mode: ask questions and get example explanations + mini practice.</div>
-            </div>
-          </div>
-        </Link>
-      </div>
+        </section>
+      </main>
     </div>
   );
 };
