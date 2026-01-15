@@ -174,326 +174,333 @@ const TeacherMessages: React.FC = () => {
   };
 
   return (
-    <div className="container">
-      <Link to="/teacher/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>← Back to Dashboard</Link>
-      
-      <div className="toolbar">
-        <div>
-          <h1 className="page-title" style={{ marginBottom: 0 }}>Teacher Communication</h1>
-          <div className="subtitle">Message students and post announcements.</div>
-        </div>
-        <div className="actions">
-          <div className="tabs">
-            <button className={`tab ${tab === 'messages' ? 'active' : ''}`} onClick={() => setTab('messages')}>
-              Messages {unreadCount > 0 && <span className="pill">Unread: {unreadCount}</span>}
-            </button>
-            <button className={`tab ${tab === 'announcements' ? 'active' : ''}`} onClick={() => setTab('announcements')}>
-              Announcements
+    <div
+      style={{
+        minHeight: '100vh',
+        padding: 24,
+      }}
+    >
+      <div className="container">
+        <Link to="/teacher/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>← Back to Dashboard</Link>
+
+        <div className="toolbar">
+          <div>
+            <h1 className="page-title" style={{ marginBottom: 0 }}>Teacher Communication</h1>
+            <div className="subtitle">Message students and post announcements.</div>
+          </div>
+          <div className="actions">
+            <div className="tabs">
+              <button className={`tab ${tab === 'messages' ? 'active' : ''}`} onClick={() => setTab('messages')}>
+                Messages {unreadCount > 0 && <span className="pill">Unread: {unreadCount}</span>}
+              </button>
+              <button className={`tab ${tab === 'announcements' ? 'active' : ''}`} onClick={() => setTab('announcements')}>
+                Announcements
+              </button>
+            </div>
+            <button className="button button-primary" onClick={load} disabled={loading || sending || posting}>
+              {loading ? 'Loading…' : 'Refresh'}
             </button>
           </div>
-          <button className="button button-primary" onClick={load} disabled={loading || sending || posting}>
-            {loading ? 'Loading…' : 'Refresh'}
-          </button>
         </div>
-      </div>
-      
-      {error && <div className="card" style={{ borderColor: 'rgba(220,38,38,0.25)', background: 'rgba(220,38,38,0.06)' }}>{error}</div>}
-      {notice && <div className="card" style={{ borderColor: 'rgba(37,99,235,0.25)', background: 'rgba(37,99,235,0.06)' }}>{notice}</div>}
 
-      {tab === 'messages' && (
-        <div className="split" style={{ marginTop: 16 }}>
-          <div className="card">
-            <div className="kpis" style={{ marginBottom: 12 }}>
-              <div className="kpi">
-                <div className="label">Inbox</div>
-                <div className="value">{inboxCount}</div>
+        {error && <div className="card" style={{ borderColor: 'rgba(220,38,38,0.25)', background: 'rgba(220,38,38,0.06)' }}>{error}</div>}
+        {notice && <div className="card" style={{ borderColor: 'rgba(37,99,235,0.25)', background: 'rgba(37,99,235,0.06)' }}>{notice}</div>}
+
+        {tab === 'messages' && (
+          <div className="split" style={{ marginTop: 16 }}>
+            <div className="card">
+              <div className="kpis" style={{ marginBottom: 12 }}>
+                <div className="kpi">
+                  <div className="label">Inbox</div>
+                  <div className="value">{inboxCount}</div>
+                </div>
+                <div className="kpi">
+                  <div className="label">Sent</div>
+                  <div className="value">{sentCount}</div>
+                </div>
+                <div className="kpi">
+                  <div className="label">Unread</div>
+                  <div className="value">{unreadCount}</div>
+                </div>
               </div>
-              <div className="kpi">
-                <div className="label">Sent</div>
-                <div className="value">{sentCount}</div>
+
+              <div className="tabs" style={{ marginBottom: 10 }}>
+                <button className={`tab ${box === 'all' ? 'active' : ''}`} onClick={() => setBox('all')}>All</button>
+                <button className={`tab ${box === 'inbox' ? 'active' : ''}`} onClick={() => setBox('inbox')}>Inbox</button>
+                <button className={`tab ${box === 'sent' ? 'active' : ''}`} onClick={() => setBox('sent')}>Sent</button>
               </div>
-              <div className="kpi">
-                <div className="label">Unread</div>
-                <div className="value">{unreadCount}</div>
-              </div>
-            </div>
 
-            <div className="tabs" style={{ marginBottom: 10 }}>
-              <button className={`tab ${box === 'all' ? 'active' : ''}`} onClick={() => setBox('all')}>All</button>
-              <button className={`tab ${box === 'inbox' ? 'active' : ''}`} onClick={() => setBox('inbox')}>Inbox</button>
-              <button className={`tab ${box === 'sent' ? 'active' : ''}`} onClick={() => setBox('sent')}>Sent</button>
-            </div>
+              <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by person/subject/content…" />
 
-            <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by person/subject/content…" />
-
-            {loading ? (
-              <div className="loading">Loading…</div>
-            ) : (
-              <div className="list">
-                {filteredMessages.length === 0 && <div className="text-muted">No messages yet.</div>}
-                {filteredMessages.map((m) => {
-                  const isInbound = myId ? m.receiverId === myId : true;
-                  const counterpart = isInbound
-                    ? (m.senderName || `User #${m.senderId}`)
-                    : (m.receiverName || `User #${m.receiverId}`);
-                  const initials = (counterpart || 'U')
-                    .split(' ')
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((x) => x[0]?.toUpperCase())
-                    .join('');
-                  return (
-                    <div
-                      key={m.id}
-                      className={`list-item ${selectedId === m.id ? 'active' : ''} ${myId && m.receiverId === myId && !m.isRead ? 'unread' : ''}`}
-                      onClick={() => selectMessage(m)}
-                    >
-                      <div className="msg-row">
-                        <span className={`avatar ${isInbound ? '' : 'muted'}`}>{initials || 'U'}</span>
-                        <div className="msg-main">
-                          <div className="msg-title">
-                            <div className="who">
-                              {counterpart}{' '}
-                              <span className="pill" style={{ marginLeft: 8 }}>
-                                {isInbound ? 'IN' : 'OUT'}
-                              </span>
+              {loading ? (
+                <div className="loading">Loading…</div>
+              ) : (
+                <div className="list">
+                  {filteredMessages.length === 0 && <div className="text-muted">No messages yet.</div>}
+                  {filteredMessages.map((m) => {
+                    const isInbound = myId ? m.receiverId === myId : true;
+                    const counterpart = isInbound
+                      ? (m.senderName || `User #${m.senderId}`)
+                      : (m.receiverName || `User #${m.receiverId}`);
+                    const initials = (counterpart || 'U')
+                      .split(' ')
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((x) => x[0]?.toUpperCase())
+                      .join('');
+                    return (
+                      <div
+                        key={m.id}
+                        className={`list-item ${selectedId === m.id ? 'active' : ''} ${myId && m.receiverId === myId && !m.isRead ? 'unread' : ''}`}
+                        onClick={() => selectMessage(m)}
+                      >
+                        <div className="msg-row">
+                          <span className={`avatar ${isInbound ? '' : 'muted'}`}>{initials || 'U'}</span>
+                          <div className="msg-main">
+                            <div className="msg-title">
+                              <div className="who">
+                                {counterpart}{' '}
+                                <span className="pill" style={{ marginLeft: 8 }}>
+                                  {isInbound ? 'IN' : 'OUT'}
+                                </span>
+                              </div>
+                              <div className="date">{new Date(m.createdAt).toLocaleDateString()}</div>
                             </div>
-                            <div className="date">{new Date(m.createdAt).toLocaleDateString()}</div>
+                            <div className="msg-subject">{m.subject || '(no subject)'}</div>
+                            <div className="msg-snippet">{m.content}</div>
                           </div>
-                          <div className="msg-subject">{m.subject || '(no subject)'}</div>
-                          <div className="msg-snippet">{m.content}</div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="card">
-            <div className="toolbar">
-              <div>
-                <h2 style={{ marginBottom: 6 }}>Message</h2>
-                {selected ? (
-                  <div className="text-muted">
-                    From <strong>{selected.senderName || selected.senderId}</strong> · To{' '}
-                    <strong>{selected.receiverName || selected.receiverId}</strong>
-                  </div>
-                ) : (
-                  <div className="text-muted">Select a message to view details.</div>
-                )}
-              </div>
-              {selected && (
-                <div className="actions">
-                  <button className="button button-ghost" onClick={replyToSelected} disabled={!myId}>
-                    Reply
-                  </button>
-                  <button className="button button-danger" onClick={() => deleteMessage(selected.id)}>
-                    Delete
-                  </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            {selected && (
-              <div style={{ marginTop: 14 }}>
-                <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{selected.subject || '(no subject)'}</div>
-                <div className="text-muted" style={{ marginTop: 6 }}>{new Date(selected.createdAt).toLocaleString()}</div>
-                <div className="divider" />
-                <div style={{ marginTop: 14, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{selected.content}</div>
+            <div className="card">
+              <div className="toolbar">
+                <div>
+                  <h2 style={{ marginBottom: 6 }}>Message</h2>
+                  {selected ? (
+                    <div className="text-muted">
+                      From <strong>{selected.senderName || selected.senderId}</strong> · To{' '}
+                      <strong>{selected.receiverName || selected.receiverId}</strong>
+                    </div>
+                  ) : (
+                    <div className="text-muted">Select a message to view details.</div>
+                  )}
+                </div>
+                {selected && (
+                  <div className="actions">
+                    <button className="button button-ghost" onClick={replyToSelected} disabled={!myId}>
+                      Reply
+                    </button>
+                    <button className="button button-danger" onClick={() => deleteMessage(selected.id)}>
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
-      )}
 
-      {tab === 'messages' && (
-      <div className="card">
-        <div className="toolbar">
-          <div>
-            <h2 style={{ marginBottom: 6 }}>Compose</h2>
-            <div className="text-muted">Send a new message to a student.</div>
-          </div>
-          <div className="pill">Draft</div>
-        </div>
-        <div className="divider" />
-        <div className="form-group">
-          <div className="grid-2">
-            <div>
-              <label className="form-label">To</label>
-          <select
-            className="input"
-            value={compose.receiverId}
-            onChange={(e) => setCompose((p) => ({ ...p, receiverId: e.target.value }))}
-          >
-            <option value="">Select…</option>
-            {contacts.length === 0 && (
-              <option value="" disabled>
-                No student contact found (create Student accounts first)
-              </option>
-            )}
-            {contacts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.role})
-              </option>
-            ))}
-          </select>
-          {contacts.length === 0 && (
-            <div className="text-muted" style={{ marginTop: 6 }}>
-              This dropdown is empty because there are no <strong>Student</strong> accounts yet (or you're not logged in).
-              Once you create at least one student account, it will appear here.
-            </div>
-          )}
-            </div>
-            <div>
-              <label className="form-label">Subject</label>
-          <input
-            className="input"
-            type="text"
-            placeholder="Message subject"
-            value={compose.subject}
-            onChange={(e) => setCompose((p) => ({ ...p, subject: e.target.value }))}
-          />
+              {selected && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{selected.subject || '(no subject)'}</div>
+                  <div className="text-muted" style={{ marginTop: 6 }}>{new Date(selected.createdAt).toLocaleString()}</div>
+                  <div className="divider" />
+                  <div style={{ marginTop: 14, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{selected.content}</div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">Message</label>
-          <textarea
-            className="input"
-            rows={5}
-            placeholder="Type your message here..."
-            style={{ resize: 'vertical' }}
-            value={compose.content}
-            onChange={(e) => setCompose((p) => ({ ...p, content: e.target.value }))}
-          />
-          <div className="text-muted" style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-            <span>Tip: The Reply button auto-fills from the selected message.</span>
-            <span>{compose.content.length} chars</span>
-          </div>
-        </div>
-        <button className="button button-primary" onClick={send} disabled={sending || loading}>
-          {sending ? 'Sending…' : 'Send Message'}
-        </button>
-      </div>
-      )}
+        )}
 
-      {tab === 'announcements' && (
-      <div className="card">
-        <div className="toolbar">
-          <div>
-            <h2 style={{ marginBottom: 6 }}>Create Announcement</h2>
-            <div className="text-muted">Post an announcement.</div>
-          </div>
-          <div className="pill">Teacher</div>
-        </div>
-        <div className="divider" />
-
-        <div className="grid-2">
-          <div>
+        {tab === 'messages' && (
+          <div className="card">
+            <div className="toolbar">
+              <div>
+                <h2 style={{ marginBottom: 6 }}>Compose</h2>
+                <div className="text-muted">Send a new message to a student.</div>
+              </div>
+              <div className="pill">Draft</div>
+            </div>
+            <div className="divider" />
             <div className="form-group">
-              <label className="form-label">Title</label>
-              <input
-                className="input"
-                type="text"
-                placeholder="Announcement title"
-                value={announceForm.title}
-                onChange={(e) => setAnnounceForm((p) => ({ ...p, title: e.target.value }))}
-              />
+              <div className="grid-2">
+                <div>
+                  <label className="form-label">To</label>
+                  <select
+                    className="input"
+                    value={compose.receiverId}
+                    onChange={(e) => setCompose((p) => ({ ...p, receiverId: e.target.value }))}
+                  >
+                    <option value="">Select…</option>
+                    {contacts.length === 0 && (
+                      <option value="" disabled>
+                        No student contact found (create Student accounts first)
+                      </option>
+                    )}
+                    {contacts.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.role})
+                      </option>
+                    ))}
+                  </select>
+                  {contacts.length === 0 && (
+                    <div className="text-muted" style={{ marginTop: 6 }}>
+                      This dropdown is empty because there are no <strong>Student</strong> accounts yet (or you're not logged in).
+                      Once you create at least one student account, it will appear here.
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="form-label">Subject</label>
+                  <input
+                    className="input"
+                    type="text"
+                    placeholder="Message subject"
+                    value={compose.subject}
+                    onChange={(e) => setCompose((p) => ({ ...p, subject: e.target.value }))}
+                  />
+                </div>
+              </div>
             </div>
             <div className="form-group">
-              <label className="form-label">Target Audience</label>
-              <select
-                className="input"
-                value={announceForm.targetAudience}
-                onChange={(e) => setAnnounceForm((p) => ({ ...p, targetAudience: e.target.value as any }))}
-              >
-                <option value="students">Students</option>
-                <option value="all">All Users</option>
-                <option value="teachers">Teachers</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Content</label>
+              <label className="form-label">Message</label>
               <textarea
                 className="input"
                 rows={5}
-                placeholder="Announcement content..."
+                placeholder="Type your message here..."
                 style={{ resize: 'vertical' }}
-                value={announceForm.content}
-                onChange={(e) => setAnnounceForm((p) => ({ ...p, content: e.target.value }))}
+                value={compose.content}
+                onChange={(e) => setCompose((p) => ({ ...p, content: e.target.value }))}
               />
               <div className="text-muted" style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                <span>Keep it short & clear.</span>
-                <span>{announceForm.content.length} chars</span>
+                <span>Tip: The Reply button auto-fills from the selected message.</span>
+                <span>{compose.content.length} chars</span>
               </div>
             </div>
-            <button className="button button-primary" onClick={postAnnouncement} disabled={posting || loading}>
-              {posting ? 'Posting…' : 'Post Announcement'}
+            <button className="button button-primary" onClick={send} disabled={sending || loading}>
+              {sending ? 'Sending…' : 'Send Message'}
             </button>
           </div>
+        )}
 
-          <div>
-            <div className="pill" style={{ marginBottom: 10 }}>Live Preview</div>
-            <div className="list-item announcement-card">
-              <div className="msg-row">
-                <span className="avatar">{(user?.name || 'T').slice(0, 1).toUpperCase()}</span>
-                <div className="msg-main">
-                  <div className="announcement-head">
-                    <div style={{ fontWeight: 900 }}>{announceForm.title.trim() || 'Announcement title'}</div>
-                    <span className="pill">{new Date().toLocaleDateString()}</span>
-                  </div>
-                  <div className="announcement-meta">
-                    By <strong>{user?.name || 'Teacher'}</strong> · Audience: <strong>{announceForm.targetAudience}</strong>
-                  </div>
-                  <div style={{ marginTop: 10, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>
-                    {announceForm.content.trim() || 'Announcement content preview…'}
+        {tab === 'announcements' && (
+          <div className="card">
+            <div className="toolbar">
+              <div>
+                <h2 style={{ marginBottom: 6 }}>Create Announcement</h2>
+                <div className="text-muted">Post an announcement.</div>
+              </div>
+              <div className="pill">Teacher</div>
+            </div>
+            <div className="divider" />
+
+            <div className="grid-2">
+              <div>
+                <div className="form-group">
+                  <label className="form-label">Title</label>
+                  <input
+                    className="input"
+                    type="text"
+                    placeholder="Announcement title"
+                    value={announceForm.title}
+                    onChange={(e) => setAnnounceForm((p) => ({ ...p, title: e.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Target Audience</label>
+                  <select
+                    className="input"
+                    value={announceForm.targetAudience}
+                    onChange={(e) => setAnnounceForm((p) => ({ ...p, targetAudience: e.target.value as any }))}
+                  >
+                    <option value="students">Students</option>
+                    <option value="all">All Users</option>
+                    <option value="teachers">Teachers</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Content</label>
+                  <textarea
+                    className="input"
+                    rows={5}
+                    placeholder="Announcement content..."
+                    style={{ resize: 'vertical' }}
+                    value={announceForm.content}
+                    onChange={(e) => setAnnounceForm((p) => ({ ...p, content: e.target.value }))}
+                  />
+                  <div className="text-muted" style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                    <span>Keep it short & clear.</span>
+                    <span>{announceForm.content.length} chars</span>
                   </div>
                 </div>
+                <button className="button button-primary" onClick={postAnnouncement} disabled={posting || loading}>
+                  {posting ? 'Posting…' : 'Post Announcement'}
+                </button>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      )}
 
-      {tab === 'announcements' && (
-        <div className="card">
-          <div className="toolbar">
-            <div>
-              <h2 style={{ marginBottom: 6 }}>Announcements Feed</h2>
-              <div className="text-muted">List of published announcements.</div>
-            </div>
-            <span className="pill">{announcements.length} items</span>
-          </div>
-          <div className="divider" />
-          {loading ? (
-            <div className="loading">Loading…</div>
-          ) : (
-            <div className="list">
-              {announcements.length === 0 && <div className="text-muted">No announcements yet.</div>}
-              {announcements.map((a) => (
-                <div key={a.id} className="list-item announcement-card">
+              <div>
+                <div className="pill" style={{ marginBottom: 10 }}>Live Preview</div>
+                <div className="list-item announcement-card">
                   <div className="msg-row">
-                    <span className="avatar">{(a.authorName || 'T').slice(0, 1).toUpperCase()}</span>
+                    <span className="avatar">{(user?.name || 'T').slice(0, 1).toUpperCase()}</span>
                     <div className="msg-main">
                       <div className="announcement-head">
-                        <div style={{ fontWeight: 900 }}>{a.title}</div>
-                        <span className="pill">{new Date(a.createdAt).toLocaleDateString()}</span>
+                        <div style={{ fontWeight: 900 }}>{announceForm.title.trim() || 'Announcement title'}</div>
+                        <span className="pill">{new Date().toLocaleDateString()}</span>
                       </div>
                       <div className="announcement-meta">
-                        By <strong>{a.authorName}</strong> · Audience: <strong>{a.targetAudience}</strong>
+                        By <strong>{user?.name || 'Teacher'}</strong> · Audience: <strong>{announceForm.targetAudience}</strong>
                       </div>
-                      <div style={{ marginTop: 10, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{a.content}</div>
+                      <div style={{ marginTop: 10, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>
+                        {announceForm.content.trim() || 'Announcement content preview…'}
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+
+        {tab === 'announcements' && (
+          <div className="card">
+            <div className="toolbar">
+              <div>
+                <h2 style={{ marginBottom: 6 }}>Announcements Feed</h2>
+                <div className="text-muted">List of published announcements.</div>
+              </div>
+              <span className="pill">{announcements.length} items</span>
+            </div>
+            <div className="divider" />
+            {loading ? (
+              <div className="loading">Loading…</div>
+            ) : (
+              <div className="list">
+                {announcements.length === 0 && <div className="text-muted">No announcements yet.</div>}
+                {announcements.map((a) => (
+                  <div key={a.id} className="list-item announcement-card">
+                    <div className="msg-row">
+                      <span className="avatar">{(a.authorName || 'T').slice(0, 1).toUpperCase()}</span>
+                      <div className="msg-main">
+                        <div className="announcement-head">
+                          <div style={{ fontWeight: 900 }}>{a.title}</div>
+                          <span className="pill">{new Date(a.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <div className="announcement-meta">
+                          By <strong>{a.authorName}</strong> · Audience: <strong>{a.targetAudience}</strong>
+                        </div>
+                        <div style={{ marginTop: 10, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{a.content}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
