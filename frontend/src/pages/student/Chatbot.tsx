@@ -218,7 +218,7 @@ const Chatbot: React.FC = () => {
               </div>
             )}
 
-            <div className="chat-compose-wrap bg-indigo-50/90 border-t border-indigo-100">
+            <div className="chat-compose-wrap">
               <div className="chat-compose">
                 <input
                   className="chat-compose__input"
@@ -247,9 +247,9 @@ const Chatbot: React.FC = () => {
           </div>
 
           <div className="card">
-            <div className="rounded-2xl bg-gradient-to-r from-indigo-50/30 to-white p-4">
+            <div className="chat-suggestions">
               <div className="toolbar">
-                <h3 className="text-indigo-800 font-bold tracking-tight" style={{ marginBottom: 0 }}>✨ Suggested prompts</h3>
+                <h3 className="chat-suggestions__title" style={{ marginBottom: 0 }}>✨ Suggested prompts</h3>
                 <span className="pill">Click to fill</span>
               </div>
               <div className="chip-row" style={{ marginTop: '15px' }}>
@@ -295,7 +295,7 @@ const Chatbot: React.FC = () => {
         <style>{`
         .chatbot-page {
           min-height: 100vh;
-          background: linear-gradient(to bottom, rgba(238, 242, 255, 1), rgba(255, 255, 255, 1) 38%, rgba(255, 255, 255, 1));
+          padding: 24px 0;
         }
 
         /* Modern chat UI (scoped to this page via existing class names) */
@@ -305,6 +305,14 @@ const Chatbot: React.FC = () => {
           box-shadow: var(--shadow-sm);
           transition: none;
           transform: none;
+        }
+
+        .card.chat-shell {
+          background: rgba(255, 255, 255, 0.74);
+          border: 1px solid rgba(255, 255, 255, 0.70);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          box-shadow: 0 18px 54px rgba(15, 23, 42, 0.10);
         }
 
         .chatbot-title {
@@ -317,11 +325,11 @@ const Chatbot: React.FC = () => {
 
         .chat-body,
         .chat-body:hover {
-          background: rgba(238, 242, 255, 0.40);
+          background: rgba(245, 243, 255, 0.65);
           padding: 18px;
-          border: 1px solid rgba(224, 231, 255, 1);
+          border: 1px solid rgba(15, 23, 42, 0.06);
           border-radius: 18px 18px 0 0;
-          box-shadow: inset 0 2px 14px rgba(15, 23, 42, 0.06);
+          box-shadow: inset 0 2px 14px rgba(15, 23, 42, 0.05);
           transition: none;
         }
 
@@ -357,7 +365,7 @@ const Chatbot: React.FC = () => {
         }
 
         .chat-bubble.assistant {
-          background: #ffffff;
+          background: rgba(255, 255, 255, 0.92);
           border-top-left-radius: 0;
         }
 
@@ -379,8 +387,8 @@ const Chatbot: React.FC = () => {
         .chat-compose-wrap {
           position: relative;
           padding: 12px 18px;
-          background: rgba(238, 242, 255, 0.55);
-          border: 1px solid rgba(224, 231, 255, 1);
+          background: rgba(245, 243, 255, 0.80);
+          border: 1px solid rgba(15, 23, 42, 0.06);
           border-top: 0;
           border-radius: 0 0 18px 18px;
         }
@@ -390,8 +398,8 @@ const Chatbot: React.FC = () => {
           gap: 10px;
           align-items: center;
           padding: 10px 12px;
-          background: #ffffff;
-          border: 1px solid rgba(16, 24, 40, 0.10);
+          background: rgba(255, 255, 255, 0.92);
+          border: 1px solid rgba(15, 23, 42, 0.10);
           border-radius: 999px;
           box-shadow: var(--shadow-sm);
         }
@@ -436,8 +444,8 @@ const Chatbot: React.FC = () => {
         }
 
         .chat-chip {
-          background: rgba(238, 242, 255, 1);
-          border: 0;
+          background: rgba(255, 255, 255, 0.78);
+          border: 1px solid rgba(15, 23, 42, 0.08);
           color: rgba(67, 56, 202, 1);
           border-radius: 999px;
           padding: 10px 12px;
@@ -447,7 +455,7 @@ const Chatbot: React.FC = () => {
         }
 
         .chat-chip:hover {
-          background: rgba(224, 231, 255, 1);
+          background: rgba(245, 243, 255, 0.95);
           transform: scale(1.05);
         }
 
@@ -461,8 +469,8 @@ const Chatbot: React.FC = () => {
         .chat-helpbox:hover {
           margin-top: 1.5rem;
           padding: 14px;
-          background: rgba(238, 242, 255, 0.30);
-          border: 1px solid rgba(224, 231, 255, 1);
+          background: rgba(245, 243, 255, 0.60);
+          border: 1px solid rgba(15, 23, 42, 0.06);
           border-radius: 14px;
           box-shadow: none;
           transition: none;
@@ -492,8 +500,8 @@ const Chatbot: React.FC = () => {
           align-items: flex-start;
           gap: 10px;
           padding: 12px;
-          background: #ffffff;
-          border: 1px solid rgba(224, 231, 255, 1);
+          background: rgba(255, 255, 255, 0.92);
+          border: 1px solid rgba(15, 23, 42, 0.06);
           border-radius: 12px;
         }
 
@@ -504,7 +512,7 @@ const Chatbot: React.FC = () => {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: rgba(238, 242, 255, 1);
+          background: rgba(99, 102, 241, 0.12);
           color: rgba(79, 70, 229, 1);
           flex: 0 0 32px;
           font-size: 16px;
@@ -515,6 +523,21 @@ const Chatbot: React.FC = () => {
           line-height: 1.35;
           color: rgba(55, 65, 81, 1);
           font-weight: 700;
+        }
+
+        .chat-suggestions {
+          border-radius: 18px;
+          padding: 14px;
+          background: rgba(255, 255, 255, 0.70);
+          border: 1px solid rgba(255, 255, 255, 0.70);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+        }
+
+        .chat-suggestions__title {
+          color: rgba(30, 27, 75, 1);
+          font-weight: 900;
+          letter-spacing: -0.01em;
         }
       `}</style>
       </div>

@@ -1912,7 +1912,8 @@ details>summary::-webkit-details-marker {
   background:
     radial-gradient(1200px 520px at 20% 0%, rgba(99, 102, 241, 0.08), transparent 55%),
     radial-gradient(900px 520px at 90% 10%, rgba(14, 165, 233, 0.06), transparent 55%),
-    #f8fafc; /* slate-50 */
+    #f8fafc;
+  /* slate-50 */
 }
 
 .slp-container {
@@ -2715,13 +2716,40 @@ details>summary::-webkit-details-marker {
   font-weight: 800;
 }
 
-.lp4-tag-neutral { background: rgba(148, 163, 184, 0.16); color: #475569; }
-.lp4-tag-speak { background: rgba(14, 165, 233, 0.16); color: #0369a1; }
-.lp4-tag-gram { background: rgba(34, 197, 94, 0.16); color: #166534; }
-.lp4-tag-vocab { background: rgba(234, 88, 12, 0.16); color: #9a3412; }
-.lp4-tag-listen { background: rgba(59, 130, 246, 0.16); color: #1d4ed8; }
-.lp4-tag-read { background: rgba(168, 85, 247, 0.16); color: #6d28d9; }
-.lp4-tag-write { background: rgba(244, 114, 182, 0.16); color: #9d174d; }
+.lp4-tag-neutral {
+  background: rgba(148, 163, 184, 0.16);
+  color: #475569;
+}
+
+.lp4-tag-speak {
+  background: rgba(14, 165, 233, 0.16);
+  color: #0369a1;
+}
+
+.lp4-tag-gram {
+  background: rgba(34, 197, 94, 0.16);
+  color: #166534;
+}
+
+.lp4-tag-vocab {
+  background: rgba(234, 88, 12, 0.16);
+  color: #9a3412;
+}
+
+.lp4-tag-listen {
+  background: rgba(59, 130, 246, 0.16);
+  color: #1d4ed8;
+}
+
+.lp4-tag-read {
+  background: rgba(168, 85, 247, 0.16);
+  color: #6d28d9;
+}
+
+.lp4-tag-write {
+  background: rgba(244, 114, 182, 0.16);
+  color: #9d174d;
+}
 
 .lp4-topic-desc {
   color: rgba(15, 23, 42, 0.62);
@@ -2784,9 +2812,17 @@ details>summary::-webkit-details-marker {
 }
 
 @media (max-width: 1100px) {
-  .lp4-layout { padding: 20px 16px 32px; }
-  .lp4-hero { grid-template-columns: 1fr; }
-  .lp4-topic-card { grid-template-columns: 1fr; }
+  .lp4-layout {
+    padding: 20px 16px 32px;
+  }
+
+  .lp4-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .lp4-topic-card {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* =========================
@@ -2794,9 +2830,9 @@ details>summary::-webkit-details-marker {
    ========================= */
 
 .lp5-page {
-  --lp5-primary-gradient: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  --lp5-primary-gradient: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
   --lp5-primary: #6366f1;
-  --lp5-bg: #f3f4f6;
+  --lp5-bg: rgba(255, 255, 255, 0.72);
   --lp5-card: #ffffff;
   --lp5-text: #111827;
   --lp5-text-medium: #4b5563;
@@ -2805,7 +2841,7 @@ details>summary::-webkit-details-marker {
   --lp5-warning: #f59e0b;
 
   min-height: 100vh;
-  background: var(--lp5-bg);
+  background: transparent;
   color: var(--lp5-text);
 }
 
@@ -2813,7 +2849,7 @@ details>summary::-webkit-details-marker {
   min-height: 100vh;
   display: flex;
   align-items: stretch;
-  background: var(--lp5-bg);
+  background: transparent;
 }
 
 .lp5-main {
@@ -2847,15 +2883,19 @@ details>summary::-webkit-details-marker {
 }
 
 .lp5-hero {
-  background: var(--lp5-primary-gradient);
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.86) 0%,
+      rgba(245, 243, 255, 0.92) 45%,
+      rgba(224, 231, 255, 0.88) 100%);
   border-radius: 24px;
   padding: 40px;
-  color: #ffffff;
+  color: var(--lp5-text);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 30px;
-  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.16);
+  box-shadow: 0 18px 48px rgba(16, 24, 40, 0.08);
   position: relative;
   overflow: hidden;
 }
@@ -2867,7 +2907,7 @@ details>summary::-webkit-details-marker {
   right: -20%;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 70%);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -2880,7 +2920,8 @@ details>summary::-webkit-details-marker {
 
 .lp5-hero-content p {
   margin: 0;
-  opacity: 0.9;
+  color: rgba(15, 23, 42, 0.68);
+  opacity: 1;
   font-size: 16px;
   max-width: 600px;
 }
@@ -2893,9 +2934,9 @@ details>summary::-webkit-details-marker {
 }
 
 .lp5-refresh {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(16, 24, 40, 0.10);
+  color: var(--lp5-text);
   padding: 10px 20px;
   border-radius: 12px;
   font-weight: 600;
@@ -2908,7 +2949,8 @@ details>summary::-webkit-details-marker {
 }
 
 .lp5-refresh:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(99, 102, 241, 0.22);
 }
 
 .lp5-refresh:disabled {
@@ -2923,18 +2965,19 @@ details>summary::-webkit-details-marker {
 }
 
 .lp5-stat {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.62);
   padding: 10px 16px;
   border-radius: 12px;
   backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(16, 24, 40, 0.08);
 }
 
 .lp5-stat-label {
   display: block;
   font-size: 11px;
   text-transform: uppercase;
-  opacity: 0.7;
+  color: rgba(15, 23, 42, 0.62);
+  opacity: 1;
   letter-spacing: 0.5px;
 }
 
@@ -3072,11 +3115,30 @@ details>summary::-webkit-details-marker {
   text-transform: uppercase;
 }
 
-.lp5-tag-blue { background: #dbeafe; color: #1e40af; }
-.lp5-tag-gray { background: #f3f4f6; color: var(--lp5-text-medium); }
-.lp5-tag-green { background: #ecfdf5; color: #047857; }
-.lp5-tag-purple { background: #ede9fe; color: #6d28d9; }
-.lp5-tag-pink { background: #fce7f3; color: #9d174d; }
+.lp5-tag-blue {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.lp5-tag-gray {
+  background: #f3f4f6;
+  color: var(--lp5-text-medium);
+}
+
+.lp5-tag-green {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.lp5-tag-purple {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.lp5-tag-pink {
+  background: #fce7f3;
+  color: #9d174d;
+}
 
 .lp5-lesson-title {
   font-size: 18px;
@@ -3182,21 +3244,26 @@ details>summary::-webkit-details-marker {
     flex-direction: column;
     gap: 20px;
   }
+
   .lp5-grid {
     grid-template-columns: 1fr;
   }
+
   .lp5-lesson-card {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
   }
+
   .lp5-lesson-action {
     width: 100%;
     text-align: left;
   }
+
   .lp5-lesson-desc {
     max-width: 100%;
   }
+
   .lp5-layout {
     flex-direction: column;
   }
