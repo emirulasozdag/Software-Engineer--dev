@@ -10,41 +10,41 @@ import { useAchievementNotifications } from '@/hooks/useAchievementNotifications
 type ContentBlock =
   | { type: 'text'; id: string; text: string }
   | {
-      type: 'matching';
-      id: string;
-      title?: string;
-      prompt: string;
-      left: Array<{ id: string; text: string }>;
-      right: Array<{ id: string; text: string }>;
-    }
+    type: 'matching';
+    id: string;
+    title?: string;
+    prompt: string;
+    left: Array<{ id: string; text: string }>;
+    right: Array<{ id: string; text: string }>;
+  }
   | {
-      type: 'fill_blanks';
-      id: string;
-      title?: string;
-      prompt: string;
-      wordBank: string[];
-      textWithBlanks: string; // uses {{b1}} placeholders
-    }
+    type: 'fill_blanks';
+    id: string;
+    title?: string;
+    prompt: string;
+    wordBank: string[];
+    textWithBlanks: string; // uses {{b1}} placeholders
+  }
   | {
-      type: 'audio';
-      id: string;
-      audioUrl: string;
-      transcript?: string;
-    }
+    type: 'audio';
+    id: string;
+    audioUrl: string;
+    transcript?: string;
+  }
   | {
-      type: 'multiple_choice';
-      id: string;
-      question: string;
-      options: string[];
-      correctAnswer: string;
-    }
+    type: 'multiple_choice';
+    id: string;
+    question: string;
+    options: string[];
+    correctAnswer: string;
+  }
   | {
-      type: 'speaking';
-      id: string;
-      prompt: string;
-      title?: string;
-      maxDuration?: number;
-    };
+    type: 'speaking';
+    id: string;
+    prompt: string;
+    title?: string;
+    maxDuration?: number;
+  };
 
 type StructuredContentBody = {
   formatVersion: 1;
@@ -156,16 +156,16 @@ const ContentViewer: React.FC = () => {
     const isCompleted = content?.isCompleted || false;
 
     return (
-      <div style={{ marginTop: '16px' }}>
-        {b.title && <h4 style={{ marginBottom: '6px' }}>{b.title}</h4>}
-        <p style={{ color: '#666', marginBottom: '8px' }}>{b.prompt}</p>
+      <div className="cv-ex">
+        {b.title && <h4 className="cv-ex-title">{b.title}</h4>}
+        <p className="cv-ex-prompt">{b.prompt}</p>
         {Array.isArray(b.wordBank) && b.wordBank.length > 0 && (
-          <p style={{ color: '#666', marginBottom: '10px' }}>
+          <p className="cv-ex-hint">
             <strong>Word bank:</strong> {b.wordBank.join(', ')}
           </p>
         )}
-        <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '4px' }}>
-          <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
+        <div className="cv-ex-box">
+          <div className="cv-prose cv-prose-block" style={{ lineHeight: 1.8 }}>
             {parts.map((p, idx) => {
               if (p.kind === 'text') return <span key={`${b.id}-t-${idx}`}>{p.value}</span>;
               return (
@@ -212,7 +212,7 @@ const ContentViewer: React.FC = () => {
         <h4 style={{ marginBottom: '12px' }}>🎤 Speaking Exercise</h4>
         {b.title && <div style={{ fontWeight: 600, marginBottom: 8 }}>{b.title}</div>}
         <p style={{ color: '#666', marginBottom: '16px' }}>{b.prompt}</p>
-        
+
         {!isCompleted && !hasFeedback && !isAnalyzing && (
           <AudioRecorder
             onRecordingComplete={handleRecordingComplete}
@@ -222,10 +222,10 @@ const ContentViewer: React.FC = () => {
         )}
 
         {hasRecording && !hasFeedback && !isAnalyzing && (
-          <div style={{ 
-            marginTop: '12px', 
-            padding: '12px', 
-            background: '#d1ecf1', 
+          <div style={{
+            marginTop: '12px',
+            padding: '12px',
+            background: '#d1ecf1',
             border: '1px solid #bee5eb',
             borderRadius: '6px',
             color: '#0c5460'
@@ -242,9 +242,9 @@ const ContentViewer: React.FC = () => {
 
         {hasFeedback && (
           <div style={{ marginTop: '20px' }}>
-            <div style={{ 
-              padding: '16px', 
-              background: '#d4edda', 
+            <div style={{
+              padding: '16px',
+              background: '#d4edda',
               border: '1px solid #c3e6cb',
               borderRadius: '6px',
               marginBottom: '16px'
@@ -260,7 +260,7 @@ const ContentViewer: React.FC = () => {
             </div>
 
             <h5 style={{ marginTop: '20px', marginBottom: '12px' }}>Detailed Feedback:</h5>
-            
+
             {/* Pronunciation */}
             <div style={{ marginBottom: '16px', padding: '12px', background: '#fff', border: '1px solid #eee', borderRadius: '6px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -328,11 +328,11 @@ const ContentViewer: React.FC = () => {
         <p style={{ color: '#666', marginBottom: '12px' }}>
           Listen carefully to the audio. You can play it multiple times.
         </p>
-        <audio 
-          controls 
+        <audio
+          controls
           src={`http://localhost:8000${b.audioUrl}`}
-          style={{ 
-            width: '100%', 
+          style={{
+            width: '100%',
             marginBottom: 12,
             borderRadius: 6,
           }}
@@ -378,7 +378,7 @@ const ContentViewer: React.FC = () => {
             const isSelected = current === opt;
             const showCorrect = isCompleted && b.correctAnswer === opt;
             const showIncorrect = isCompleted && isSelected && current !== b.correctAnswer;
-            
+
             return (
               <label
                 key={idx}
@@ -423,10 +423,10 @@ const ContentViewer: React.FC = () => {
   const renderMatching = (b: Extract<ContentBlock, { type: 'matching' }>) => {
     const current = (answers[b.id] as Record<string, string> | undefined) ?? {};
     const isCompleted = content?.isCompleted || false;
-    
+
     // Helper to check if a right item is already matched
     const isMatched = (rightId: string) => Object.values(current).includes(rightId);
-    
+
     const handleLeftClick = (leftId: string) => {
       if (isCompleted) return;
       if (current[leftId]) {
@@ -450,25 +450,26 @@ const ContentViewer: React.FC = () => {
     };
 
     return (
-      <div style={{ marginTop: '24px', padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eee' }}>
-        {b.title && <h4 style={{ marginBottom: '12px' }}>{b.title}</h4>}
-        <p style={{ color: '#666', marginBottom: '16px' }}>{b.prompt}</p>
-        <p style={{ fontSize: '0.9em', color: '#888', marginBottom: '16px' }}>
+      <div className="cv-ex cv-ex-card">
+        {b.title && <h4 className="cv-ex-title">{b.title}</h4>}
+        <p className="cv-ex-prompt">{b.prompt}</p>
+        <p className="cv-ex-hint">
           Click an item on the left, then click its match on the right. Click a matched item on the left to unmatch.
         </p>
 
-        <div style={{ display: 'flex', gap: '40px' }}>
+        <div className="cv-match-grid">
           {/* Left Column */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div className="cv-match-col">
             {b.left.map((l) => {
               const matchedRightId = current[l.id];
               const isSelected = selectedLeft === l.id;
               const isMatched = !!matchedRightId;
-              
+
               return (
                 <div
                   key={l.id}
                   onClick={() => handleLeftClick(l.id)}
+                  className={`cv-match-item ${isSelected ? 'is-selected' : ''} ${isMatched ? 'is-matched' : ''}`}
                   style={{
                     padding: '12px',
                     border: isSelected ? '2px solid #3498db' : isMatched ? '2px solid #9b59b6' : '1px solid #ddd',
@@ -487,14 +488,15 @@ const ContentViewer: React.FC = () => {
           </div>
 
           {/* Right Column */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div className="cv-match-col">
             {b.right.map((r) => {
               const isUsed = isMatched(r.id);
-              
+
               return (
                 <div
                   key={r.id}
                   onClick={() => !isUsed && handleRightClick(r.id)}
+                  className={`cv-match-item ${isUsed ? 'is-used' : ''}`}
                   style={{
                     padding: '12px',
                     border: isUsed ? '2px solid #9b59b6' : '1px solid #ddd',
@@ -524,7 +526,7 @@ const ContentViewer: React.FC = () => {
       const speakingBlocks = structured?.blocks.filter((b: ContentBlock) => b.type === 'speaking') || [];
       const speakingResults: Record<string, any> = {};
       const hasSpeakingContent = speakingBlocks.length > 0;
-      
+
       for (const block of speakingBlocks) {
         const audioBlob = speakingAudio[block.id];
         if (audioBlob) {
@@ -582,7 +584,7 @@ const ContentViewer: React.FC = () => {
         setCompleteMsg('Content completed! Moving to next lesson...');
         setTimeout(() => proceedToNext(), 1000);
       }
-      
+
     } catch (e: any) {
       setCompleteMsg(null);
       setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to complete content');
@@ -616,11 +618,11 @@ const ContentViewer: React.FC = () => {
           onClose={clearAchievements}
         />
       )}
-      
+
       {/* AI Loading Overlays */}
       {isCompleting && <AILoading message="Analyzing your answers..." />}
       {isLoadingNext && <AILoading message="Generating your next lesson..." />}
-      
+
       <div className="cv-layout">
         <aside className="sd-sidebar">
           <div className="sd-brand">
@@ -685,185 +687,153 @@ const ContentViewer: React.FC = () => {
                 <span className="cv-pill">ID: {content?.contentId || '—'}</span>
               </div>
             </section>
-      
-      {/* Feedback Modal */}
-      {showFeedback && feedbackData && !isLoadingNext && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.7)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-        }}>
-          <div style={{
-            background: 'white',
-            padding: '30px',
-            borderRadius: '8px',
-            maxWidth: '600px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflow: 'auto',
-          }}>
-            <h2 style={{ marginTop: 0, color: '#2ecc71' }}>Great Job! 🎉</h2>
-            <div style={{ marginTop: '20px' }}>
-              <h3>Feedback</h3>
-              <p style={{ lineHeight: 1.6, fontSize: '1.05rem', color: '#2c3e50' }}>{feedbackData.feedback}</p>
-            </div>
-            
-            <button
-              className="button button-primary"
-              style={{ marginTop: '30px', width: '100%' }}
-              onClick={proceedToNext}
-            >
-              Continue to Next Lesson
-            </button>
-          </div>
-        </div>
-      )}
-      
-      <div className="card cv-card">
-        {isLoading && <p>Loading...</p>}
-        {!isLoading && error && (
-          <div className="cv-error">
-            <strong>Error:</strong> {error}
-          </div>
-        )}
 
-        {!isLoading && !error && content && (
-          <>
-            <h2 className="cv-title">{content.title}</h2>
-            <div className="cv-meta">
-              <span>Content ID: {content.contentId}</span>
-              <span>Level: <strong>{content.level}</strong></span>
-              <span>Type: <strong>{content.contentType}</strong></span>
-            </div>
+            {/* Feedback Modal */}
+            {showFeedback && feedbackData && !isLoadingNext && (
+              <div className="cv-modal-overlay">
+                <div className="cv-modal">
+                  <h2 className="cv-modal-title">Great Job! 🎉</h2>
+                  <div style={{ marginTop: '20px' }}>
+                    <h3>Feedback</h3>
+                    <p style={{ lineHeight: 1.6, fontSize: '1.05rem', color: '#2c3e50' }}>{feedbackData.feedback}</p>
+                  </div>
 
-            {rationaleFromNav && (
-              <p className="cv-rationale">
-                <strong>Why this content:</strong> {rationaleFromNav}
-              </p>
-            )}
-
-            {completeMsg && !isLoadingNext && (
-              <div style={{ marginTop: '10px', padding: '15px', background: '#d4edda', borderRadius: '6px', border: '1px solid #c3e6cb' }}>
-                <strong style={{ color: '#155724' }}>{completeMsg}</strong>
-                <div style={{ marginTop: '12px' }}>
                   <button
                     className="button button-primary"
+                    style={{ marginTop: '30px', width: '100%' }}
                     onClick={proceedToNext}
-                    disabled={isLoadingNext}
                   >
-                    Continue to Next Lesson →
+                    Continue to Next Lesson
                   </button>
                 </div>
               </div>
             )}
-            
-            <div style={{ marginTop: '20px', padding: '20px', background: '#f9f9f9', borderRadius: '4px' }}>
-              <h3>Lesson Content</h3>
 
-              {/* Structured rendering if body is JSON */}
-              {structured ? (
+            <div className="card cv-card">
+              {isLoading && <p>Loading...</p>}
+              {!isLoading && error && (
+                <div className="cv-error">
+                  <strong>Error:</strong> {error}
+                </div>
+              )}
+
+              {!isLoading && !error && content && (
                 <>
-                  {structured.rationale && !rationaleFromNav && (
-                    <p style={{ marginTop: '0', color: '#666' }}>
-                      <strong>Why this content:</strong> {structured.rationale}
+                  <h2 className="cv-title">{content.title}</h2>
+                  <div className="cv-meta">
+                    <span>Content ID: {content.contentId}</span>
+                    <span>Level: <strong>{content.level}</strong></span>
+                    <span>Type: <strong>{content.contentType}</strong></span>
+                  </div>
+
+                  {rationaleFromNav && (
+                    <p className="cv-rationale">
+                      <strong>Why this content:</strong> {rationaleFromNav}
                     </p>
                   )}
 
-                  {structured.blocks.map((b) => {
-                    if (b.type === 'text') {
-                      return (
-                        <div key={b.id} style={{ marginTop: '20px', marginBottom: '20px' }}>
-                          <div style={{ 
-                            whiteSpace: 'pre-wrap', 
-                            margin: 0, 
-                            fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                            fontSize: '1.1rem',
-                            lineHeight: '1.6',
-                            color: '#2c3e50'
-                          }}>
-                            {b.text}
-                          </div>
-                        </div>
-                      );
-                    }
-                    if (b.type === 'audio') return <div key={b.id}>{renderAudio(b)}</div>;
-                    if (b.type === 'speaking') return <div key={b.id}>{renderSpeaking(b)}</div>;
-                    if (b.type === 'multiple_choice') return <div key={b.id}>{renderMultipleChoice(b)}</div>;
-                    if (b.type === 'matching') return <div key={b.id}>{renderMatching(b)}</div>;
-                    if (b.type === 'fill_blanks') return <div key={b.id}>{renderFillBlanks(b)}</div>;
-                    return null;
-                  })}
-                </>
-              ) : (
-                <div style={{ 
-                  whiteSpace: 'pre-wrap', 
-                  fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                  fontSize: '1.1rem',
-                  lineHeight: '1.6',
-                  color: '#2c3e50'
-                }}>
-                  {content.body}
-                </div>
-              )}
-            </div>
-
-            {content.isCompleted && (
-              <div style={{ marginTop: '20px', padding: '15px', background: '#eafaf1', borderRadius: '4px', border: '1px solid #2ecc71' }}>
-                <strong style={{ color: '#27ae60' }}>✓ Completed on {new Date(content.completedAt || '').toLocaleDateString()}</strong>
-                {content.feedback && (() => {
-                  try {
-                    const parsed = JSON.parse(content.feedback);
-                    // Check if this is speaking feedback (displayed inline above) or other feedback
-                    if (parsed.speakingFeedback) {
-                      return (
-                        <div style={{ marginTop: '8px', color: '#666', fontSize: '0.9em' }}>
-                          Speaking feedback is displayed above with your recordings.
-                        </div>
-                      );
-                    }
-                    // For other feedback types, show the View Feedback button
-                    return (
-                      <div style={{ marginTop: '10px' }}>
-                        <button 
-                          className="button button-secondary"
-                          onClick={() => {
-                            setFeedbackData(parsed);
-                            setShowFeedback(true);
-                          }}
+                  {completeMsg && !isLoadingNext && (
+                    <div className="cv-banner cv-banner-success">
+                      <strong className="cv-banner__title">{completeMsg}</strong>
+                      <div style={{ marginTop: '12px' }}>
+                        <button
+                          className="button button-primary"
+                          onClick={proceedToNext}
+                          disabled={isLoadingNext}
                         >
-                          View Feedback
+                          Continue to Next Lesson →
                         </button>
                       </div>
-                    );
-                  } catch (e) {
-                    return null;
-                  }
-                })()}
-              </div>
-            )}
+                    </div>
+                  )}
 
-            {!content.isCompleted && (
-              <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-                <button
-                  className="button button-primary"
-                  disabled={isCompleting}
-                  onClick={handleComplete}
-                >
-                  {isCompleting ? 'Submitting...' : 'Submit & Complete'}
-                </button>
-              </div>
-            )}
-          </>
-        )}
+                  <div className="cv-section">
+                    <h3>Lesson Content</h3>
+
+                    {/* Structured rendering if body is JSON */}
+                    {structured ? (
+                      <>
+                        {structured.rationale && !rationaleFromNav && (
+                          <p className="cv-prose cv-prose-muted" style={{ marginTop: '0' }}>
+                            <strong>Why this content:</strong> {structured.rationale}
+                          </p>
+                        )}
+
+                        {structured.blocks.map((b) => {
+                          if (b.type === 'text') {
+                            return (
+                              <div key={b.id} style={{ marginTop: '20px', marginBottom: '20px' }}>
+                                <div className="cv-prose cv-prose-block" style={{ margin: 0 }}>
+                                  {b.text}
+                                </div>
+                              </div>
+                            );
+                          }
+                          if (b.type === 'audio') return <div key={b.id}>{renderAudio(b)}</div>;
+                          if (b.type === 'speaking') return <div key={b.id}>{renderSpeaking(b)}</div>;
+                          if (b.type === 'multiple_choice') return <div key={b.id}>{renderMultipleChoice(b)}</div>;
+                          if (b.type === 'matching') return <div key={b.id}>{renderMatching(b)}</div>;
+                          if (b.type === 'fill_blanks') return <div key={b.id}>{renderFillBlanks(b)}</div>;
+                          return null;
+                        })}
+                      </>
+                    ) : (
+                      <div className="cv-prose cv-prose-block">
+                        {content.body}
+                      </div>
+                    )}
+                  </div>
+
+                  {content.isCompleted && (
+                    <div className="cv-banner cv-banner-complete">
+                      <strong className="cv-banner__title">✓ Completed on {new Date(content.completedAt || '').toLocaleDateString()}</strong>
+                      {content.feedback && (() => {
+                        try {
+                          const parsed = JSON.parse(content.feedback);
+                          // Check if this is speaking feedback (displayed inline above) or other feedback
+                          if (parsed.speakingFeedback) {
+                            return (
+                              <div style={{ marginTop: '8px', color: '#666', fontSize: '0.9em' }}>
+                                Speaking feedback is displayed above with your recordings.
+                              </div>
+                            );
+                          }
+                          // For other feedback types, show the View Feedback button
+                          return (
+                            <div style={{ marginTop: '10px' }}>
+                              <button
+                                className="button button-secondary"
+                                onClick={() => {
+                                  setFeedbackData(parsed);
+                                  setShowFeedback(true);
+                                }}
+                              >
+                                View Feedback
+                              </button>
+                            </div>
+                          );
+                        } catch (e) {
+                          return null;
+                        }
+                      })()}
+                    </div>
+                  )}
+
+                  {!content.isCompleted && (
+                    <div className="cv-actions">
+                      <button
+                        className="button button-primary"
+                        disabled={isCompleting}
+                        onClick={handleComplete}
+                      >
+                        {isCompleting ? 'Submitting...' : 'Submit & Complete'}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
         </main>
       </div>
     </div>

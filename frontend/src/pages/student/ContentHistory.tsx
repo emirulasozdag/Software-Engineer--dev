@@ -137,8 +137,7 @@ const ContentHistory: React.FC = () => {
                             <span className="ch-badge">Has Feedback</span>
                           )}
                           <button
-                            className="button button-secondary"
-                            style={{ padding: '6px 12px', fontSize: '0.9em' }}
+                            className="button button-secondary ch-review"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleViewContent(item.contentId);
