@@ -18,15 +18,19 @@ const TeacherMessages: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const [compose, setCompose] = useState({ receiverId: '', subject: '', content: '' });
   const [sending, setSending] = useState(false);
 
-  const [announceForm, setAnnounceForm] = useState({ title: '', content: '', targetAudience: 'students' as 'students' | 'all' | 'teachers' });
+  const [announceForm, setAnnounceForm] = useState({
+    title: '',
+    content: '',
+    targetAudience: 'students' as 'students' | 'all' | 'teachers',
+  });
   const [posting, setPosting] = useState(false);
 
   const [query, setQuery] = useState('');
-  const [notice, setNotice] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -86,7 +90,10 @@ const TeacherMessages: React.FC = () => {
     });
   }, [messages, query, box, myId]);
 
-  const selected = useMemo(() => filteredMessages.find((m) => m.id === selectedId) || null, [filteredMessages, selectedId]);
+  const selected = useMemo(
+    () => filteredMessages.find((m) => m.id === selectedId) || null,
+    [filteredMessages, selectedId],
+  );
 
   const selectMessage = async (m: Message) => {
     setSelectedId(m.id);
@@ -102,6 +109,7 @@ const TeacherMessages: React.FC = () => {
   };
 
   const deleteMessage = async (id: string) => {
+    setError(null);
     try {
       await communicationService.deleteMessage(id);
       setMessages((prev) => prev.filter((m) => m.id !== id));
@@ -123,11 +131,7 @@ const TeacherMessages: React.FC = () => {
         : selected.senderName || selected.senderId;
     const quoted = `\n\n---\nOn ${new Date(selected.createdAt).toLocaleString()}, ${otherName} wrote:\n${selected.content}`;
 
-    setCompose((p) => ({
-      receiverId: otherId,
-      subject,
-      content: p.content ? p.content : quoted,
-    }));
+    setCompose((p) => ({ receiverId: otherId, subject, content: p.content ? p.content : quoted }));
     setNotice('Reply drafted below.');
     setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 50);
   };
@@ -161,7 +165,11 @@ const TeacherMessages: React.FC = () => {
     setPosting(true);
     setError(null);
     try {
-      const ann = await communicationService.createAnnouncement(announceForm.title, announceForm.content, announceForm.targetAudience);
+      const ann = await communicationService.createAnnouncement(
+        announceForm.title,
+        announceForm.content,
+        announceForm.targetAudience,
+      );
       setAnnouncements((prev) => [ann, ...prev]);
       setAnnounceForm({ title: '', content: '', targetAudience: 'students' });
       setTab('announcements');
@@ -174,41 +182,52 @@ const TeacherMessages: React.FC = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        padding: 24,
-      }}
-    >
+    <div style={{ minHeight: '100vh', padding: 24 }}>
       <div className="container">
-        <Link to="/teacher/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>← Back to Dashboard</Link>
+        <Link to="/teacher/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>
+          ← Back to Dashboard
+        </Link>
 
         <div className="toolbar">
           <div>
-            <h1 className="page-title" style={{ marginBottom: 0 }}>Teacher Communication</h1>
+            <h1 className="page-title" style={{ marginBottom: 0 }}>
+              Teacher Communication
+            </h1>
             <div className="subtitle">Message students and post announcements.</div>
           </div>
           <div className="actions">
             <div className="tabs">
-              <button className={`tab ${tab === 'messages' ? 'active' : ''}`} onClick={() => setTab('messages')}>
+              <button type="button" className={`tab ${tab === 'messages' ? 'active' : ''}`} onClick={() => setTab('messages')}>
                 Messages {unreadCount > 0 && <span className="pill">Unread: {unreadCount}</span>}
               </button>
-              <button className={`tab ${tab === 'announcements' ? 'active' : ''}`} onClick={() => setTab('announcements')}>
+              <button
+                type="button"
+                className={`tab ${tab === 'announcements' ? 'active' : ''}`}
+                onClick={() => setTab('announcements')}
+              >
                 Announcements
               </button>
             </div>
-            <button className="button button-primary" onClick={load} disabled={loading || sending || posting}>
+            <button type="button" className="button button-primary" onClick={load} disabled={loading || sending || posting}>
               {loading ? 'Loading…' : 'Refresh'}
             </button>
           </div>
         </div>
 
-        {error && <div className="card" style={{ borderColor: 'rgba(220,38,38,0.25)', background: 'rgba(220,38,38,0.06)' }}>{error}</div>}
-        {notice && <div className="card" style={{ borderColor: 'rgba(37,99,235,0.25)', background: 'rgba(37,99,235,0.06)' }}>{notice}</div>}
+        {error && (
+          <div className="card" style={{ borderColor: 'rgba(220,38,38,0.25)', background: 'rgba(220,38,38,0.06)' }}>
+            {error}
+          </div>
+        )}
+        {notice && (
+          <div className="card" style={{ borderColor: 'rgba(37,99,235,0.25)', background: 'rgba(37,99,235,0.06)' }}>
+            {notice}
+          </div>
+        )}
 
         {tab === 'messages' && (
           <div className="split" style={{ marginTop: 16 }}>
-            <div className="card">
+            <div className="card tc-card">
               <div className="kpis" style={{ marginBottom: 12 }}>
                 <div className="kpi">
                   <div className="label">Inbox</div>
@@ -225,12 +244,23 @@ const TeacherMessages: React.FC = () => {
               </div>
 
               <div className="tabs" style={{ marginBottom: 10 }}>
-                <button className={`tab ${box === 'all' ? 'active' : ''}`} onClick={() => setBox('all')}>All</button>
-                <button className={`tab ${box === 'inbox' ? 'active' : ''}`} onClick={() => setBox('inbox')}>Inbox</button>
-                <button className={`tab ${box === 'sent' ? 'active' : ''}`} onClick={() => setBox('sent')}>Sent</button>
+                <button type="button" className={`tab ${box === 'all' ? 'active' : ''}`} onClick={() => setBox('all')}>
+                  All
+                </button>
+                <button type="button" className={`tab ${box === 'inbox' ? 'active' : ''}`} onClick={() => setBox('inbox')}>
+                  Inbox
+                </button>
+                <button type="button" className={`tab ${box === 'sent' ? 'active' : ''}`} onClick={() => setBox('sent')}>
+                  Sent
+                </button>
               </div>
 
-              <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by person/subject/content…" />
+              <input
+                className="input tc-input"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by person/subject/content…"
+              />
 
               {loading ? (
                 <div className="loading">Loading…</div>
@@ -239,9 +269,7 @@ const TeacherMessages: React.FC = () => {
                   {filteredMessages.length === 0 && <div className="text-muted">No messages yet.</div>}
                   {filteredMessages.map((m) => {
                     const isInbound = myId ? m.receiverId === myId : true;
-                    const counterpart = isInbound
-                      ? (m.senderName || `User #${m.senderId}`)
-                      : (m.receiverName || `User #${m.receiverId}`);
+                    const counterpart = isInbound ? m.senderName || `User #${m.senderId}` : m.receiverName || `User #${m.receiverId}`;
                     const initials = (counterpart || 'U')
                       .split(' ')
                       .filter(Boolean)
@@ -277,8 +305,8 @@ const TeacherMessages: React.FC = () => {
               )}
             </div>
 
-            <div className="card">
-              <div className="toolbar">
+            <div className="card tc-card">
+              <div className="toolbar tc-toolbar">
                 <div>
                   <h2 style={{ marginBottom: 6 }}>Message</h2>
                   {selected ? (
@@ -292,10 +320,10 @@ const TeacherMessages: React.FC = () => {
                 </div>
                 {selected && (
                   <div className="actions">
-                    <button className="button button-ghost" onClick={replyToSelected} disabled={!myId}>
+                    <button type="button" className="button button-ghost" onClick={replyToSelected} disabled={!myId}>
                       Reply
                     </button>
-                    <button className="button button-danger" onClick={() => deleteMessage(selected.id)}>
+                    <button type="button" className="button button-danger" onClick={() => deleteMessage(selected.id)}>
                       Delete
                     </button>
                   </div>
@@ -305,7 +333,9 @@ const TeacherMessages: React.FC = () => {
               {selected && (
                 <div style={{ marginTop: 14 }}>
                   <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{selected.subject || '(no subject)'}</div>
-                  <div className="text-muted" style={{ marginTop: 6 }}>{new Date(selected.createdAt).toLocaleString()}</div>
+                  <div className="text-muted" style={{ marginTop: 6 }}>
+                    {new Date(selected.createdAt).toLocaleString()}
+                  </div>
                   <div className="divider" />
                   <div style={{ marginTop: 14, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{selected.content}</div>
                 </div>
@@ -315,8 +345,8 @@ const TeacherMessages: React.FC = () => {
         )}
 
         {tab === 'messages' && (
-          <div className="card">
-            <div className="toolbar">
+          <div className="card tc-card">
+            <div className="toolbar tc-toolbar">
               <div>
                 <h2 style={{ marginBottom: 6 }}>Compose</h2>
                 <div className="text-muted">Send a new message to a student.</div>
@@ -329,7 +359,7 @@ const TeacherMessages: React.FC = () => {
                 <div>
                   <label className="form-label">To</label>
                   <select
-                    className="input"
+                    className="input tc-input"
                     value={compose.receiverId}
                     onChange={(e) => setCompose((p) => ({ ...p, receiverId: e.target.value }))}
                   >
@@ -347,15 +377,15 @@ const TeacherMessages: React.FC = () => {
                   </select>
                   {contacts.length === 0 && (
                     <div className="text-muted" style={{ marginTop: 6 }}>
-                      This dropdown is empty because there are no <strong>Student</strong> accounts yet (or you're not logged in).
-                      Once you create at least one student account, it will appear here.
+                      This dropdown is empty because there are no <strong>Student</strong> accounts yet (or you're not logged in). Once you create
+                      at least one student account, it will appear here.
                     </div>
                   )}
                 </div>
                 <div>
                   <label className="form-label">Subject</label>
                   <input
-                    className="input"
+                    className="input tc-input"
                     type="text"
                     placeholder="Message subject"
                     value={compose.subject}
@@ -367,7 +397,7 @@ const TeacherMessages: React.FC = () => {
             <div className="form-group">
               <label className="form-label">Message</label>
               <textarea
-                className="input"
+                className="input tc-input"
                 rows={5}
                 placeholder="Type your message here..."
                 style={{ resize: 'vertical' }}
@@ -379,15 +409,15 @@ const TeacherMessages: React.FC = () => {
                 <span>{compose.content.length} chars</span>
               </div>
             </div>
-            <button className="button button-primary" onClick={send} disabled={sending || loading}>
+            <button type="button" className="tc-btn tc-btn-gradient" onClick={send} disabled={sending || loading}>
               {sending ? 'Sending…' : 'Send Message'}
             </button>
           </div>
         )}
 
         {tab === 'announcements' && (
-          <div className="card">
-            <div className="toolbar">
+          <div className="card tc-card">
+            <div className="toolbar tc-toolbar">
               <div>
                 <h2 style={{ marginBottom: 6 }}>Create Announcement</h2>
                 <div className="text-muted">Post an announcement.</div>
@@ -401,7 +431,7 @@ const TeacherMessages: React.FC = () => {
                 <div className="form-group">
                   <label className="form-label">Title</label>
                   <input
-                    className="input"
+                    className="input tc-input"
                     type="text"
                     placeholder="Announcement title"
                     value={announceForm.title}
@@ -411,7 +441,7 @@ const TeacherMessages: React.FC = () => {
                 <div className="form-group">
                   <label className="form-label">Target Audience</label>
                   <select
-                    className="input"
+                    className="input tc-input"
                     value={announceForm.targetAudience}
                     onChange={(e) => setAnnounceForm((p) => ({ ...p, targetAudience: e.target.value as any }))}
                   >
@@ -423,7 +453,7 @@ const TeacherMessages: React.FC = () => {
                 <div className="form-group">
                   <label className="form-label">Content</label>
                   <textarea
-                    className="input"
+                    className="input tc-input"
                     rows={5}
                     placeholder="Announcement content..."
                     style={{ resize: 'vertical' }}
@@ -435,13 +465,15 @@ const TeacherMessages: React.FC = () => {
                     <span>{announceForm.content.length} chars</span>
                   </div>
                 </div>
-                <button className="button button-primary" onClick={postAnnouncement} disabled={posting || loading}>
+                <button type="button" className="tc-btn tc-btn-gradient" onClick={postAnnouncement} disabled={posting || loading}>
                   {posting ? 'Posting…' : 'Post Announcement'}
                 </button>
               </div>
 
               <div>
-                <div className="pill" style={{ marginBottom: 10 }}>Live Preview</div>
+                <div className="pill" style={{ marginBottom: 10 }}>
+                  Live Preview
+                </div>
                 <div className="list-item announcement-card">
                   <div className="msg-row">
                     <span className="avatar">{(user?.name || 'T').slice(0, 1).toUpperCase()}</span>
@@ -465,8 +497,8 @@ const TeacherMessages: React.FC = () => {
         )}
 
         {tab === 'announcements' && (
-          <div className="card">
-            <div className="toolbar">
+          <div className="card tc-card">
+            <div className="toolbar tc-toolbar">
               <div>
                 <h2 style={{ marginBottom: 6 }}>Announcements Feed</h2>
                 <div className="text-muted">List of published announcements.</div>

@@ -5,7 +5,7 @@ import { adminService } from '@/services/api/admin.service';
 import type { MaintenanceMode, SystemStats } from '@/types/admin.types';
 
 const AdminDashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [maintenance, setMaintenance] = useState<MaintenanceMode | null>(null);
   const [maintenanceReason, setMaintenanceReason] = useState('');
@@ -31,6 +31,8 @@ const AdminDashboard: React.FC = () => {
     refresh();
   }, []);
 
+  const displayName = user?.name ?? 'Admin';
+  const firstName = displayName.split(' ')[0] || displayName;
   const setMaintenanceEnabled = async (enabled: boolean) => {
     setIsLoading(true);
     setError(null);
@@ -45,120 +47,189 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const totalUsers = stats?.totalUsers;
+  const totalStudents = stats?.totalStudents;
+  const totalTeachers = stats?.totalTeachers;
+  const verifiedUsers = stats?.verifiedUsers;
+
   return (
-    <div className="container">
-      <div className="card dash-hero">
-        <div className="hero-row">
-          <div>
-            <h1 className="hero-title">Admin Dashboard</h1>
-            <div className="hero-sub">System overview, users, and feedback management.</div>
-            <div className="action-meta" style={{ marginTop: 12 }}>
-              <span className="pill">Name: {user?.name}</span>
-              <span className="pill">Email: {user?.email}</span>
-              <span className="pill">Role: {user?.role}</span>
-            </div>
-          </div>
-          <div className="hero-actions">
-            <button className="button button-primary" onClick={logout}>
-              Logout
+    <>
+      <section className="sd-hero" aria-label="Welcome">
+        <div className="sd-hero-inner">
+          <div className="sd-hero-title">Welcome back, {firstName}</div>
+          <div className="sd-hero-actions">
+            <button type="button" className="sd-hero-chip sd-hero-chip-solid" onClick={refresh} disabled={isLoading}>
+              {isLoading ? 'Loading…' : 'Refresh'}
             </button>
+            <Link to="/admin/users" className="sd-hero-chip sd-hero-chip-outline">
+              Manage Users
+            </Link>
+            <Link to="/admin/stats" className="sd-hero-chip sd-hero-chip-outline">
+              View System Stats
+            </Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="dash-grid">
-        <Link to="/admin/users" style={{ textDecoration: 'none' }} className="col-4">
-          <div className="card click-card action-card">
-            <span className="action-icon">UM</span>
-            <div>
-              <h3 className="action-title">User Management</h3>
-              <div className="action-desc">Manage user accounts and roles.</div>
-              <div className="action-meta">
-                <span className="pill">CRUD</span>
-                <span className="pill">Roles</span>
+      <section className="sd-grid" aria-label="Dashboard Cards">
+        {error && (
+          <div className="sd-card sd-card-sm" role="alert">
+            <div className="sd-card-head">
+              <div className="sd-card-title">Error</div>
+              <button
+                type="button"
+                className="sd-card-action"
+                onClick={() => setError(null)}
+                aria-label="Dismiss error"
+                style={{ cursor: 'pointer' }}
+              >
+                ×
+              </button>
+            </div>
+            <div className="sd-card-desc">{error}</div>
+          </div>
+        )}
+
+        <div className="sd-row sd-row-3">
+          <div className="sd-card sd-card-sm">
+            <div className="sd-card-head">
+              <div className="sd-card-title">Total Users</div>
+              <Link to="/admin/users" className="sd-card-action" aria-label="Open user management">👤</Link>
+            </div>
+            <div className="sd-metric">{isLoading ? '…' : (totalUsers ?? '—')}</div>
+            <div className="sd-card-desc">All accounts</div>
+            <div className="sd-pill-row">
+              <span className="sd-pill sd-pill-cool">Users</span>
+              <span className="sd-pill sd-pill-warm">Roles</span>
+            </div>
+          </div>
+
+          <div className="sd-card sd-card-sm">
+            <div className="sd-card-head">
+              <div className="sd-card-title">Active Students</div>
+              <Link to="/admin/stats" className="sd-card-action" aria-label="Open system statistics">📈</Link>
+            </div>
+            <div className="sd-metric">{isLoading ? '…' : (totalStudents ?? '—')}</div>
+            <div className="sd-card-desc">Students in the system</div>
+            <div className="sd-pill-row">
+              <span className="sd-pill sd-pill-cool">Metrics</span>
+              <span className="sd-pill sd-pill-warm">Live</span>
+            </div>
+          </div>
+
+          <div className="sd-card sd-card-sm">
+            <div className="sd-card-head">
+              <div className="sd-card-title">Teachers</div>
+              <Link to="/admin/stats" className="sd-card-action" aria-label="Open system stats">🧑‍🏫</Link>
+            </div>
+            <div className="sd-metric">{isLoading ? '…' : (totalTeachers ?? '—')}</div>
+            <div className="sd-card-desc">Educators onboarded</div>
+            <div className="sd-pill-row">
+              <span className="sd-pill sd-pill-cool">Staff</span>
+              <span className="sd-pill sd-pill-warm">Access</span>
+            </div>
+          </div>
+
+          <div className="sd-card sd-card-sm">
+            <div className="sd-card-head">
+              <div className="sd-card-title">Maintenance</div>
+              <button
+                type="button"
+                className="sd-card-action"
+                onClick={() => setMaintenanceEnabled(!(maintenance?.enabled ?? false))}
+                disabled={isLoading}
+                aria-label="Toggle maintenance"
+                style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
+              >
+                {maintenance?.enabled ? '⏻' : '⭘'}
+              </button>
+            </div>
+            <div className="sd-card-desc">
+              Status: {isLoading ? '…' : (maintenance?.enabled ? 'Enabled' : 'Disabled')}
+            </div>
+            <div className="sd-pill-row">
+              <span className="sd-pill sd-pill-cool">Controls</span>
+              <span className="sd-pill sd-pill-warm">Demo</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="sd-row sd-row-2">
+          <div className="sd-card sd-card-lg">
+            <div className="sd-card-head">
+              <div className="sd-card-title">Quick Stats</div>
+              <Link to="/admin/stats" className="sd-card-action" aria-label="Open stats">📊</Link>
+            </div>
+            <div className="sd-list">
+              <div className="sd-list-item">
+                <div className="sd-list-title">Total users</div>
+                <div className="sd-list-sub">{isLoading ? '…' : (totalUsers ?? '—')}</div>
+              </div>
+              <div className="sd-list-item">
+                <div className="sd-list-title">Active students</div>
+                <div className="sd-list-sub">{isLoading ? '…' : (totalStudents ?? '—')}</div>
+              </div>
+              <div className="sd-list-item">
+                <div className="sd-list-title">Teachers</div>
+                <div className="sd-list-sub">{isLoading ? '…' : (totalTeachers ?? '—')}</div>
+              </div>
+              <div className="sd-list-item">
+                <div className="sd-list-title">Verified users</div>
+                <div className="sd-list-sub">{isLoading ? '…' : (verifiedUsers ?? '—')}</div>
               </div>
             </div>
           </div>
-        </Link>
 
-        <Link to="/admin/stats" style={{ textDecoration: 'none' }} className="col-4">
-          <div className="card click-card action-card">
-            <span className="action-icon green">SS</span>
-            <div>
-              <h3 className="action-title">System Statistics</h3>
-              <div className="action-desc">View system-level metrics and status.</div>
-              <div className="action-meta">
-                <span className="pill">Metrics</span>
-                <span className="pill">Health</span>
-              </div>
+          <div className="sd-card sd-card-lg">
+            <div className="sd-card-head">
+              <div className="sd-card-title">Maintenance Mode</div>
+              <button
+                type="button"
+                className="sd-card-action"
+                onClick={() => setMaintenanceEnabled(!(maintenance?.enabled ?? false))}
+                disabled={isLoading}
+                aria-label="Toggle maintenance mode"
+                style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
+              >
+                {maintenance?.enabled ? '⏻' : '⭘'}
+              </button>
             </div>
-          </div>
-        </Link>
 
-        <Link to="/admin/feedback" style={{ textDecoration: 'none' }} className="col-4">
-          <div className="card click-card action-card">
-            <span className="action-icon amber">FB</span>
-            <div>
-              <h3 className="action-title">Feedback Management</h3>
-              <div className="action-desc">Review user feedback and bug reports.</div>
-              <div className="action-meta">
-                <span className="pill">Triage</span>
-                <span className="pill">Notes</span>
-              </div>
+            <div className="sd-card-desc">
+              {maintenance?.enabled
+                ? (maintenance?.reason ? `Enabled: ${maintenance.reason}` : 'Enabled')
+                : 'Disabled'}
             </div>
-          </div>
-        </Link>
 
+            <div className="sd-hero-actions" style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                className="sd-hero-chip sd-hero-chip-solid"
+                onClick={() => setMaintenanceEnabled(true)}
+                disabled={isLoading}
+                style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
+              >
+                Enable
+              </button>
+              <button
+                type="button"
+                className="sd-hero-chip sd-hero-chip-outline"
+                onClick={() => setMaintenanceEnabled(false)}
+                disabled={isLoading}
+                style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
+              >
+                Disable
+              </button>
+            </div>
 
-        <div className="card col-8">
-          <div className="toolbar">
-            <div>
-              <h2 style={{ marginBottom: 6 }}>Quick Stats</h2>
-              <div className="text-muted">Real-time system data</div>
-            </div>
-            <span className="pill">Overview</span>
-          </div>
-          <div className="divider" />
-          <div className="kpis">
-            <div className="kpi">
-              <div className="label">Total Users</div>
-              <div className="value">{stats?.totalUsers ?? '-'}</div>
-            </div>
-            <div className="kpi">
-              <div className="label">Active Students</div>
-              <div className="value">{stats?.totalStudents ?? '-'}</div>
-            </div>
-            <div className="kpi">
-              <div className="label">Teachers</div>
-              <div className="value">{stats?.totalTeachers ?? '-'}</div>
-            </div>
-            <div className="kpi">
-              <div className="label">Verified Users</div>
-              <div className="value">{stats?.verifiedUsers ?? '-'}</div>
+            <div className="sd-pill-row" style={{ marginTop: 12 }}>
+              <span className="sd-pill sd-pill-cool">Current</span>
+              <span className="sd-pill sd-pill-warm">{maintenance?.enabled ? 'Enabled' : 'Disabled'}</span>
             </div>
           </div>
         </div>
-
-        <div className="card col-4">
-          <div className="toolbar">
-            <div>
-              <h2 style={{ marginBottom: 6 }}>Maintenance</h2>
-              <div className="text-muted">Admin controls (demo)</div>
-            </div>
-            <span className="pill">Status: Active</span>
-          </div>
-          <div className="divider" />
-          <div className="actions">
-            <button className="button button-primary" type="button">
-              Enable Maintenance
-            </button>
-            <button className="button button-secondary" type="button">
-              Schedule Update
-            </button>
-          </div>
-        </div>
-      </div>
-    </div >
+      </section>
+    </>
   );
 };
 

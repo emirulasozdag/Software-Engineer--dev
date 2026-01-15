@@ -75,7 +75,7 @@ const SystemStats: React.FC = () => {
         ← Back to Dashboard
       </Link>
 
-      <div className="card">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100" style={{ padding: 20, marginBottom: 20 }}>
         <div className="toolbar">
           <div>
             <h1 className="page-title" style={{ marginBottom: 0 }}>System Statistics</h1>
@@ -85,51 +85,91 @@ const SystemStats: React.FC = () => {
         </div>
       </div>
 
-      <div className="card">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100" style={{ padding: 20, marginBottom: 20 }}>
         <h2>User Statistics</h2>
         <div className="kpis" style={{ marginTop: 12 }}>
-          <div className="kpi">
-            <div className="label">Total Users</div>
-            <div className="value">{stats?.totalUsers ?? '-'}</div>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <div className="text-slate-500 font-medium">
+              <span style={{ marginRight: 8, opacity: 0.75 }}>👥</span>
+              Total Users
+            </div>
+            <div className="text-3xl font-bold text-violet-600" style={{ marginTop: 10 }}>
+              {stats?.totalUsers ?? '-'}
+            </div>
           </div>
-          <div className="kpi">
-            <div className="label">Active Students</div>
-            <div className="value">{stats?.totalStudents ?? '-'}</div>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <div className="text-slate-500 font-medium">
+              <span style={{ marginRight: 8, opacity: 0.75 }}>🎓</span>
+              Active Students
+            </div>
+            <div className="text-3xl font-bold text-violet-600" style={{ marginTop: 10 }}>
+              {stats?.totalStudents ?? '-'}
+            </div>
           </div>
-          <div className="kpi">
-            <div className="label">Active Teachers</div>
-            <div className="value">{stats?.totalTeachers ?? '-'}</div>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <div className="text-slate-500 font-medium">
+              <span style={{ marginRight: 8, opacity: 0.75 }}>🧑‍🏫</span>
+              Active Teachers
+            </div>
+            <div className="text-3xl font-bold text-violet-600" style={{ marginTop: 10 }}>
+              {stats?.totalTeachers ?? '-'}
+            </div>
           </div>
-          <div className="kpi">
-            <div className="label">New Users (7d)</div>
-            <div className="value">{stats?.newUsers7d ?? '-'}</div>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <div className="text-slate-500 font-medium">
+              <span style={{ marginRight: 8, opacity: 0.75 }}>✨</span>
+              New Users (7d)
+            </div>
+            <div className="text-3xl font-bold text-violet-600" style={{ marginTop: 10 }}>
+              {stats?.newUsers7d ?? '-'}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="card">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100" style={{ padding: 20, marginBottom: 20 }}>
         <h2>Learning Activity</h2>
         <div className="kpis" style={{ marginTop: 12 }}>
-          <div className="kpi">
-            <div className="label">Tests Completed</div>
-            <div className="value">{stats?.learningActivity?.testsCompleted ?? '-'}</div>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <div className="text-slate-500 font-medium">
+              <span style={{ marginRight: 8, opacity: 0.75 }}>🧪</span>
+              Tests Completed
+            </div>
+            <div className="text-3xl font-bold text-violet-600" style={{ marginTop: 10 }}>
+              {stats?.learningActivity?.testsCompleted ?? '-'}
+            </div>
           </div>
-          <div className="kpi">
-            <div className="label">Lessons Completed</div>
-            <div className="value">{stats?.learningActivity?.lessonsCompleted ?? '-'}</div>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <div className="text-slate-500 font-medium">
+              <span style={{ marginRight: 8, opacity: 0.75 }}>✅</span>
+              Lessons Completed
+            </div>
+            <div className="text-3xl font-bold text-violet-600" style={{ marginTop: 10 }}>
+              {stats?.learningActivity?.lessonsCompleted ?? '-'}
+            </div>
           </div>
-          <div className="kpi">
-            <div className="label">Assignments Created</div>
-            <div className="value">{stats?.learningActivity?.assignmentsCreated ?? '-'}</div>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <div className="text-slate-500 font-medium">
+              <span style={{ marginRight: 8, opacity: 0.75 }}>📝</span>
+              Assignments Created
+            </div>
+            <div className="text-3xl font-bold text-violet-600" style={{ marginTop: 10 }}>
+              {stats?.learningActivity?.assignmentsCreated ?? '-'}
+            </div>
           </div>
-          <div className="kpi">
-            <div className="label">AI Content Generated</div>
-            <div className="value">{stats?.learningActivity?.aiContentGenerated ?? '-'}</div>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <div className="text-slate-500 font-medium">
+              <span style={{ marginRight: 8, opacity: 0.75 }}>✦</span>
+              AI Content Generated
+            </div>
+            <div className="text-3xl font-bold text-violet-600" style={{ marginTop: 10 }}>
+              {stats?.learningActivity?.aiContentGenerated ?? '-'}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="card">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100" style={{ padding: 20, marginBottom: 20 }}>
         <h2>Usage Over Time</h2>
         {isLoading ? (
           <div style={{ width: '100%', textAlign: 'center', color: '#94a3b8', padding: '28px 0' }}>
@@ -152,11 +192,11 @@ const SystemStats: React.FC = () => {
               >
                 <defs>
                   <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#667EEA" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#667EEA" stopOpacity={0.06} />
+                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.38} />
+                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.06} />
                   </linearGradient>
                   <filter id="activityShadow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#667EEA" floodOpacity="0.18" />
+                    <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#8b5cf6" floodOpacity="0.18" />
                   </filter>
                 </defs>
 
@@ -169,7 +209,7 @@ const SystemStats: React.FC = () => {
 
                 <XAxis
                   dataKey="label"
-                  tick={{ fill: '#64748B', fontSize: 12, fontWeight: 500 }}
+                  tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 500 }}
                   axisLine={false}
                   tickLine={false}
                   padding={{ left: 8, right: 8 }}
@@ -177,27 +217,27 @@ const SystemStats: React.FC = () => {
 
                 <YAxis
                   dataKey="hours"
-                  tick={{ fill: '#64748B', fontSize: 12, fontWeight: 500 }}
+                  tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 500 }}
                   axisLine={false}
                   tickLine={false}
                   width={44}
-                  label={{ value: 'Hours', angle: -90, position: 'insideLeft', fill: '#64748B', fontSize: 12 }}
+                  label={{ value: 'Hours', angle: -90, position: 'insideLeft', fill: '#94A3B8', fontSize: 12 }}
                 />
 
                 <Tooltip
                   content={<ActivityTooltip />}
-                  cursor={{ stroke: 'rgba(102, 126, 234, 0.18)', strokeWidth: 1 }}
+                  cursor={{ stroke: 'rgba(139, 92, 246, 0.18)', strokeWidth: 1 }}
                 />
 
                 <Area
                   type="monotone"
                   dataKey="hours"
-                  stroke="#667EEA"
+                  stroke="#8b5cf6"
                   strokeWidth={3}
                   fill="url(#activityGradient)"
                   fillOpacity={1}
                   dot={false}
-                  activeDot={{ r: 6, fill: '#ffffff', stroke: '#667EEA', strokeWidth: 3 }}
+                  activeDot={{ r: 6, fill: '#ffffff', stroke: '#8b5cf6', strokeWidth: 3 }}
                   filter="url(#activityShadow)"
                 />
               </AreaChart>
@@ -210,25 +250,25 @@ const SystemStats: React.FC = () => {
         )}
       </div>
 
-      <div className="card">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100" style={{ padding: 20, marginBottom: 20 }}>
         <h2>Database Statistics</h2>
         <table className="table" style={{ marginTop: 12 }}>
-          <thead>
+          <thead className="bg-slate-50">
             <tr>
-              <th>Metric</th>
-              <th>Value</th>
+              <th className="text-slate-500 font-medium">Metric</th>
+              <th className="text-slate-500 font-medium">Value</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
+            <tr className="hover:bg-slate-50 transition-colors">
               <td>Database Size</td>
               <td>2.4 GB</td>
             </tr>
-            <tr>
+            <tr className="hover:bg-slate-50 transition-colors">
               <td>Last Backup</td>
               <td>2025-12-27 23:00</td>
             </tr>
-            <tr>
+            <tr className="hover:bg-slate-50 transition-colors">
               <td>Connection Pool</td>
               <td>Active: 12 / Max: 100</td>
             </tr>

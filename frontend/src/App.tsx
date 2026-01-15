@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
+import TeacherLayout from '@/layouts/TeacherLayout';
+import AdminLayout from '@/layouts/AdminLayout';
+
 // Auth pages
 import LoginPage from '@/pages/auth/LoginPage';
 import RegisterPage from '@/pages/auth/RegisterPage';
@@ -69,20 +72,26 @@ const App: React.FC = () => {
 
           {/* Teacher routes */}
           <Route element={<ProtectedRoute allowedRoles={['teacher']} />}>
-            <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-            <Route path="/teacher/students" element={<StudentList />} />
-            <Route path="/teacher/students/:studentId" element={<StudentDetails />} />
-            <Route path="/teacher/assignments/create" element={<CreateAssignment />} />
-            <Route path="/teacher/ai-drafts" element={<AIDrafts />} />
-            <Route path="/teacher/messages" element={<TeacherMessages />} />
+            <Route path="/teacher" element={<TeacherLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<TeacherDashboard />} />
+              <Route path="students" element={<StudentList />} />
+              <Route path="students/:studentId" element={<StudentDetails />} />
+              <Route path="assignments/create" element={<CreateAssignment />} />
+              <Route path="ai-drafts" element={<AIDrafts />} />
+              <Route path="messages" element={<TeacherMessages />} />
+            </Route>
           </Route>
 
           {/* Admin routes */}
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/users" element={<UserManagement />} />
-            <Route path="/admin/stats" element={<SystemStats />} />
-            <Route path="/admin/feedback" element={<FeedbackManagement />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="stats" element={<SystemStats />} />
+              <Route path="feedback" element={<FeedbackManagement />} />
+            </Route>
           </Route>
 
           {/* Default redirects */}
