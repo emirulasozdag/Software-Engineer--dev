@@ -6,7 +6,7 @@ import { communicationService } from '@/services/api/communication.service';
 import { Announcement, Contact, Message } from '@/types/communication.types';
 
 const Messages: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const myId = user?.id;
 
   const [tab, setTab] = useState<'messages' | 'announcements'>('messages');
@@ -152,342 +152,378 @@ const Messages: React.FC = () => {
   };
 
   return (
-    <div
-      className="aurora-page"
-      style={{
-        minHeight: '100vh',
-        padding: 24,
-      }}
-    >
-      <div className="container aurora-content">
-        <Link
-          to="/student/dashboard"
-          className="aurora-link"
-          style={{ marginBottom: '20px', display: 'inline-block' }}
-        >
-          ← Back to Dashboard
-        </Link>
-
-        <div className="toolbar">
-          <div>
-            <h1 className="text-3xl font-extrabold text-indigo-900 tracking-tight" style={{ marginBottom: 0 }}>Communication</h1>
-            <div className="subtitle aurora-subtitle">Message your teacher and follow announcements.</div>
-          </div>
-          <div className="actions">
-            <div className="tabs">
-              <button className={`tab ${tab === 'messages' ? 'active' : ''}`} onClick={() => setTab('messages')}>
-                Messages {unreadCount > 0 && <span className="pill">Unread: {unreadCount}</span>}
-              </button>
-              <button className={`tab ${tab === 'announcements' ? 'active' : ''}`} onClick={() => setTab('announcements')}>
-                Announcements
-              </button>
-            </div>
-            {tab === 'messages' && (
-              <button
-                className="button button-primary"
-                onClick={() => setIsComposeOpen(true)}
-                disabled={sending || loading}
-              >
-                New Message ✏️
-              </button>
-            )}
-            <button className="button button-secondary" onClick={load} disabled={loading || sending}>
-              {loading ? 'Loading…' : 'Refresh'}
-            </button>
+    <div className="sd-layout">
+      <aside className="sd-sidebar">
+        <div className="sd-brand">
+          <div className="sd-brand-mark" aria-hidden="true">AI</div>
+          <div className="sd-brand-text">
+            <div className="sd-brand-name">AI Learning</div>
+            <div className="sd-brand-sub">Student</div>
           </div>
         </div>
 
-        {error && <div className="card aurora-alert" style={{ borderColor: 'rgba(220,38,38,0.25)', background: 'rgba(220,38,38,0.06)' }}>{error}</div>}
-        {notice && <div className="card aurora-alert" style={{ borderColor: 'rgba(37,99,235,0.25)', background: 'rgba(37,99,235,0.06)' }}>{notice}</div>}
+        <nav className="sd-nav">
+          <Link to="/student/dashboard" className="sd-nav-link">
+            <span className="sd-nav-ico" aria-hidden="true">▦</span>
+            <span>Dashboard</span>
+          </Link>
+          <Link to="/student/learning-plan" className="sd-nav-link">
+            <span className="sd-nav-ico" aria-hidden="true">📘</span>
+            <span>Learning Plan</span>
+          </Link>
+          <Link to="/student/messages" className="sd-nav-link is-active">
+            <span className="sd-nav-ico" aria-hidden="true">✉</span>
+            <span>Messages</span>
+          </Link>
+          <Link to="/student/progress" className="sd-nav-link">
+            <span className="sd-nav-ico" aria-hidden="true">📈</span>
+            <span>My Progress</span>
+          </Link>
+          <Link to="/student/ai-content-delivery" className="sd-nav-link">
+            <span className="sd-nav-ico" aria-hidden="true">✦</span>
+            <span>AI Delivery</span>
+          </Link>
+          <Link to="/student/chatbot" className="sd-nav-link">
+            <span className="sd-nav-ico" aria-hidden="true">🤖</span>
+            <span>Chatbot</span>
+          </Link>
+        </nav>
 
-        {tab === 'messages' && (
-          <div
-            className="grid gap-4"
-            style={{
-              marginTop: 16,
-              gridTemplateColumns: 'minmax(0, 1fr)',
-            }}
+        <div className="sd-sidebar-footer">
+          <button className="sd-logout" onClick={logout}>Logout</button>
+        </div>
+      </aside>
+
+      <main className="sd-main">
+        <div className="container aurora-content">
+          <Link
+            to="/student/dashboard"
+            className="aurora-link"
+            style={{ marginBottom: '20px', display: 'inline-block' }}
           >
+            ← Back to Dashboard
+          </Link>
+
+          <div className="toolbar">
+            <div>
+              <h1 className="text-3xl font-extrabold text-indigo-900 tracking-tight" style={{ marginBottom: 0 }}>Communication</h1>
+              <div className="subtitle aurora-subtitle">Message your teacher and follow announcements.</div>
+            </div>
+            <div className="actions">
+              <div className="tabs">
+                <button className={`tab ${tab === 'messages' ? 'active' : ''}`} onClick={() => setTab('messages')}>
+                  Messages {unreadCount > 0 && <span className="pill">Unread: {unreadCount}</span>}
+                </button>
+                <button className={`tab ${tab === 'announcements' ? 'active' : ''}`} onClick={() => setTab('announcements')}>
+                  Announcements
+                </button>
+              </div>
+              {tab === 'messages' && (
+                <button
+                  className="button button-primary"
+                  onClick={() => setIsComposeOpen(true)}
+                  disabled={sending || loading}
+                >
+                  New Message ✏️
+                </button>
+              )}
+              <button className="button button-secondary" onClick={load} disabled={loading || sending}>
+                {loading ? 'Loading…' : 'Refresh'}
+              </button>
+            </div>
+          </div>
+
+          {error && <div className="card aurora-alert" style={{ borderColor: 'rgba(220,38,38,0.25)', background: 'rgba(220,38,38,0.06)' }}>{error}</div>}
+          {notice && <div className="card aurora-alert" style={{ borderColor: 'rgba(37,99,235,0.25)', background: 'rgba(37,99,235,0.06)' }}>{notice}</div>}
+
+          {tab === 'messages' && (
             <div
               className="grid gap-4"
               style={{
+                marginTop: 16,
                 gridTemplateColumns: 'minmax(0, 1fr)',
               }}
             >
               <div
-                className="split"
+                className="grid gap-4"
                 style={{
-                  marginTop: 0,
-                  gridTemplateColumns: '360px minmax(0, 1fr)',
-                  alignItems: 'stretch',
-                  minHeight: '70vh',
+                  gridTemplateColumns: 'minmax(0, 1fr)',
                 }}
               >
-                <div className="card glass-card bg-white/80 backdrop-blur-xl border border-white shadow-lg rounded-2xl text-slate-800" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <h2 className="text-lg font-bold text-slate-700" style={{ marginBottom: 10 }}>Inbox</h2>
-                  <div className="kpis" style={{ marginBottom: 12 }}>
-                    <div className="kpi aurora-kpi inbox">
-                      <div className="label">Inbox</div>
-                      <div className="value text-4xl font-black text-indigo-600">{inboxCount}</div>
+                <div
+                  className="split"
+                  style={{
+                    marginTop: 0,
+                    gridTemplateColumns: '360px minmax(0, 1fr)',
+                    alignItems: 'stretch',
+                    minHeight: '70vh',
+                  }}
+                >
+                  <div className="card glass-card bg-white/80 backdrop-blur-xl border border-white shadow-lg rounded-2xl text-slate-800" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <h2 className="text-lg font-bold text-slate-700" style={{ marginBottom: 10 }}>Inbox</h2>
+                    <div className="kpis" style={{ marginBottom: 12 }}>
+                      <div className="kpi aurora-kpi inbox">
+                        <div className="label">Inbox</div>
+                        <div className="value text-4xl font-black text-indigo-600">{inboxCount}</div>
+                      </div>
+                      <div className="kpi aurora-kpi sent">
+                        <div className="label">Sent</div>
+                        <div className="value text-4xl font-black text-indigo-600">{sentCount}</div>
+                      </div>
+                      <div className="kpi aurora-kpi unread">
+                        <div className="label">Unread</div>
+                        <div className="value text-4xl font-black text-indigo-600">{unreadCount}</div>
+                      </div>
                     </div>
-                    <div className="kpi aurora-kpi sent">
-                      <div className="label">Sent</div>
-                      <div className="value text-4xl font-black text-indigo-600">{sentCount}</div>
+
+                    <div className="tabs" style={{ marginBottom: 10 }}>
+                      <button className={`tab ${box === 'all' ? 'active' : ''}`} onClick={() => setBox('all')}>All</button>
+                      <button className={`tab ${box === 'inbox' ? 'active' : ''}`} onClick={() => setBox('inbox')}>Inbox</button>
+                      <button className={`tab ${box === 'sent' ? 'active' : ''}`} onClick={() => setBox('sent')}>Sent</button>
                     </div>
-                    <div className="kpi aurora-kpi unread">
-                      <div className="label">Unread</div>
-                      <div className="value text-4xl font-black text-indigo-600">{unreadCount}</div>
-                    </div>
-                  </div>
 
-                  <div className="tabs" style={{ marginBottom: 10 }}>
-                    <button className={`tab ${box === 'all' ? 'active' : ''}`} onClick={() => setBox('all')}>All</button>
-                    <button className={`tab ${box === 'inbox' ? 'active' : ''}`} onClick={() => setBox('inbox')}>Inbox</button>
-                    <button className={`tab ${box === 'sent' ? 'active' : ''}`} onClick={() => setBox('sent')}>Sent</button>
-                  </div>
+                    <input
+                      className="input aurora-input bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:ring-indigo-500"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search by person/subject/content…"
+                    />
 
-                  <input
-                    className="input aurora-input bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:ring-indigo-500"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search by person/subject/content…"
-                  />
-
-                  {loading ? (
-                    <div className="loading">Loading…</div>
-                  ) : (
-                    <div className="list" style={{ overflow: 'auto', flex: 1, paddingRight: 2 }}>
-                      {filteredMessages.length === 0 && <div className="text-muted aurora-muted">No messages yet.</div>}
-                      {filteredMessages.map((m) => {
-                        const isInbound = myId ? m.receiverId === myId : true;
-                        const counterpart = isInbound
-                          ? (m.senderName || `User #${m.senderId}`)
-                          : (m.receiverName || `User #${m.receiverId}`);
-                        const initials = (counterpart || 'U')
-                          .split(' ')
-                          .filter(Boolean)
-                          .slice(0, 2)
-                          .map((x) => x[0]?.toUpperCase())
-                          .join('');
-                        return (
-                          <div
-                            key={m.id}
-                            className={`list-item ${selectedId === m.id ? 'active' : ''} ${myId && m.receiverId === myId && !m.isRead ? 'unread' : ''}`}
-                            onClick={() => selectMessage(m)}
-                          >
-                            <div className="msg-row">
-                              <span className={`avatar ${isInbound ? '' : 'muted'}`}>{initials || 'U'}</span>
-                              <div className="msg-main">
-                                <div className="msg-title">
-                                  <div className="who">
-                                    {counterpart}{' '}
-                                    <span className="pill" style={{ marginLeft: 8 }}>
-                                      {isInbound ? 'IN' : 'OUT'}
-                                    </span>
+                    {loading ? (
+                      <div className="loading">Loading…</div>
+                    ) : (
+                      <div className="list" style={{ overflow: 'auto', flex: 1, paddingRight: 2 }}>
+                        {filteredMessages.length === 0 && <div className="text-muted aurora-muted">No messages yet.</div>}
+                        {filteredMessages.map((m) => {
+                          const isInbound = myId ? m.receiverId === myId : true;
+                          const counterpart = isInbound
+                            ? (m.senderName || `User #${m.senderId}`)
+                            : (m.receiverName || `User #${m.receiverId}`);
+                          const initials = (counterpart || 'U')
+                            .split(' ')
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .map((x) => x[0]?.toUpperCase())
+                            .join('');
+                          return (
+                            <div
+                              key={m.id}
+                              className={`list-item ${selectedId === m.id ? 'active' : ''} ${myId && m.receiverId === myId && !m.isRead ? 'unread' : ''}`}
+                              onClick={() => selectMessage(m)}
+                            >
+                              <div className="msg-row">
+                                <span className={`avatar ${isInbound ? '' : 'muted'}`}>{initials || 'U'}</span>
+                                <div className="msg-main">
+                                  <div className="msg-title">
+                                    <div className="who">
+                                      {counterpart}{' '}
+                                      <span className="pill" style={{ marginLeft: 8 }}>
+                                        {isInbound ? 'IN' : 'OUT'}
+                                      </span>
+                                    </div>
+                                    <div className="date">{new Date(m.createdAt).toLocaleDateString()}</div>
                                   </div>
-                                  <div className="date">{new Date(m.createdAt).toLocaleDateString()}</div>
+                                  <div className="msg-subject">{m.subject || '(no subject)'}</div>
+                                  <div className="msg-snippet">{m.content}</div>
                                 </div>
-                                <div className="msg-subject">{m.subject || '(no subject)'}</div>
-                                <div className="msg-snippet">{m.content}</div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="card glass-card bg-white/80 backdrop-blur-xl border border-white shadow-lg rounded-2xl text-slate-800" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <div className="toolbar">
-                    <div>
-                      <h2 className="text-lg font-bold text-slate-700" style={{ marginBottom: 6 }}>Message</h2>
-                      {selected ? (
-                        <div className="text-muted aurora-muted">
-                          From <strong>{selected.senderName || selected.senderId}</strong> · To{' '}
-                          <strong>{selected.receiverName || selected.receiverId}</strong>
-                        </div>
-                      ) : null}
-                    </div>
-                    {selected && (
-                      <div className="actions">
-                        <button className="button button-ghost" onClick={replyToSelected} disabled={!myId}>
-                          Reply
-                        </button>
-                        <button className="button button-danger" onClick={() => deleteMessage(selected.id)}>
-                          Delete
-                        </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
 
-                  {!selected && (
-                    <div className="flex flex-col items-center justify-center" style={{ minHeight: 260, flex: 1 }}>
-                      <div className="text-slate-400 font-medium text-lg italic">Select a message to view details</div>
-                    </div>
-                  )}
-
-                  {selected && (
-                    <div style={{ marginTop: 14, overflow: 'auto', flex: 1 }}>
-                      <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{selected.subject || '(no subject)'}</div>
-                      <div className="text-muted aurora-muted" style={{ marginTop: 6 }}>{new Date(selected.createdAt).toLocaleString()}</div>
-                      <div className="divider" />
-                      <div style={{ marginTop: 14, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{selected.content}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {tab === 'messages' && isComposeOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-            <button
-              className="absolute inset-0"
-              style={{ background: 'rgba(15, 23, 42, 0.14)' }}
-              aria-label="Close compose modal"
-              onClick={() => setIsComposeOpen(false)}
-              type="button"
-            />
-            <div className="relative w-full max-w-2xl">
-              <div className="card glass-card bg-white/90 backdrop-blur-xl border border-white shadow-lg rounded-2xl text-slate-800" style={{ marginBottom: 0 }}>
-                <div className="toolbar">
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-700" style={{ marginBottom: 6 }}>Compose</h2>
-                    <div className="text-muted aurora-muted">Write a new message to your teacher.</div>
-                  </div>
-                  <div className="actions">
-                    <button
-                      className="button button-ghost"
-                      type="button"
-                      onClick={() => setIsComposeOpen(false)}
-                      disabled={sending}
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-                <div className="divider" />
-
-                <div className="form-group">
-                  <div className="grid-2">
-                    <div>
-                      <label className="form-label">To</label>
-                      <select
-                        className="input aurora-input bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:ring-indigo-500"
-                        value={compose.receiverId}
-                        onChange={(e) => setCompose((p) => ({ ...p, receiverId: e.target.value }))}
-                      >
-                        <option value="">Select…</option>
-                        {contacts.length === 0 && (
-                          <option value="" disabled>
-                            No teacher contact found (create a Teacher account first)
-                          </option>
-                        )}
-                        {contacts.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name} ({c.role})
-                          </option>
-                        ))}
-                      </select>
-                      {contacts.length === 0 && (
-                        <div className="text-muted aurora-muted" style={{ marginTop: 6 }}>
-                          This dropdown is empty because there is no <strong>Teacher</strong> account yet. Create a Teacher account and
-                          log in; it will be listed here.
+                  <div className="card glass-card bg-white/80 backdrop-blur-xl border border-white shadow-lg rounded-2xl text-slate-800" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <div className="toolbar">
+                      <div>
+                        <h2 className="text-lg font-bold text-slate-700" style={{ marginBottom: 6 }}>Message</h2>
+                        {selected ? (
+                          <div className="text-muted aurora-muted">
+                            From <strong>{selected.senderName || selected.senderId}</strong> · To{' '}
+                            <strong>{selected.receiverName || selected.receiverId}</strong>
+                          </div>
+                        ) : null}
+                      </div>
+                      {selected && (
+                        <div className="actions">
+                          <button className="button button-ghost" onClick={replyToSelected} disabled={!myId}>
+                            Reply
+                          </button>
+                          <button className="button button-danger" onClick={() => deleteMessage(selected.id)}>
+                            Delete
+                          </button>
                         </div>
                       )}
                     </div>
+
+                    {!selected && (
+                      <div className="flex flex-col items-center justify-center" style={{ minHeight: 260, flex: 1 }}>
+                        <div className="text-slate-400 font-medium text-lg italic">Select a message to view details</div>
+                      </div>
+                    )}
+
+                    {selected && (
+                      <div style={{ marginTop: 14, overflow: 'auto', flex: 1 }}>
+                        <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{selected.subject || '(no subject)'}</div>
+                        <div className="text-muted aurora-muted" style={{ marginTop: 6 }}>{new Date(selected.createdAt).toLocaleString()}</div>
+                        <div className="divider" />
+                        <div style={{ marginTop: 14, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{selected.content}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tab === 'messages' && isComposeOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+              <button
+                className="absolute inset-0"
+                style={{ background: 'rgba(15, 23, 42, 0.14)' }}
+                aria-label="Close compose modal"
+                onClick={() => setIsComposeOpen(false)}
+                type="button"
+              />
+              <div className="relative w-full max-w-2xl">
+                <div className="card glass-card bg-white/90 backdrop-blur-xl border border-white shadow-lg rounded-2xl text-slate-800" style={{ marginBottom: 0 }}>
+                  <div className="toolbar">
                     <div>
-                      <label className="form-label">Subject</label>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true">📝</span>
-                        <input
-                          className="input aurora-input bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:ring-indigo-500 pl-10"
-                          type="text"
-                          placeholder="Message subject"
-                          value={compose.subject}
-                          onChange={(e) => setCompose((p) => ({ ...p, subject: e.target.value }))}
-                        />
+                      <h2 className="text-lg font-bold text-slate-700" style={{ marginBottom: 6 }}>Compose</h2>
+                      <div className="text-muted aurora-muted">Write a new message to your teacher.</div>
+                    </div>
+                    <div className="actions">
+                      <button
+                        className="button button-ghost"
+                        type="button"
+                        onClick={() => setIsComposeOpen(false)}
+                        disabled={sending}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                  <div className="divider" />
+
+                  <div className="form-group">
+                    <div className="grid-2">
+                      <div>
+                        <label className="form-label">To</label>
+                        <select
+                          className="input aurora-input bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:ring-indigo-500"
+                          value={compose.receiverId}
+                          onChange={(e) => setCompose((p) => ({ ...p, receiverId: e.target.value }))}
+                        >
+                          <option value="">Select…</option>
+                          {contacts.length === 0 && (
+                            <option value="" disabled>
+                              No teacher contact found (create a Teacher account first)
+                            </option>
+                          )}
+                          {contacts.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name} ({c.role})
+                            </option>
+                          ))}
+                        </select>
+                        {contacts.length === 0 && (
+                          <div className="text-muted aurora-muted" style={{ marginTop: 6 }}>
+                            This dropdown is empty because there is no <strong>Teacher</strong> account yet. Create a Teacher account and
+                            log in; it will be listed here.
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="form-label">Subject</label>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true">📝</span>
+                          <input
+                            className="input aurora-input bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:ring-indigo-500 pl-10"
+                            type="text"
+                            placeholder="Message subject"
+                            value={compose.subject}
+                            onChange={(e) => setCompose((p) => ({ ...p, subject: e.target.value }))}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="form-group">
-                  <label className="form-label">Message</label>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-3 top-3 text-slate-400" aria-hidden="true">💬</span>
-                    <textarea
-                      className="input aurora-input bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:ring-indigo-500 pl-10 pt-3"
-                      rows={6}
-                      placeholder="Type your message here..."
-                      style={{ resize: 'vertical' }}
-                      value={compose.content}
-                      onChange={(e) => setCompose((p) => ({ ...p, content: e.target.value }))}
-                    />
-                  </div>
-                  <div className="text-muted aurora-muted" style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                    <span>Tip: The Reply button auto-fills from the selected message.</span>
-                    <span>{compose.content.length} chars</span>
-                  </div>
-                </div>
-
-                <div className="actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                  <button
-                    className="button button-primary aurora-send bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 shadow-[0_0_20px_rgba(99,102,241,0.5)]"
-                    onClick={async () => {
-                      await send();
-                      setIsComposeOpen(false);
-                    }}
-                    disabled={sending || loading}
-                  >
-                    {sending ? 'Sending…' : 'Send Message'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {tab === 'announcements' && (
-          <div className="card glass-card bg-white/80 backdrop-blur-xl border border-white shadow-lg rounded-2xl text-slate-800">
-            <div className="toolbar">
-              <div>
-                <h2 className="aurora-h2" style={{ marginBottom: 6 }}>Announcements</h2>
-                <div className="text-muted aurora-muted">Class announcements and important reminders.</div>
-              </div>
-              <span className="pill">{announcements.length} items</span>
-            </div>
-            <div className="divider" />
-            {loading ? (
-              <div className="loading">Loading…</div>
-            ) : (
-              <div className="list">
-                {announcements.length === 0 && <div className="text-muted aurora-muted">No announcements yet.</div>}
-                {announcements.map((a) => (
-                  <div key={a.id} className="list-item announcement-card">
-                    <div className="msg-row">
-                      <span className="avatar">{(a.authorName || 'T').slice(0, 1).toUpperCase()}</span>
-                      <div className="msg-main">
-                        <div className="announcement-head">
-                          <div style={{ fontWeight: 900 }}>{a.title}</div>
-                          <span className="pill">{new Date(a.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <div className="announcement-meta">
-                          By <strong>{a.authorName}</strong> · Audience: <strong>{a.targetAudience}</strong>
-                        </div>
-                        <div style={{ marginTop: 10, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{a.content}</div>
-                      </div>
+                  <div className="form-group">
+                    <label className="form-label">Message</label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-3 text-slate-400" aria-hidden="true">💬</span>
+                      <textarea
+                        className="input aurora-input bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:ring-indigo-500 pl-10 pt-3"
+                        rows={6}
+                        placeholder="Type your message here..."
+                        style={{ resize: 'vertical' }}
+                        value={compose.content}
+                        onChange={(e) => setCompose((p) => ({ ...p, content: e.target.value }))}
+                      />
+                    </div>
+                    <div className="text-muted aurora-muted" style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                      <span>Tip: The Reply button auto-fills from the selected message.</span>
+                      <span>{compose.content.length} chars</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
-        <style>{`
+                  <div className="actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                    <button
+                      className="button button-primary aurora-send bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 shadow-[0_0_20px_rgba(99,102,241,0.5)]"
+                      onClick={async () => {
+                        await send();
+                        setIsComposeOpen(false);
+                      }}
+                      disabled={sending || loading}
+                    >
+                      {sending ? 'Sending…' : 'Send Message'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tab === 'announcements' && (
+            <div className="card glass-card bg-white/80 backdrop-blur-xl border border-white shadow-lg rounded-2xl text-slate-800">
+              <div className="toolbar">
+                <div>
+                  <h2 className="aurora-h2" style={{ marginBottom: 6 }}>Announcements</h2>
+                  <div className="text-muted aurora-muted">Class announcements and important reminders.</div>
+                </div>
+                <span className="pill">{announcements.length} items</span>
+              </div>
+              <div className="divider" />
+              {loading ? (
+                <div className="loading">Loading…</div>
+              ) : (
+                <div className="list">
+                  {announcements.length === 0 && <div className="text-muted aurora-muted">No announcements yet.</div>}
+                  {announcements.map((a) => (
+                    <div key={a.id} className="list-item announcement-card">
+                      <div className="msg-row">
+                        <span className="avatar">{(a.authorName || 'T').slice(0, 1).toUpperCase()}</span>
+                        <div className="msg-main">
+                          <div className="announcement-head">
+                            <div style={{ fontWeight: 900 }}>{a.title}</div>
+                            <span className="pill">{new Date(a.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <div className="announcement-meta">
+                            By <strong>{a.authorName}</strong> · Audience: <strong>{a.targetAudience}</strong>
+                          </div>
+                          <div style={{ marginTop: 10, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{a.content}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <style>{`
         .aurora-page {
           position: relative;
           color: rgba(30, 41, 59, 1);
@@ -644,7 +680,8 @@ const Messages: React.FC = () => {
           box-shadow: 0 0 26px rgba(99, 102, 241, 0.55);
         }
       `}</style>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };
