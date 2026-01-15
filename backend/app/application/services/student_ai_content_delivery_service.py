@@ -259,7 +259,6 @@ class StudentAIContentDeliveryService:
 		if last_date == now_date:
 			# Already active today, streak doesn't change
 			pass
-		elif last_date == (now_date - timedelta(days=1)):
 		elif last_date == (now_date - datetime.timedelta(days=1)):
 			# Active yesterday, increment streak
 			student.daily_streak = (student.daily_streak or 0) + 1
