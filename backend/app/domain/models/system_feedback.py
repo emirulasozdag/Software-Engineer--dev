@@ -8,8 +8,10 @@ from datetime import datetime
 class SystemFeedback:
     feedbackId: int
     userId: int
-    subject: str
+    category: str
+    title: str
     description: str
+    status: str
     createdAt: datetime
 
     def submit(self) -> None:

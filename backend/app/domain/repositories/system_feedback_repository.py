@@ -3,7 +3,13 @@ from __future__ import annotations
 
 class SystemFeedbackRepository:
     def save(self, feedback) -> int:
-        pass
+        raise NotImplementedError()
+
+    def findById(self, feedbackId: int):
+        raise NotImplementedError()
 
     def findAll(self):
-        pass
+        raise NotImplementedError()
+
+    def updateStatus(self, feedbackId: int, status: str):
+        raise NotImplementedError()

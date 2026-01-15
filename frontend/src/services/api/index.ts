@@ -7,6 +7,8 @@ export { communicationService } from './communication.service';
 export { adminService } from './admin.service';
 export { default as apiClient } from './client';
 
+export { systemFeedbackService } from './systemFeedback.service';
+
 // Progress tracking + export (UC10–UC11)
 export { progressService } from './progress.service';
 export { rewardsService } from './rewards.service';

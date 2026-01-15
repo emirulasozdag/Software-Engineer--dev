@@ -1,12 +1,39 @@
 from contextlib import asynccontextmanager
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from sqlalchemy import text
+
 from app.api.router import api_router
 from app.config.settings import get_settings
+
+
+def _ensure_sqlite_system_feedback_schema(engine) -> None:
+    """Best-effort SQLite schema patching for dev.
+
+    This project uses `Base.metadata.create_all()` which does not alter existing tables.
+    If a developer already has an older `app.db`, new columns won't exist and writes can fail.
+    """
+    try:
+        if engine.dialect.name != "sqlite":
+            return
+        with engine.connect() as conn:
+            cols = conn.execute(text("PRAGMA table_info(system_feedback)")).fetchall()
+            if not cols:
+                return
+            col_names = {str(r[1]) for r in cols}
+            if "category" not in col_names:
+                conn.execute(text("ALTER TABLE system_feedback ADD COLUMN category VARCHAR(50) NOT NULL DEFAULT 'other'"))
+            if "status" not in col_names:
+                conn.execute(text("ALTER TABLE system_feedback ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'pending'"))
+            conn.commit()
+    except Exception as e:
+        # Do not block app startup in dev; log and continue.
+        logging.getLogger("uvicorn.error").warning(f"System feedback schema check failed: {e}")
 
 
 @asynccontextmanager
@@ -19,6 +46,7 @@ async def lifespan(app: FastAPI):
     from app.application.services.achievement_service import AchievementService
 
     Base.metadata.create_all(bind=engine)
+    _ensure_sqlite_system_feedback_schema(engine)
     
     # Initialize achievements
     try:
@@ -51,7 +79,8 @@ def create_app() -> FastAPI:
     )
 
     # Serve placeholder media files for tests (e.g., listening audio).
-    app.mount("/static", StaticFiles(directory="app/static"), name="static")
+    static_dir = Path(__file__).resolve().parent / "app" / "static"
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
     if settings.cors_origins:
         app.add_middleware(
