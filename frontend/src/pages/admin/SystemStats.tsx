@@ -214,14 +214,15 @@ const SystemStats: React.FC = () => {
         <h2>Database Statistics</h2>
         {stats?.databaseStats ? (
           <table className="table" style={{ marginTop: 12 }}>
-            <thead>
+            <thead className="bg-slate-50">
               <tr>
-                <th>Metric</th>
-                <th>Value</th>
+                <th className="text-slate-500 font-medium">Metric</th>
+                <th className="text-slate-500 font-medium">Value</th>
               </tr>
             </thead>
+                
             <tbody>
-              <tr>
+              <tr className="hover:bg-slate-50 transition-colors">
                 <td>Database Size</td>
                 <td>
                   {stats.databaseStats.sizeMB !== null && stats.databaseStats.sizeMB !== undefined
@@ -229,11 +230,13 @@ const SystemStats: React.FC = () => {
                     : 'N/A'}
                 </td>
               </tr>
-              <tr>
+                  
+              <tr className="hover:bg-slate-50 transition-colors">
                 <td>Total Records</td>
                 <td>{stats.databaseStats.totalRecords.toLocaleString()}</td>
               </tr>
-              <tr>
+                  
+              <tr className="hover:bg-slate-50 transition-colors">
                 <td>Last Backup</td>
                 <td>
                   {stats.databaseStats.lastBackup
@@ -241,7 +244,8 @@ const SystemStats: React.FC = () => {
                     : 'No maintenance logs'}
                 </td>
               </tr>
-              <tr>
+                  
+              <tr className="hover:bg-slate-50 transition-colors">
                 <td>Connection Pool</td>
                 <td>
                   Active: {stats.databaseStats.connectionPool.active} / Max:{' '}

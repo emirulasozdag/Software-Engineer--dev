@@ -153,29 +153,36 @@ const AdminDashboard: React.FC = () => {
                 {maintenance?.enabled ? 'Maintenance mode is currently enabled' : 'System is operational'}
               </div>
             </div>
-            <span className="pill" style={{ 
-              backgroundColor: maintenance?.enabled ? '#f59e0b' : '#10b981',
-              color: 'white'
-            }}>
-              {maintenance?.enabled ? 'Maintenance' : 'Active'}
+
+            {/* Demo-style pill, but driven by real state */}
+            <span className="pill sd-pill-row" style={{ display: 'inline-flex', gap: 8 }}>
+              <span className="sd-pill sd-pill-cool">Current</span>
+              <span className="sd-pill sd-pill-warm">{maintenance?.enabled ? 'Enabled' : 'Disabled'}</span>
             </span>
           </div>
+
           <div className="divider" />
+
           {error && (
             <div style={{ color: '#e74c3c', marginBottom: 12, fontSize: 14, fontWeight: 600 }}>
               {error}
             </div>
           )}
-          {maintenance?.enabled && maintenance.reason && (
-            <div style={{ marginBottom: 12, fontSize: 14, color: '#64748b' }}>
-              <strong>Reason:</strong> {maintenance.reason}
-            </div>
-          )}
+
+          {/* Demo-style short status line, but real data */}
+          <div className="sd-card-desc" style={{ marginBottom: 12 }}>
+            {maintenance?.enabled
+              ? (maintenance?.reason ? `Enabled: ${maintenance.reason}` : 'Enabled')
+              : 'Disabled'}
+          </div>
+            
           {maintenance?.enabled && maintenance.announcement && (
             <div style={{ marginBottom: 12, fontSize: 14, color: '#64748b' }}>
               <strong>Announcement:</strong> {maintenance.announcement}
             </div>
           )}
+
+          {/* Keep teacheradmin inputs (real, not demo), shown only when disabled */}
           {!maintenance?.enabled && (
             <>
               <div style={{ marginBottom: 12 }}>
@@ -196,6 +203,7 @@ const AdminDashboard: React.FC = () => {
                   }}
                 />
               </div>
+                
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 14, fontWeight: 600 }}>
                   User Announcement (optional):
@@ -218,26 +226,28 @@ const AdminDashboard: React.FC = () => {
               </div>
             </>
           )}
-          <div className="actions">
-            {maintenance?.enabled ? (
-              <button 
-                className="button button-primary" 
-                type="button"
-                onClick={() => setMaintenanceEnabled(false)}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Disabling...' : 'Disable Maintenance'}
-              </button>
-            ) : (
-              <button 
-                className="button button-primary" 
-                type="button"
-                onClick={() => setMaintenanceEnabled(true)}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Enabling...' : 'Enable Maintenance'}
-              </button>
-            )}
+
+          {/* Demo-style action chips, but wired to real handlers */}
+          <div className="sd-hero-actions" style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              className="sd-hero-chip sd-hero-chip-solid"
+              onClick={() => setMaintenanceEnabled(true)}
+              disabled={isLoading}
+              style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
+            >
+              {isLoading && !maintenance?.enabled ? 'Enabling…' : 'Enable'}
+            </button>
+        
+            <button
+              type="button"
+              className="sd-hero-chip sd-hero-chip-outline"
+              onClick={() => setMaintenanceEnabled(false)}
+              disabled={isLoading}
+              style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
+            >
+              {isLoading && maintenance?.enabled ? 'Disabling…' : 'Disable'}
+            </button>
           </div>
         </div>
       </div>
