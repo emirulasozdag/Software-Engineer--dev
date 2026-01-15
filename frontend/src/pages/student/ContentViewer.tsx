@@ -70,7 +70,7 @@ const ContentViewer: React.FC = () => {
   const { contentId } = useParams<{ contentId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const rationaleFromNav = (location.state as any)?.rationale as string | undefined;
   const { newAchievements, clearAchievements, checkForNewAchievements } = useAchievementNotifications();
 
@@ -609,7 +609,7 @@ const ContentViewer: React.FC = () => {
   };
 
   return (
-    <div className="container">
+    <div className="cv-page">
       {newAchievements && newAchievements.length > 0 && (
         <AchievementNotificationContainer
           achievements={newAchievements}
@@ -621,16 +621,70 @@ const ContentViewer: React.FC = () => {
       {isCompleting && <AILoading message="Analyzing your answers..." />}
       {isLoadingNext && <AILoading message="Generating your next lesson..." />}
       
-      <Link to="/student/learning-plan" style={{ marginBottom: '20px', display: 'inline-block' }}>
-        ← Back to Learning Plan
-      </Link>
-      
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1 className="page-title">Content Viewer</h1>
-        <Link to="/student/content/history" className="button button-secondary">
-          View History
-        </Link>
-      </div>
+      <div className="cv-layout">
+        <aside className="sd-sidebar">
+          <div className="sd-brand">
+            <div className="sd-brand-mark" aria-hidden="true">AI</div>
+            <div className="sd-brand-text">
+              <div className="sd-brand-name">AI Learning</div>
+              <div className="sd-brand-sub">Student</div>
+            </div>
+          </div>
+
+          <nav className="sd-nav">
+            <Link to="/student/dashboard" className="sd-nav-link">
+              <span className="sd-nav-ico" aria-hidden="true">▦</span>
+              <span>Dashboard</span>
+            </Link>
+            <Link to="/student/learning-plan" className="sd-nav-link">
+              <span className="sd-nav-ico" aria-hidden="true">📘</span>
+              <span>Learning Plan</span>
+            </Link>
+            <Link to="/student/messages" className="sd-nav-link">
+              <span className="sd-nav-ico" aria-hidden="true">✉</span>
+              <span>Messages</span>
+            </Link>
+            <Link to="/student/progress" className="sd-nav-link">
+              <span className="sd-nav-ico" aria-hidden="true">📈</span>
+              <span>My Progress</span>
+            </Link>
+            <Link to="/student/ai-content-delivery" className="sd-nav-link is-active">
+              <span className="sd-nav-ico" aria-hidden="true">✦</span>
+              <span>AI Delivery</span>
+            </Link>
+            <Link to="/student/chatbot" className="sd-nav-link">
+              <span className="sd-nav-ico" aria-hidden="true">🤖</span>
+              <span>Chatbot</span>
+            </Link>
+          </nav>
+
+          <div className="sd-sidebar-footer">
+            <button className="sd-logout" onClick={logout}>Logout</button>
+          </div>
+        </aside>
+
+        <main className="cv-main">
+          <div className="cv-container">
+            <div className="cv-top">
+              <Link to="/student/learning-plan" className="cv-back">
+                ← Back to Learning Plan
+              </Link>
+              <Link to="/student/content/history" className="button button-secondary">
+                View History
+              </Link>
+            </div>
+
+            <section className="cv-hero">
+              <div>
+                <h1>Content Viewer</h1>
+                <p>Stay focused and complete this lesson to move forward in your plan.</p>
+              </div>
+              <div className="cv-hero-meta">
+                <span className="cv-pill">Level: {content?.level || '—'}</span>
+                <span className="cv-pill cv-pill-muted">Type: {content?.contentType || '—'}</span>
+                <span className="cv-pill">ID: {content?.contentId || '—'}</span>
+              </div>
+            </section>
       
       {/* Feedback Modal */}
       {showFeedback && feedbackData && !isLoadingNext && (
@@ -672,24 +726,25 @@ const ContentViewer: React.FC = () => {
         </div>
       )}
       
-      <div className="card">
+      <div className="card cv-card">
         {isLoading && <p>Loading...</p>}
         {!isLoading && error && (
-          <div style={{ borderLeft: '4px solid #e74c3c', paddingLeft: '10px' }}>
+          <div className="cv-error">
             <strong>Error:</strong> {error}
           </div>
         )}
 
         {!isLoading && !error && content && (
           <>
-            <h2>{content.title}</h2>
-            <p>Content ID: {content.contentId}</p>
-            <p style={{ color: '#666' }}>
-              Level: <strong>{content.level}</strong> | Type: <strong>{content.contentType}</strong>
-            </p>
+            <h2 className="cv-title">{content.title}</h2>
+            <div className="cv-meta">
+              <span>Content ID: {content.contentId}</span>
+              <span>Level: <strong>{content.level}</strong></span>
+              <span>Type: <strong>{content.contentType}</strong></span>
+            </div>
 
             {rationaleFromNav && (
-              <p style={{ marginTop: '10px', color: '#666' }}>
+              <p className="cv-rationale">
                 <strong>Why this content:</strong> {rationaleFromNav}
               </p>
             )}
@@ -807,6 +862,9 @@ const ContentViewer: React.FC = () => {
             )}
           </>
         )}
+          </div>
+        </div>
+        </main>
       </div>
     </div>
   );
