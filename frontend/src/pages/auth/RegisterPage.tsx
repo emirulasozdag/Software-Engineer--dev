@@ -60,7 +60,7 @@ const RegisterPage: React.FC = () => {
       {/* Left Panel - Branding (40%) (copied from LoginPage) */}
       <div style={{
         flex: '0 0 40%',
-        background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)',
+        background: 'linear-gradient(135deg, #A5B4FC 0%, #C4B5FD 55%, #E9D5FF 100%)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',

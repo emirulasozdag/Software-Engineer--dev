@@ -7,7 +7,7 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
@@ -50,15 +50,15 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
+    <div style={{
+      display: 'flex',
       minHeight: '100vh',
       background: 'var(--bg)'
     }}>
       {/* Left Panel - Branding (40%) */}
       <div style={{
         flex: '0 0 40%',
-        background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)',
+        background: 'linear-gradient(135deg, #A5B4FC 0%, #C4B5FD 55%, #E9D5FF 100%)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -69,7 +69,7 @@ const LoginPage: React.FC = () => {
         overflow: 'hidden',
         boxShadow: '4px 0 24px rgba(0, 0, 0, 0.08)'
       }}
-      className="login-brand-panel"
+        className="login-brand-panel"
       >
         <div style={{ position: 'relative', zIndex: 2, textAlign: 'center', maxWidth: '520px' }}>
           <div style={{
@@ -281,8 +281,8 @@ const LoginPage: React.FC = () => {
         padding: '40px 20px',
         background: '#FAFBFC'
       }}>
-        <div style={{ 
-          width: '100%', 
+        <div style={{
+          width: '100%',
           maxWidth: '480px',
           background: 'white',
           padding: '48px 40px',
@@ -290,9 +290,9 @@ const LoginPage: React.FC = () => {
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1)'
         }}>
           <div style={{ marginBottom: '40px' }}>
-            <h2 style={{ 
-              fontSize: '34px', 
-              fontWeight: 800, 
+            <h2 style={{
+              fontSize: '34px',
+              fontWeight: 800,
               marginBottom: '12px',
               letterSpacing: '-0.03em',
               color: '#1a1a1a',
@@ -300,8 +300,8 @@ const LoginPage: React.FC = () => {
             }}>
               Welcome Back! 👋
             </h2>
-            <p style={{ 
-              color: '#64748B', 
+            <p style={{
+              color: '#64748B',
               fontSize: '16px',
               fontWeight: 400,
               lineHeight: '1.5'
@@ -312,8 +312,8 @@ const LoginPage: React.FC = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label className="form-label" style={{ 
-                fontWeight: 600, 
+              <label className="form-label" style={{
+                fontWeight: 600,
                 marginBottom: '10px',
                 display: 'block',
                 color: '#334155',
@@ -354,8 +354,8 @@ const LoginPage: React.FC = () => {
             </div>
 
             <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label className="form-label" style={{ 
-                fontWeight: 600, 
+              <label className="form-label" style={{
+                fontWeight: 600,
                 marginBottom: '10px',
                 display: 'block',
                 color: '#334155',
@@ -397,7 +397,7 @@ const LoginPage: React.FC = () => {
             </div>
 
             <div style={{ textAlign: 'right', marginBottom: '28px' }}>
-              <Link 
+              <Link
                 to="/forgot-password"
                 style={{
                   color: '#667EEA',
@@ -421,7 +421,7 @@ const LoginPage: React.FC = () => {
                 borderRadius: '14px',
                 marginBottom: '24px'
               }}>
-                <p className="error-message" style={{ 
+                <p className="error-message" style={{
                   margin: 0,
                   color: '#DC2626',
                   fontSize: '14px',
@@ -430,11 +430,11 @@ const LoginPage: React.FC = () => {
               </div>
             )}
 
-            <button 
-              className="button button-primary" 
-              type="submit" 
+            <button
+              className="button button-primary"
+              type="submit"
               disabled={isLoading}
-              style={{ 
+              style={{
                 width: '100%',
                 padding: '16px',
                 fontSize: '16px',
@@ -464,20 +464,20 @@ const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          <div style={{ 
-            marginTop: '32px', 
+          <div style={{
+            marginTop: '32px',
             textAlign: 'center',
             paddingTop: '32px',
             borderTop: '2px solid #F1F5F9'
           }}>
-            <span style={{ 
-              color: '#64748B', 
+            <span style={{
+              color: '#64748B',
               fontSize: '15px',
               fontWeight: 500
             }}>
               Don't have an account?{' '}
             </span>
-            <Link 
+            <Link
               to="/register"
               style={{
                 color: '#667EEA',

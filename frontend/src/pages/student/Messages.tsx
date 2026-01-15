@@ -152,8 +152,13 @@ const Messages: React.FC = () => {
   };
 
   return (
-    <div className="aurora-page bg-gradient-to-br from-indigo-50 via-white to-slate-50">
-      <div className="aurora-pulse" aria-hidden="true" />
+    <div
+      className="aurora-page"
+      style={{
+        minHeight: '100vh',
+        padding: 24,
+      }}
+    >
       <div className="container aurora-content">
         <Link
           to="/student/dashboard"
@@ -221,15 +226,15 @@ const Messages: React.FC = () => {
                 <div className="card glass-card bg-white/80 backdrop-blur-xl border border-white shadow-lg rounded-2xl text-slate-800" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <h2 className="text-lg font-bold text-slate-700" style={{ marginBottom: 10 }}>Inbox</h2>
                   <div className="kpis" style={{ marginBottom: 12 }}>
-                    <div className="kpi aurora-kpi inbox bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 border-indigo-500/30">
+                    <div className="kpi aurora-kpi inbox">
                       <div className="label">Inbox</div>
                       <div className="value text-4xl font-black text-indigo-600">{inboxCount}</div>
                     </div>
-                    <div className="kpi aurora-kpi sent bg-gradient-to-br from-violet-500/20 to-violet-600/20 border-violet-500/30">
+                    <div className="kpi aurora-kpi sent">
                       <div className="label">Sent</div>
                       <div className="value text-4xl font-black text-indigo-600">{sentCount}</div>
                     </div>
-                    <div className="kpi aurora-kpi unread bg-gradient-to-br from-rose-500/20 to-rose-600/20 border-rose-500/30">
+                    <div className="kpi aurora-kpi unread">
                       <div className="label">Unread</div>
                       <div className="value text-4xl font-black text-indigo-600">{unreadCount}</div>
                     </div>
@@ -339,7 +344,8 @@ const Messages: React.FC = () => {
         {tab === 'messages' && isComposeOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
             <button
-              className="absolute inset-0 bg-slate-900/30"
+              className="absolute inset-0"
+              style={{ background: 'rgba(15, 23, 42, 0.14)' }}
               aria-label="Close compose modal"
               onClick={() => setIsComposeOpen(false)}
               type="button"
@@ -483,7 +489,6 @@ const Messages: React.FC = () => {
 
         <style>{`
         .aurora-page {
-          min-height: 100vh;
           position: relative;
           color: rgba(30, 41, 59, 1);
         }
@@ -494,7 +499,7 @@ const Messages: React.FC = () => {
           background:
             radial-gradient(900px 500px at 20% 15%, rgba(99, 102, 241, 0.22), transparent 60%),
             radial-gradient(750px 520px at 80% 30%, rgba(139, 92, 246, 0.16), transparent 60%),
-            radial-gradient(820px 520px at 55% 85%, rgba(244, 63, 94, 0.10), transparent 60%);
+            radial-gradient(820px 520px at 55% 85%, rgba(99, 102, 241, 0.10), transparent 60%);
           filter: blur(18px);
           opacity: 0.80;
           pointer-events: none;
@@ -569,8 +574,8 @@ const Messages: React.FC = () => {
           box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.14);
         }
         .aurora-page .list-item.unread {
-          background: rgba(255, 228, 230, 0.70);
-          border-color: rgba(244, 63, 94, 0.26);
+          background: rgba(224, 231, 255, 0.70);
+          border-color: rgba(99, 102, 241, 0.30);
         }
 
         .aurora-page .avatar {
@@ -600,16 +605,16 @@ const Messages: React.FC = () => {
         }
 
         .aurora-page .kpi.aurora-kpi.inbox {
-          background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(79, 70, 229, 0.14));
+          background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(124, 58, 237, 0.14));
           border-color: rgba(99, 102, 241, 0.30);
         }
         .aurora-page .kpi.aurora-kpi.sent {
-          background: linear-gradient(135deg, rgba(139, 92, 246, 0.20), rgba(124, 58, 237, 0.14));
-          border-color: rgba(139, 92, 246, 0.30);
+          background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(124, 58, 237, 0.14));
+          border-color: rgba(99, 102, 241, 0.30);
         }
         .aurora-page .kpi.aurora-kpi.unread {
-          background: linear-gradient(135deg, rgba(244, 63, 94, 0.22), rgba(225, 29, 72, 0.12));
-          border-color: rgba(244, 63, 94, 0.30);
+          background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(124, 58, 237, 0.14));
+          border-color: rgba(99, 102, 241, 0.30);
         }
 
         .aurora-page .form-label {
