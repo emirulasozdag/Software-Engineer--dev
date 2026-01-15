@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { learningService } from '@/services/api/learning.service';
 import { LearningPlan as LearningPlanType } from '@/types/learning.types';
 import AILoading from '@/components/AILoading';
 
 const LearningPlan: React.FC = () => {
+  const { logout } = useAuth();
   const [plan, setPlan] = useState<LearningPlanType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,132 +41,196 @@ const LearningPlan: React.FC = () => {
     return [...plan.topics].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
   }, [plan]);
 
+  const level = plan?.recommendedLevel || '—';
+  const updatedText = plan?.updatedAt ? new Date(plan.updatedAt).toLocaleString() : '—';
+  const planTypeText = plan ? (plan.isGeneral ? 'General Plan' : 'Personalized') : '—';
+  const statusText = plan ? 'On Track' : 'Pending';
+
+  const getTypeLabel = (category?: string) => {
+    if (!category) return 'TOPIC';
+    const upper = String(category).toUpperCase();
+    if (upper.includes('SPEAK')) return 'SPEAKING';
+    if (upper.includes('GRAM')) return 'GRAMMAR';
+    if (upper.includes('VOC')) return 'VOCABULARY';
+    if (upper.includes('LISTEN')) return 'LISTENING';
+    if (upper.includes('READ')) return 'READING';
+    if (upper.includes('WRITE')) return 'WRITING';
+    return upper;
+  };
+
+  const getTypeClass = (label: string) => {
+    if (label === 'SPEAKING') return 'lp5-tag lp5-tag-blue';
+    if (label === 'GRAMMAR') return 'lp5-tag lp5-tag-green';
+    if (label === 'VOCABULARY') return 'lp5-tag lp5-tag-purple';
+    if (label === 'LISTENING') return 'lp5-tag lp5-tag-blue';
+    if (label === 'READING') return 'lp5-tag lp5-tag-purple';
+    if (label === 'WRITING') return 'lp5-tag lp5-tag-pink';
+    return 'lp5-tag lp5-tag-gray';
+  };
+
   return (
-    <div className="container">
+    <div className="lp5-page">
       {isRefreshing && <AILoading message="Generating your personalized plan..." />}
-      
-      <Link to="/student/dashboard" className="link mb-16" style={{ display: 'inline-block' }}>
-        ← Back to Dashboard
-      </Link>
-      <h1 className="page-title">Learning Plan</h1>
-
-      <div className="card lp-hero">
-        <div className="lp-topbar">
-          <div>
-            <div className="topic-meta mb-6">
-              <span className="badge">
-                Level: <strong>{plan?.recommendedLevel || '—'}</strong>
-              </span>
-              {plan?.isGeneral ? (
-                <span className="badge badge-muted">General Plan (no results yet)</span>
-              ) : (
-                <span className="badge badge-success">Personalized</span>
-              )}
-            </div>
-            <div className="lp-subtitle">
-              {plan
-                ? `Updated: ${new Date(plan.updatedAt).toLocaleString()}`
-                : 'Generate a plan based on your strengths and weaknesses.'}
+      <div className="lp5-layout">
+        <aside className="sd-sidebar">
+          <div className="sd-brand">
+            <div className="sd-brand-mark" aria-hidden="true">AI</div>
+            <div className="sd-brand-text">
+              <div className="sd-brand-name">AI Learning</div>
+              <div className="sd-brand-sub">Student</div>
             </div>
           </div>
 
-          <div className="lp-actions">
-            <button className="button button-primary" onClick={() => load(true)} disabled={loading}>
-              {loading ? 'Refreshing...' : 'Refresh Plan'}
+          <nav className="sd-nav">
+            <Link to="/student/dashboard" className="sd-nav-link">
+              <span className="sd-nav-ico" aria-hidden="true">▦</span>
+              <span>Dashboard</span>
+            </Link>
+            <Link to="/student/learning-plan" className="sd-nav-link is-active">
+              <span className="sd-nav-ico" aria-hidden="true">📘</span>
+              <span>Learning Plan</span>
+            </Link>
+            <Link to="/student/messages" className="sd-nav-link">
+              <span className="sd-nav-ico" aria-hidden="true">✉</span>
+              <span>Messages</span>
+            </Link>
+            <Link to="/student/progress" className="sd-nav-link">
+              <span className="sd-nav-ico" aria-hidden="true">📈</span>
+              <span>My Progress</span>
+            </Link>
+            <Link to="/student/ai-content-delivery" className="sd-nav-link">
+              <span className="sd-nav-ico" aria-hidden="true">✦</span>
+              <span>AI Delivery</span>
+            </Link>
+            <Link to="/student/chatbot" className="sd-nav-link">
+              <span className="sd-nav-ico" aria-hidden="true">🤖</span>
+              <span>Chatbot</span>
+            </Link>
+          </nav>
+
+          <div className="sd-sidebar-footer">
+            <button className="sd-logout" onClick={logout}>Logout</button>
+          </div>
+        </aside>
+
+        <main className="lp5-main">
+          <div className="lp5-container">
+            <div className="lp5-top-nav">
+              <Link to="/student/dashboard" className="lp5-back-link">← Back to Dashboard</Link>
+            </div>
+
+        <div className="lp5-hero">
+          <div className="lp5-hero-content">
+            <h1>Learning Plan</h1>
+            <p>Professional, goal-driven learning tailored to your pace.</p>
+          </div>
+          <div className="lp5-hero-actions">
+            <button className="lp5-refresh" onClick={() => load(true)} disabled={loading}>
+              {loading ? 'Refreshing…' : '↻ Refresh Plan'}
             </button>
+            <div className="lp5-stats">
+              <div className="lp5-stat">
+                <span className="lp5-stat-label">Level</span>
+                <span className="lp5-stat-value">{level}</span>
+              </div>
+              <div className="lp5-stat">
+                <span className="lp5-stat-label">Type</span>
+                <span className="lp5-stat-value">{planTypeText}</span>
+              </div>
+              <div className="lp5-stat lp5-stat-status">
+                <span className="lp5-stat-label">Status</span>
+                <span className="lp5-stat-value">{statusText}</span>
+              </div>
+              <div className="lp5-stat">
+                <span className="lp5-stat-label">Updated</span>
+                <span className="lp5-stat-value">{updatedText}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {loading && (
-          <div className="mt-12">
-            <div className="skeleton skeleton-line lg" style={{ width: '55%' }} />
-            <div className="skeleton skeleton-line" style={{ width: '80%' }} />
-            <div className="skeleton skeleton-line" style={{ width: '65%' }} />
+        {error && <div className="lp5-error">{error}</div>}
+
+        <div className="lp5-grid">
+          <div className="lp5-card">
+            <div className="lp5-status-header">
+              <div className="lp5-status-icon lp5-icon-green">✓</div>
+              <span className="lp5-status-title">Strengths</span>
+            </div>
+            {plan?.strengths?.length ? (
+              <div className="lp5-chip-row">
+                {plan.strengths.map((s) => (
+                  <span key={s} className="lp5-chip">{s}</span>
+                ))}
+              </div>
+            ) : (
+              <p className="lp5-status-desc">No specific strengths detected yet. Start a lesson to reveal them.</p>
+            )}
           </div>
-        )}
-        {error && <p className="error-message mt-12">{error}</p>}
-        <p className="text-muted mt-12">
-          This page analyzes placement test results (strengths/weaknesses) and generates a personalized lesson plan.
-        </p>
-      </div>
-
-      <div className="lp-grid">
-        <div className="card lp-col-6">
-          <h2 style={{ marginBottom: 10 }}>Strengths (from test results)</h2>
-          {plan?.strengths?.length ? (
-            <div className="chip-row">
-              {plan.strengths.map((s) => (
-                <span key={s} className="chip">{s}</span>
-              ))}
+          <div className="lp5-card">
+            <div className="lp5-status-header">
+              <div className="lp5-status-icon lp5-icon-orange">!</div>
+              <span className="lp5-status-title">Focus Areas</span>
             </div>
-          ) : (
-            <p style={{ color: '#5f6b76' }}>No strengths detected yet.</p>
-          )}
+            {plan?.weaknesses?.length ? (
+              <div className="lp5-chip-row">
+                {plan.weaknesses.map((w) => (
+                  <span key={w} className="lp5-chip">{w}</span>
+                ))}
+              </div>
+            ) : (
+              <p className="lp5-status-desc">We’ll highlight focus areas once we gather more performance data.</p>
+            )}
+          </div>
         </div>
 
-        <div className="card lp-col-6">
-          <h2 style={{ marginBottom: 10 }}>Weaknesses (focus areas)</h2>
-          {plan?.weaknesses?.length ? (
-            <div className="chip-row">
-              {plan.weaknesses.map((w) => (
-                <span key={w} className="chip">{w}</span>
-              ))}
-            </div>
-          ) : (
-            <p style={{ color: '#5f6b76' }}>No weaknesses detected yet.</p>
-          )}
+        <div className="lp5-section">
+          <h3>Recommended Topics</h3>
+          <span>Prioritized by your goals and progress</span>
         </div>
 
-        <div className="card lp-col-12">
-          <h2>Recommended Topics</h2>
-          <p className="text-muted" style={{ marginTop: 6 }}>
-            Each topic includes a short rationale derived from weaknesses.
-          </p>
-
-        {!loading && plan && sortedTopics.length === 0 && (
-          <p>No topics yet.</p>
-        )}
+        {!loading && plan && sortedTopics.length === 0 && <div className="lp5-empty">No topics yet.</div>}
 
         {!loading && plan && sortedTopics.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }} className="mt-14">
-            {sortedTopics.map((t) => (
-              <div key={`${t.topicId ?? t.name}-${t.priority}`} className="card topic-card">
-                <div className="topic-head">
-                  <h3 style={{ margin: 0 }}>{t.priority}. {t.name}</h3>
-                  <div className="topic-meta">
-                    <span className="badge badge-muted">{t.category}</span>
-                    <span className="badge">Difficulty: <strong>{t.difficulty}</strong></span>
-                  </div>
-                </div>
-                
-                <div style={{ marginTop: 12, marginBottom: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
-                    <span>Progress</span>
-                    <span>{Math.round(t.progress)}%</span>
-                  </div>
-                  <div style={{ width: '100%', height: 8, background: '#eee', borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{ width: `${t.progress}%`, height: '100%', background: '#2ecc71', transition: 'width 0.3s ease' }} />
-                  </div>
-                </div>
+          <div className="lp5-topic-list">
+            {sortedTopics.map((t) => {
+              const typeLabel = getTypeLabel(t.category);
+              const typeClass = getTypeClass(typeLabel);
+              const order = String(t.priority ?? 0);
 
-                <details style={{ marginTop: 10 }}>
-                  <summary className="link" style={{ cursor: 'pointer', display: 'inline-block' }}>
-                    Why this topic?
-                  </summary>
-                  <div className="topic-reason">{t.reason}</div>
-                  {!!t.evidence?.length && (
-                    <div className="chip-row mt-12">
-                      {t.evidence.map((e) => (
-                        <span key={e} className="chip">{e}</span>
-                      ))}
+              return (
+                <div key={`${t.topicId ?? t.name}-${t.priority}`} className="lp5-card lp5-lesson-card">
+                  <div className="lp5-lesson-main">
+                    <div className="lp5-lesson-tags">
+                      <span className={typeClass}>{typeLabel}</span>
+                      <span className="lp5-tag lp5-tag-gray">{t.difficulty}</span>
                     </div>
-                  )}
-                </details>
-              </div>
-            ))}
+                    <h2 className="lp5-lesson-title">
+                      <span className="lp5-lesson-number">{order}</span>
+                      {t.name}
+                    </h2>
+                    <p className="lp5-lesson-desc">{t.reason}</p>
+                    <div className="lp5-ai-note">✨ Generated by AI based on your profile.</div>
+                  </div>
+                  <div className="lp5-lesson-action">
+                    <div className="lp5-progress-label">
+                      <span>Progress</span>
+                      <span>{Math.round(t.progress)}%</span>
+                    </div>
+                    <div className="lp5-progress-bar" aria-hidden="true">
+                      <div className="lp5-progress-fill" style={{ width: `${Math.round(t.progress)}%` }} />
+                    </div>
+                    <Link to="/student/ai-content-delivery" className="lp5-start">
+                      Start Lesson
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
-        </div>
+          )}
+          </div>
+        </main>
       </div>
     </div>
   );
