@@ -96,6 +96,10 @@ const StudentDashboard: React.FC = () => {
             <span className="sd-nav-ico" aria-hidden="true">✦</span>
             <span>AI Delivery</span>
           </Link>
+          <Link to="/student/chatbot" className="sd-nav-link">
+            <span className="sd-nav-ico" aria-hidden="true">🤖</span>
+            <span>Chatbot</span>
+          </Link>
         </nav>
 
         <div className="sd-sidebar-footer">
@@ -180,6 +184,14 @@ const StudentDashboard: React.FC = () => {
               </div>
               <div className="sd-metric">{loading ? '…' : unread}</div>
               <div className="sd-card-desc">Unread</div>
+            </div>
+
+            <div className="sd-card sd-card-sm">
+              <div className="sd-card-head">
+                <div className="sd-card-title">Chatbot</div>
+                <Link to="/student/chatbot" className="sd-card-action" aria-label="Open chatbot">🤖</Link>
+              </div>
+              <div className="sd-card-desc">Ask questions and get practice with instant feedback.</div>
             </div>
           </div>
 
