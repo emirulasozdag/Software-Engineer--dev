@@ -9,6 +9,7 @@ const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [maintenance, setMaintenance] = useState<MaintenanceMode | null>(null);
   const [maintenanceReason, setMaintenanceReason] = useState('');
+  const [maintenanceAnnouncement, setMaintenanceAnnouncement] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -20,6 +21,7 @@ const AdminDashboard: React.FC = () => {
       setStats(s);
       setMaintenance(m);
       setMaintenanceReason(m.reason ?? '');
+      setMaintenanceAnnouncement(m.announcement ?? '');
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to load admin dashboard');
     } finally {
@@ -37,7 +39,11 @@ const AdminDashboard: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const m = await adminService.setMaintenanceMode({ enabled, reason: enabled ? maintenanceReason : null });
+      const m = await adminService.setMaintenanceMode({ 
+        enabled, 
+        reason: enabled ? maintenanceReason : null,
+        announcement: enabled ? maintenanceAnnouncement : null
+      });
       setMaintenance(m);
       await refresh();
     } catch (e: any) {
@@ -154,78 +160,109 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="sd-row sd-row-2">
-          <div className="sd-card sd-card-lg">
-            <div className="sd-card-head">
-              <div className="sd-card-title">Quick Stats</div>
-              <Link to="/admin/stats" className="sd-card-action" aria-label="Open stats">📊</Link>
-            </div>
-            <div className="sd-list">
-              <div className="sd-list-item">
-                <div className="sd-list-title">Total users</div>
-                <div className="sd-list-sub">{isLoading ? '…' : (totalUsers ?? '—')}</div>
-              </div>
-              <div className="sd-list-item">
-                <div className="sd-list-title">Active students</div>
-                <div className="sd-list-sub">{isLoading ? '…' : (totalStudents ?? '—')}</div>
-              </div>
-              <div className="sd-list-item">
-                <div className="sd-list-title">Teachers</div>
-                <div className="sd-list-sub">{isLoading ? '…' : (totalTeachers ?? '—')}</div>
-              </div>
-              <div className="sd-list-item">
-                <div className="sd-list-title">Verified users</div>
-                <div className="sd-list-sub">{isLoading ? '…' : (verifiedUsers ?? '—')}</div>
+        <div className="card col-4">
+          <div className="toolbar">
+            <div>
+              <h2 style={{ marginBottom: 6 }}>Maintenance</h2>
+              <div className="text-muted">
+                {maintenance?.enabled ? 'Maintenance mode is currently enabled' : 'System is operational'}
               </div>
             </div>
-          </div>
 
-          <div className="sd-card sd-card-lg">
-            <div className="sd-card-head">
-              <div className="sd-card-title">Maintenance Mode</div>
-              <button
-                type="button"
-                className="sd-card-action"
-                onClick={() => setMaintenanceEnabled(!(maintenance?.enabled ?? false))}
-                disabled={isLoading}
-                aria-label="Toggle maintenance mode"
-                style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
-              >
-                {maintenance?.enabled ? '⏻' : '⭘'}
-              </button>
-            </div>
-
-            <div className="sd-card-desc">
-              {maintenance?.enabled
-                ? (maintenance?.reason ? `Enabled: ${maintenance.reason}` : 'Enabled')
-                : 'Disabled'}
-            </div>
-
-            <div className="sd-hero-actions" style={{ marginTop: 12 }}>
-              <button
-                type="button"
-                className="sd-hero-chip sd-hero-chip-solid"
-                onClick={() => setMaintenanceEnabled(true)}
-                disabled={isLoading}
-                style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
-              >
-                Enable
-              </button>
-              <button
-                type="button"
-                className="sd-hero-chip sd-hero-chip-outline"
-                onClick={() => setMaintenanceEnabled(false)}
-                disabled={isLoading}
-                style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
-              >
-                Disable
-              </button>
-            </div>
-
-            <div className="sd-pill-row" style={{ marginTop: 12 }}>
+            {/* Demo-style pill, but driven by real state */}
+            <span className="pill sd-pill-row" style={{ display: 'inline-flex', gap: 8 }}>
               <span className="sd-pill sd-pill-cool">Current</span>
               <span className="sd-pill sd-pill-warm">{maintenance?.enabled ? 'Enabled' : 'Disabled'}</span>
+            </span>
+          </div>
+
+          <div className="divider" />
+
+          {error && (
+            <div style={{ color: '#e74c3c', marginBottom: 12, fontSize: 14, fontWeight: 600 }}>
+              {error}
             </div>
+          )}
+
+          {/* Demo-style short status line, but real data */}
+          <div className="sd-card-desc" style={{ marginBottom: 12 }}>
+            {maintenance?.enabled
+              ? (maintenance?.reason ? `Enabled: ${maintenance.reason}` : 'Enabled')
+              : 'Disabled'}
+          </div>
+            
+          {maintenance?.enabled && maintenance.announcement && (
+            <div style={{ marginBottom: 12, fontSize: 14, color: '#64748b' }}>
+              <strong>Announcement:</strong> {maintenance.announcement}
+            </div>
+          )}
+
+          {/* Keep teacheradmin inputs (real, not demo), shown only when disabled */}
+          {!maintenance?.enabled && (
+            <>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, fontWeight: 600 }}>
+                  Reason (optional):
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., Scheduled system update"
+                  value={maintenanceReason}
+                  onChange={(e) => setMaintenanceReason(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    fontSize: 14,
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 8,
+                  }}
+                />
+              </div>
+                
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, fontWeight: 600 }}>
+                  User Announcement (optional):
+                </label>
+                <textarea
+                  placeholder="e.g., We are performing scheduled maintenance. The system will be back online by 2:00 PM EST."
+                  value={maintenanceAnnouncement}
+                  onChange={(e) => setMaintenanceAnnouncement(e.target.value)}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    fontSize: 14,
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 8,
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Demo-style action chips, but wired to real handlers */}
+          <div className="sd-hero-actions" style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              className="sd-hero-chip sd-hero-chip-solid"
+              onClick={() => setMaintenanceEnabled(true)}
+              disabled={isLoading}
+              style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
+            >
+              {isLoading && !maintenance?.enabled ? 'Enabling…' : 'Enable'}
+            </button>
+        
+            <button
+              type="button"
+              className="sd-hero-chip sd-hero-chip-outline"
+              onClick={() => setMaintenanceEnabled(false)}
+              disabled={isLoading}
+              style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
+            >
+              {isLoading && maintenance?.enabled ? 'Disabling…' : 'Disable'}
+            </button>
           </div>
         </div>
       </section>

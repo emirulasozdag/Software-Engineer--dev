@@ -79,7 +79,7 @@ const SystemStats: React.FC = () => {
         <div className="toolbar">
           <div>
             <h1 className="page-title" style={{ marginBottom: 0 }}>System Statistics</h1>
-            <div className="subtitle">High-level system metrics (demo data)</div>
+            <div className="subtitle">High-level system metrics</div>
           </div>
           <span className="pill">Admin</span>
         </div>
@@ -252,28 +252,53 @@ const SystemStats: React.FC = () => {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100" style={{ padding: 20, marginBottom: 20 }}>
         <h2>Database Statistics</h2>
-        <table className="table" style={{ marginTop: 12 }}>
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="text-slate-500 font-medium">Metric</th>
-              <th className="text-slate-500 font-medium">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="hover:bg-slate-50 transition-colors">
-              <td>Database Size</td>
-              <td>2.4 GB</td>
-            </tr>
-            <tr className="hover:bg-slate-50 transition-colors">
-              <td>Last Backup</td>
-              <td>2025-12-27 23:00</td>
-            </tr>
-            <tr className="hover:bg-slate-50 transition-colors">
-              <td>Connection Pool</td>
-              <td>Active: 12 / Max: 100</td>
-            </tr>
-          </tbody>
-        </table>
+        {stats?.databaseStats ? (
+          <table className="table" style={{ marginTop: 12 }}>
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="text-slate-500 font-medium">Metric</th>
+                <th className="text-slate-500 font-medium">Value</th>
+              </tr>
+            </thead>
+                
+            <tbody>
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td>Database Size</td>
+                <td>
+                  {stats.databaseStats.sizeMB !== null && stats.databaseStats.sizeMB !== undefined
+                    ? `${stats.databaseStats.sizeMB} MB`
+                    : 'N/A'}
+                </td>
+              </tr>
+                  
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td>Total Records</td>
+                <td>{stats.databaseStats.totalRecords.toLocaleString()}</td>
+              </tr>
+                  
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td>Last Backup</td>
+                <td>
+                  {stats.databaseStats.lastBackup
+                    ? new Date(stats.databaseStats.lastBackup).toLocaleString()
+                    : 'No maintenance logs'}
+                </td>
+              </tr>
+                  
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td>Connection Pool</td>
+                <td>
+                  Active: {stats.databaseStats.connectionPool.active} / Max:{' '}
+                  {stats.databaseStats.connectionPool.max}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        ) : (
+          <div style={{ width: '100%', textAlign: 'center', color: '#94a3b8', padding: '28px 0' }}>
+            Database statistics not available
+          </div>
+        )}
       </div>
     </div>
   );

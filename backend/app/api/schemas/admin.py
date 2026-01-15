@@ -41,16 +41,19 @@ class SystemStatsOut(BaseModel):
 	newUsers7d: int = 0
 	learningActivity: dict = Field(default_factory=dict)
 	usageHistory: list[dict] = Field(default_factory=list)
+	databaseStats: dict | None = None
 
 
 class MaintenanceStatusOut(BaseModel):
 	enabled: bool
 	reason: str | None = None
+	announcement: str | None = None
 	startedAt: datetime | None = None
 
 
 class SetMaintenanceRequest(BaseModel):
 	enabled: bool
 	reason: str | None = None
+	announcement: str | None = None
 
 

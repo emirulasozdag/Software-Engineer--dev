@@ -32,3 +32,4 @@ class MaintenanceLogDB(Base, IdMixin):
     start_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     end_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    announcement: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

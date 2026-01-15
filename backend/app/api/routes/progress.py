@@ -240,8 +240,11 @@ def get_my_progress(user=Depends(get_current_user), db: Session = Depends(get_db
 	)
 
 
-@router.get("/{student_id}", response_model=ProgressResponse, dependencies=[Depends(require_role(UserRole.TEACHER, UserRole.ADMIN))])
-def get_student_progress(student_id: int, db: Session = Depends(get_db)) -> ProgressResponse:
+@router.get("/{student_user_id}", response_model=ProgressResponse, dependencies=[Depends(require_role(UserRole.TEACHER, UserRole.ADMIN))])
+def get_student_progress(student_user_id: int, db: Session = Depends(get_db)) -> ProgressResponse:
+	# Resolve student DB id from user id (frontend sends user_id, not student table PK)
+	student_id = _resolve_student_db_id(db, student_user_id)
+	
 	repo = SqlAlchemyProgressRepository(db)
 	progress = repo.fetch_progress(student_id)
 	snapshots = repo.fetch_snapshots(student_id=student_id, days=30)

@@ -42,6 +42,7 @@ import FeedbackManagement from '@/pages/admin/FeedbackManagement';
 // Shared pages
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import NotFoundPage from '@/pages/NotFoundPage';
+import MaintenancePage from '@/pages/MaintenancePage';
 
 const App: React.FC = () => {
   return (
@@ -54,6 +55,7 @@ const App: React.FC = () => {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
+          <Route path="/maintenance" element={<MaintenancePage />} />
 
           {/* Student routes */}
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
