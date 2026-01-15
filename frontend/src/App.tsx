@@ -18,10 +18,9 @@ import ContentViewer from '@/pages/student/ContentViewer';
 import ContentHistory from '@/pages/student/ContentHistory';
 import Progress from '@/pages/student/Progress';
 import Assignments from '@/pages/student/Assignments';
-import AssignmentDetail from '@/pages/student/AssignmentDetail';
-import AssignmentResults from '@/pages/student/AssignmentResults';
 import Chatbot from '@/pages/student/Chatbot';
 import Messages from '@/pages/student/Messages';
+import StudentSystemFeedback from '@/pages/student/SystemFeedback';
 
 // Teacher pages
 import TeacherDashboard from '@/pages/teacher/Dashboard';
@@ -63,10 +62,9 @@ const App: React.FC = () => {
             <Route path="/student/content/:contentId" element={<ContentViewer />} />
             <Route path="/student/progress" element={<Progress />} />
             <Route path="/student/assignments" element={<Assignments />} />
-            <Route path="/student/assignment/:studentAssignmentId" element={<AssignmentDetail />} />
-            <Route path="/student/assignment/:studentAssignmentId/results" element={<AssignmentResults />} />
             <Route path="/student/chatbot" element={<Chatbot />} />
             <Route path="/student/messages" element={<Messages />} />
+			<Route path="/student/feedback" element={<StudentSystemFeedback />} />
           </Route>
 
           {/* Teacher routes */}

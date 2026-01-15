@@ -1,17 +1,48 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { adminService } from '@/services/api';
+import { SystemFeedback } from '@/types/admin.types';
 
 const FeedbackManagement: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'in-progress' | 'resolved'>('all');
+  const [feedbacks, setFeedbacks] = useState<SystemFeedback[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const feedbacks = [
-    { id: '1', user: 'John Doe', category: 'bug', title: 'Audio not playing in listening test', status: 'pending', createdAt: '2025-12-25' },
-    { id: '2', user: 'Sarah Smith', category: 'feature', title: 'Add dark mode option', status: 'in-progress', createdAt: '2025-12-24' },
-    { id: '3', user: 'Mike Johnson', category: 'improvement', title: 'Improve mobile responsiveness', status: 'resolved', createdAt: '2025-12-20' },
-    { id: '4', user: 'Emily Brown', category: 'bug', title: 'Progress chart not updating', status: 'pending', createdAt: '2025-12-26' },
-  ];
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await adminService.getAllFeedback();
+      setFeedbacks(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail;
+      setError(typeof detail === 'string' ? detail : 'Failed to load feedback.');
+      setFeedbacks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredFeedback = filter === 'all' ? feedbacks : feedbacks.filter(f => f.status === filter);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filteredFeedback = useMemo(() => {
+    if (filter === 'all') return feedbacks;
+    return feedbacks.filter((f) => f.status === filter);
+  }, [feedbacks, filter]);
+
+  const onChangeStatus = async (feedbackId: string, status: SystemFeedback['status']) => {
+    try {
+      const updated = await adminService.updateFeedbackStatus(feedbackId, status);
+      setFeedbacks((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail;
+      setError(typeof detail === 'string' ? detail : 'Failed to update status.');
+    }
+  };
 
   return (
     <div className="container">
@@ -23,7 +54,7 @@ const FeedbackManagement: React.FC = () => {
         <div className="toolbar">
           <div>
             <h1 className="page-title" style={{ marginBottom: 0 }}>Feedback Management</h1>
-            <div className="subtitle">Review incoming feedback (demo data)</div>
+			<div className="subtitle">Review incoming student feedback</div>
           </div>
           <span className="pill">Triage</span>
         </div>
@@ -45,7 +76,15 @@ const FeedbackManagement: React.FC = () => {
           </button>
         </div>
 
-        <table className="table">
+        {error && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{error}</div>}
+		<div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+			<button className="button button-sm" type="button" onClick={load} disabled={loading}>
+				{loading ? 'Loading…' : 'Refresh'}
+			</button>
+			<div style={{ color: '#666' }}>{loading ? 'Fetching feedback…' : `${feedbacks.length} total`}</div>
+		</div>
+
+		<table className="table">
           <thead>
             <tr>
               <th>User</th>
@@ -59,7 +98,7 @@ const FeedbackManagement: React.FC = () => {
           <tbody>
             {filteredFeedback.map((feedback) => (
               <tr key={feedback.id}>
-                <td>{feedback.user}</td>
+                <td>{feedback.userName}</td>
                 <td>
                   <span className={feedback.category === 'bug' ? 'badge-success' : feedback.category === 'feature' ? 'badge' : 'badge-muted'}>
                     {feedback.category}
@@ -71,11 +110,21 @@ const FeedbackManagement: React.FC = () => {
                     {feedback.status}
                   </span>
                 </td>
-                <td>{feedback.createdAt}</td>
+                <td>{new Date(feedback.createdAt).toLocaleDateString()}</td>
                 <td>
                   <div className="actions">
-                    <button className="button button-primary button-sm" type="button">View</button>
-                    <select className="input input-sm" defaultValue={feedback.status}>
+                    <button
+						className="button button-primary button-sm"
+						type="button"
+						onClick={() => window.alert(`${feedback.title}\n\n${feedback.description}`)}
+					>
+						View
+					</button>
+                    <select
+						className="input input-sm"
+						value={feedback.status}
+						onChange={(e) => onChangeStatus(feedback.id, e.target.value as any)}
+					>
                       <option value="pending">Pending</option>
                       <option value="in-progress">In Progress</option>
                       <option value="resolved">Resolved</option>
@@ -84,6 +133,11 @@ const FeedbackManagement: React.FC = () => {
                 </td>
               </tr>
             ))}
+			{!loading && filteredFeedback.length === 0 && (
+				<tr>
+					<td colSpan={6} style={{ color: '#666' }}>No feedback found.</td>
+				</tr>
+			)}
           </tbody>
         </table>
       </div>

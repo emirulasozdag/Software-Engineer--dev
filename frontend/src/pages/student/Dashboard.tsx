@@ -100,6 +100,10 @@ const StudentDashboard: React.FC = () => {
             <span className="sd-nav-ico" aria-hidden="true">🤖</span>
             <span>Chatbot</span>
           </Link>
+		  <Link to="/student/feedback" className="sd-nav-link">
+			<span className="sd-nav-ico" aria-hidden="true">✎</span>
+			<span>Feedback</span>
+		  </Link>
         </nav>
 
         <div className="sd-sidebar-footer">

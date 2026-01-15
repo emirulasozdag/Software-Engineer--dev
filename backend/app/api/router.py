@@ -13,6 +13,7 @@ from app.api.routes import test_results
 from app.api.routes import content_delivery, content_update
 from app.api.routes import admin, assignments, ai_content
 from app.api.routes import users
+from app.api.routes import system_feedback
 
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(messaging.router, prefix="/messaging", tags=["messaging"])
@@ -27,6 +28,7 @@ api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(assignments.router, prefix="/assignments", tags=["assignments"])
 api_router.include_router(ai_content.router, prefix="/ai-content", tags=["ai-content"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(system_feedback.router, prefix="/system-feedback", tags=["system-feedback"])
 
 # Additive router registrations (no changes to existing routes)
 from app.api.routes import data_export, progress, rewards
