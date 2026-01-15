@@ -118,6 +118,9 @@ class AdminService:
 				"activity": tests + lessons
 			})
 
+		# Database statistics
+		db_stats = self._getDatabaseStats()
+
 		return {
 			"totalUsers": total_users,
 			"totalStudents": total_students,
@@ -135,15 +138,73 @@ class AdminService:
 				"aiContentGenerated": ai_content_generated,
 			},
 			"usageHistory": history,
+			"databaseStats": db_stats,
+		}
+
+	def _getDatabaseStats(self) -> dict:
+		"""Calculate database statistics including size, table counts, and connection info."""
+		import os
+		from app.config.settings import get_settings
+		
+		settings = get_settings()
+		db_url = settings.database_url
+		
+		# For SQLite, calculate actual file size
+		db_size_mb = None
+		if db_url.startswith("sqlite"):
+			try:
+				db_path = db_url.replace("sqlite:///", "").replace("sqlite://", "")
+				if os.path.exists(db_path):
+					db_size_bytes = os.path.getsize(db_path)
+					db_size_mb = round(db_size_bytes / (1024 * 1024), 2)
+			except Exception:
+				pass
+		
+		# Count total records across key tables
+		total_records = 0
+		table_counts = {}
+		try:
+			for model, name in [
+				(UserDB, "users"),
+				(StudentDB, "students"),
+				(TeacherDB, "teachers"),
+				(TestResultDB, "test_results"),
+				(AssignmentDB, "assignments"),
+				(StudentAIContentDB, "ai_content"),
+			]:
+				count = self.db.scalar(select(func.count()).select_from(model)) or 0
+				table_counts[name] = count
+				total_records += count
+		except Exception:
+			pass
+		
+		# Get last maintenance log as proxy for "last backup"
+		last_maintenance = self.db.scalar(
+			select(MaintenanceLogDB)
+			.where(MaintenanceLogDB.end_time.is_not(None))
+			.order_by(MaintenanceLogDB.end_time.desc())
+			.limit(1)
+		)
+		last_backup = last_maintenance.end_time if last_maintenance else None
+		
+		return {
+			"sizeMB": db_size_mb,
+			"totalRecords": total_records,
+			"tableCounts": table_counts,
+			"lastBackup": last_backup,
+			"connectionPool": {
+				"active": 1,  # SQLite is single connection by default
+				"max": 1,
+			},
 		}
 
 	def getMaintenanceStatus(self) -> dict:
 		open_log = self.db.scalar(select(MaintenanceLogDB).where(MaintenanceLogDB.end_time.is_(None)).order_by(MaintenanceLogDB.start_time.desc()).limit(1))
 		if not open_log:
-			return {"enabled": False, "reason": None, "startedAt": None}
-		return {"enabled": True, "reason": open_log.reason, "startedAt": open_log.start_time}
+			return {"enabled": False, "reason": None, "announcement": None, "startedAt": None}
+		return {"enabled": True, "reason": open_log.reason, "announcement": open_log.announcement, "startedAt": open_log.start_time}
 
-	def setMaintenanceMode(self, *, enabled: bool, adminUserId: int, reason: str | None = None) -> dict:
+	def setMaintenanceMode(self, *, enabled: bool, adminUserId: int, reason: str | None = None, announcement: str | None = None) -> dict:
 		admin_pk = self.db.scalar(select(AdminDB.id).where(AdminDB.user_id == int(adminUserId)))
 		if not admin_pk:
 			raise ValueError("Admin profile not found")
@@ -153,7 +214,7 @@ class AdminService:
 			status = self.getMaintenanceStatus()
 			if status["enabled"]:
 				return status
-			self.db.add(MaintenanceLogDB(admin_id=int(admin_pk), start_time=datetime.utcnow(), end_time=None, reason=reason))
+			self.db.add(MaintenanceLogDB(admin_id=int(admin_pk), start_time=datetime.utcnow(), end_time=None, reason=reason, announcement=announcement))
 			self.db.commit()
 			return self.getMaintenanceStatus()
 

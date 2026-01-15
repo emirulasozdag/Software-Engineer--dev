@@ -62,13 +62,15 @@ const UserManagement: React.FC = () => {
         <div className="toolbar">
           <div>
             <h1 className="page-title" style={{ marginBottom: 0 }}>User Management</h1>
-            <div className="subtitle">Manage user accounts (demo data)</div>
+            <div className="subtitle">Manage user accounts</div>
           </div>
           <input
             className="input input-sm"
             type="text"
             placeholder="Search users…"
             style={{ width: 320 }}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 

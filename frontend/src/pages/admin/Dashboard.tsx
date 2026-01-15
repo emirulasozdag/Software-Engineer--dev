@@ -9,6 +9,7 @@ const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [maintenance, setMaintenance] = useState<MaintenanceMode | null>(null);
   const [maintenanceReason, setMaintenanceReason] = useState('');
+  const [maintenanceAnnouncement, setMaintenanceAnnouncement] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -20,6 +21,7 @@ const AdminDashboard: React.FC = () => {
       setStats(s);
       setMaintenance(m);
       setMaintenanceReason(m.reason ?? '');
+      setMaintenanceAnnouncement(m.announcement ?? '');
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to load admin dashboard');
     } finally {
@@ -35,7 +37,11 @@ const AdminDashboard: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const m = await adminService.setMaintenanceMode({ enabled, reason: enabled ? maintenanceReason : null });
+      const m = await adminService.setMaintenanceMode({ 
+        enabled, 
+        reason: enabled ? maintenanceReason : null,
+        announcement: enabled ? maintenanceAnnouncement : null
+      });
       setMaintenance(m);
       await refresh();
     } catch (e: any) {
@@ -143,18 +149,95 @@ const AdminDashboard: React.FC = () => {
           <div className="toolbar">
             <div>
               <h2 style={{ marginBottom: 6 }}>Maintenance</h2>
-              <div className="text-muted">Admin controls (demo)</div>
+              <div className="text-muted">
+                {maintenance?.enabled ? 'Maintenance mode is currently enabled' : 'System is operational'}
+              </div>
             </div>
-            <span className="pill">Status: Active</span>
+            <span className="pill" style={{ 
+              backgroundColor: maintenance?.enabled ? '#f59e0b' : '#10b981',
+              color: 'white'
+            }}>
+              {maintenance?.enabled ? 'Maintenance' : 'Active'}
+            </span>
           </div>
           <div className="divider" />
+          {error && (
+            <div style={{ color: '#e74c3c', marginBottom: 12, fontSize: 14, fontWeight: 600 }}>
+              {error}
+            </div>
+          )}
+          {maintenance?.enabled && maintenance.reason && (
+            <div style={{ marginBottom: 12, fontSize: 14, color: '#64748b' }}>
+              <strong>Reason:</strong> {maintenance.reason}
+            </div>
+          )}
+          {maintenance?.enabled && maintenance.announcement && (
+            <div style={{ marginBottom: 12, fontSize: 14, color: '#64748b' }}>
+              <strong>Announcement:</strong> {maintenance.announcement}
+            </div>
+          )}
+          {!maintenance?.enabled && (
+            <>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, fontWeight: 600 }}>
+                  Reason (optional):
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., Scheduled system update"
+                  value={maintenanceReason}
+                  onChange={(e) => setMaintenanceReason(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    fontSize: 14,
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 8,
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, fontWeight: 600 }}>
+                  User Announcement (optional):
+                </label>
+                <textarea
+                  placeholder="e.g., We are performing scheduled maintenance. The system will be back online by 2:00 PM EST."
+                  value={maintenanceAnnouncement}
+                  onChange={(e) => setMaintenanceAnnouncement(e.target.value)}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    fontSize: 14,
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 8,
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+            </>
+          )}
           <div className="actions">
-            <button className="button button-primary" type="button">
-              Enable Maintenance
-            </button>
-            <button className="button button-secondary" type="button">
-              Schedule Update
-            </button>
+            {maintenance?.enabled ? (
+              <button 
+                className="button button-primary" 
+                type="button"
+                onClick={() => setMaintenanceEnabled(false)}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Disabling...' : 'Disable Maintenance'}
+              </button>
+            ) : (
+              <button 
+                className="button button-primary" 
+                type="button"
+                onClick={() => setMaintenanceEnabled(true)}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Enabling...' : 'Enable Maintenance'}
+              </button>
+            )}
           </div>
         </div>
       </div>

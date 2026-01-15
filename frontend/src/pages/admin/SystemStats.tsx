@@ -79,7 +79,7 @@ const SystemStats: React.FC = () => {
         <div className="toolbar">
           <div>
             <h1 className="page-title" style={{ marginBottom: 0 }}>System Statistics</h1>
-            <div className="subtitle">High-level system metrics (demo data)</div>
+            <div className="subtitle">High-level system metrics</div>
           </div>
           <span className="pill">Admin</span>
         </div>
@@ -212,28 +212,49 @@ const SystemStats: React.FC = () => {
 
       <div className="card">
         <h2>Database Statistics</h2>
-        <table className="table" style={{ marginTop: 12 }}>
-          <thead>
-            <tr>
-              <th>Metric</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Database Size</td>
-              <td>2.4 GB</td>
-            </tr>
-            <tr>
-              <td>Last Backup</td>
-              <td>2025-12-27 23:00</td>
-            </tr>
-            <tr>
-              <td>Connection Pool</td>
-              <td>Active: 12 / Max: 100</td>
-            </tr>
-          </tbody>
-        </table>
+        {stats?.databaseStats ? (
+          <table className="table" style={{ marginTop: 12 }}>
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Database Size</td>
+                <td>
+                  {stats.databaseStats.sizeMB !== null && stats.databaseStats.sizeMB !== undefined
+                    ? `${stats.databaseStats.sizeMB} MB`
+                    : 'N/A'}
+                </td>
+              </tr>
+              <tr>
+                <td>Total Records</td>
+                <td>{stats.databaseStats.totalRecords.toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td>Last Backup</td>
+                <td>
+                  {stats.databaseStats.lastBackup
+                    ? new Date(stats.databaseStats.lastBackup).toLocaleString()
+                    : 'No maintenance logs'}
+                </td>
+              </tr>
+              <tr>
+                <td>Connection Pool</td>
+                <td>
+                  Active: {stats.databaseStats.connectionPool.active} / Max:{' '}
+                  {stats.databaseStats.connectionPool.max}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        ) : (
+          <div style={{ width: '100%', textAlign: 'center', color: '#94a3b8', padding: '28px 0' }}>
+            Database statistics not available
+          </div>
+        )}
       </div>
     </div>
   );

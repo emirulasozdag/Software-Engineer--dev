@@ -94,7 +94,7 @@ def set_maintenance(
 ) -> MaintenanceStatusOut:
 	svc = AdminService(db)
 	try:
-		status_out = svc.setMaintenanceMode(enabled=payload.enabled, adminUserId=int(admin.userId), reason=payload.reason)
+		status_out = svc.setMaintenanceMode(enabled=payload.enabled, adminUserId=int(admin.userId), reason=payload.reason, announcement=payload.announcement)
 	except ValueError as e:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 	return MaintenanceStatusOut(**status_out)

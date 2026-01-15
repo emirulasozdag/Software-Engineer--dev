@@ -27,6 +27,16 @@ export interface SystemStats {
     users: number;
     activity: number;
   }>;
+  databaseStats?: {
+    sizeMB?: number | null;
+    totalRecords: number;
+    tableCounts: Record<string, number>;
+    lastBackup?: string | null;
+    connectionPool: {
+      active: number;
+      max: number;
+    };
+  } | null;
 }
 
 export interface UserAccount {
@@ -42,6 +52,7 @@ export interface UserAccount {
 export interface MaintenanceMode {
   enabled: boolean;
   reason?: string | null;
+  announcement?: string | null;
   startedAt?: string | null;
 }
 
