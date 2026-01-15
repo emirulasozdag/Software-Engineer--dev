@@ -70,7 +70,7 @@ const ContentViewer: React.FC = () => {
   const { contentId } = useParams<{ contentId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const rationaleFromNav = (location.state as any)?.rationale as string | undefined;
   const { newAchievements, clearAchievements, checkForNewAchievements } = useAchievementNotifications();
 
@@ -623,219 +623,176 @@ const ContentViewer: React.FC = () => {
       {isCompleting && <AILoading message="Analyzing your answers..." />}
       {isLoadingNext && <AILoading message="Generating your next lesson..." />}
 
-      <div className="cv-layout">
-        <aside className="sd-sidebar">
-          <div className="sd-brand">
-            <div className="sd-brand-mark" aria-hidden="true">AI</div>
-            <div className="sd-brand-text">
-              <div className="sd-brand-name">AI Learning</div>
-              <div className="sd-brand-sub">Student</div>
-            </div>
+      <main className="cv-main">
+        <div className="cv-container">
+          <div className="cv-top">
+            <Link to="/student/learning-plan" className="cv-back">
+              ← Back to Learning Plan
+            </Link>
+            <Link to="/student/content/history" className="button button-secondary">
+              View History
+            </Link>
           </div>
 
-          <nav className="sd-nav">
-            <Link to="/student/dashboard" className="sd-nav-link">
-              <span className="sd-nav-ico" aria-hidden="true">▦</span>
-              <span>Dashboard</span>
-            </Link>
-            <Link to="/student/learning-plan" className="sd-nav-link">
-              <span className="sd-nav-ico" aria-hidden="true">📘</span>
-              <span>Learning Plan</span>
-            </Link>
-            <Link to="/student/messages" className="sd-nav-link">
-              <span className="sd-nav-ico" aria-hidden="true">✉</span>
-              <span>Messages</span>
-            </Link>
-            <Link to="/student/progress" className="sd-nav-link">
-              <span className="sd-nav-ico" aria-hidden="true">📈</span>
-              <span>My Progress</span>
-            </Link>
-            <Link to="/student/ai-content-delivery" className="sd-nav-link is-active">
-              <span className="sd-nav-ico" aria-hidden="true">✦</span>
-              <span>AI Delivery</span>
-            </Link>
-            <Link to="/student/chatbot" className="sd-nav-link">
-              <span className="sd-nav-ico" aria-hidden="true">🤖</span>
-              <span>Chatbot</span>
-            </Link>
-          </nav>
-
-          <div className="sd-sidebar-footer">
-            <button className="sd-logout" onClick={logout}>Logout</button>
-          </div>
-        </aside>
-
-        <main className="cv-main">
-          <div className="cv-container">
-            <div className="cv-top">
-              <Link to="/student/learning-plan" className="cv-back">
-                ← Back to Learning Plan
-              </Link>
-              <Link to="/student/content/history" className="button button-secondary">
-                View History
-              </Link>
+          <section className="cv-hero">
+            <div>
+              <h1>Content Viewer</h1>
+              <p>Stay focused and complete this lesson to move forward in your plan.</p>
             </div>
+            <div className="cv-hero-meta">
+              <span className="cv-pill">Level: {content?.level || '—'}</span>
+              <span className="cv-pill cv-pill-muted">Type: {content?.contentType || '—'}</span>
+              <span className="cv-pill">ID: {content?.contentId || '—'}</span>
+            </div>
+          </section>
 
-            <section className="cv-hero">
-              <div>
-                <h1>Content Viewer</h1>
-                <p>Stay focused and complete this lesson to move forward in your plan.</p>
-              </div>
-              <div className="cv-hero-meta">
-                <span className="cv-pill">Level: {content?.level || '—'}</span>
-                <span className="cv-pill cv-pill-muted">Type: {content?.contentType || '—'}</span>
-                <span className="cv-pill">ID: {content?.contentId || '—'}</span>
-              </div>
-            </section>
-
-            {/* Feedback Modal */}
-            {showFeedback && feedbackData && !isLoadingNext && (
-              <div className="cv-modal-overlay">
-                <div className="cv-modal">
-                  <h2 className="cv-modal-title">Great Job! 🎉</h2>
-                  <div style={{ marginTop: '20px' }}>
-                    <h3>Feedback</h3>
-                    <p style={{ lineHeight: 1.6, fontSize: '1.05rem', color: '#2c3e50' }}>{feedbackData.feedback}</p>
-                  </div>
-
-                  <button
-                    className="button button-primary"
-                    style={{ marginTop: '30px', width: '100%' }}
-                    onClick={proceedToNext}
-                  >
-                    Continue to Next Lesson
-                  </button>
+          {/* Feedback Modal */}
+          {showFeedback && feedbackData && !isLoadingNext && (
+            <div className="cv-modal-overlay">
+              <div className="cv-modal">
+                <h2 className="cv-modal-title">Great Job! 🎉</h2>
+                <div style={{ marginTop: '20px' }}>
+                  <h3>Feedback</h3>
+                  <p style={{ lineHeight: 1.6, fontSize: '1.05rem', color: '#2c3e50' }}>{feedbackData.feedback}</p>
                 </div>
+
+                <button
+                  className="button button-primary"
+                  style={{ marginTop: '30px', width: '100%' }}
+                  onClick={proceedToNext}
+                >
+                  Continue to Next Lesson
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="card cv-card">
+            {isLoading && <p>Loading...</p>}
+            {!isLoading && error && (
+              <div className="cv-error">
+                <strong>Error:</strong> {error}
               </div>
             )}
 
-            <div className="card cv-card">
-              {isLoading && <p>Loading...</p>}
-              {!isLoading && error && (
-                <div className="cv-error">
-                  <strong>Error:</strong> {error}
+            {!isLoading && !error && content && (
+              <>
+                <h2 className="cv-title">{content.title}</h2>
+                <div className="cv-meta">
+                  <span>Content ID: {content.contentId}</span>
+                  <span>Level: <strong>{content.level}</strong></span>
+                  <span>Type: <strong>{content.contentType}</strong></span>
                 </div>
-              )}
 
-              {!isLoading && !error && content && (
-                <>
-                  <h2 className="cv-title">{content.title}</h2>
-                  <div className="cv-meta">
-                    <span>Content ID: {content.contentId}</span>
-                    <span>Level: <strong>{content.level}</strong></span>
-                    <span>Type: <strong>{content.contentType}</strong></span>
-                  </div>
+                {rationaleFromNav && (
+                  <p className="cv-rationale">
+                    <strong>Why this content:</strong> {rationaleFromNav}
+                  </p>
+                )}
 
-                  {rationaleFromNav && (
-                    <p className="cv-rationale">
-                      <strong>Why this content:</strong> {rationaleFromNav}
-                    </p>
-                  )}
-
-                  {completeMsg && !isLoadingNext && (
-                    <div className="cv-banner cv-banner-success">
-                      <strong className="cv-banner__title">{completeMsg}</strong>
-                      <div style={{ marginTop: '12px' }}>
-                        <button
-                          className="button button-primary"
-                          onClick={proceedToNext}
-                          disabled={isLoadingNext}
-                        >
-                          Continue to Next Lesson →
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="cv-section">
-                    <h3>Lesson Content</h3>
-
-                    {/* Structured rendering if body is JSON */}
-                    {structured ? (
-                      <>
-                        {structured.rationale && !rationaleFromNav && (
-                          <p className="cv-prose cv-prose-muted" style={{ marginTop: '0' }}>
-                            <strong>Why this content:</strong> {structured.rationale}
-                          </p>
-                        )}
-
-                        {structured.blocks.map((b) => {
-                          if (b.type === 'text') {
-                            return (
-                              <div key={b.id} style={{ marginTop: '20px', marginBottom: '20px' }}>
-                                <div className="cv-prose cv-prose-block" style={{ margin: 0 }}>
-                                  {b.text}
-                                </div>
-                              </div>
-                            );
-                          }
-                          if (b.type === 'audio') return <div key={b.id}>{renderAudio(b)}</div>;
-                          if (b.type === 'speaking') return <div key={b.id}>{renderSpeaking(b)}</div>;
-                          if (b.type === 'multiple_choice') return <div key={b.id}>{renderMultipleChoice(b)}</div>;
-                          if (b.type === 'matching') return <div key={b.id}>{renderMatching(b)}</div>;
-                          if (b.type === 'fill_blanks') return <div key={b.id}>{renderFillBlanks(b)}</div>;
-                          return null;
-                        })}
-                      </>
-                    ) : (
-                      <div className="cv-prose cv-prose-block">
-                        {content.body}
-                      </div>
-                    )}
-                  </div>
-
-                  {content.isCompleted && (
-                    <div className="cv-banner cv-banner-complete">
-                      <strong className="cv-banner__title">✓ Completed on {new Date(content.completedAt || '').toLocaleDateString()}</strong>
-                      {content.feedback && (() => {
-                        try {
-                          const parsed = JSON.parse(content.feedback);
-                          // Check if this is speaking feedback (displayed inline above) or other feedback
-                          if (parsed.speakingFeedback) {
-                            return (
-                              <div style={{ marginTop: '8px', color: '#666', fontSize: '0.9em' }}>
-                                Speaking feedback is displayed above with your recordings.
-                              </div>
-                            );
-                          }
-                          // For other feedback types, show the View Feedback button
-                          return (
-                            <div style={{ marginTop: '10px' }}>
-                              <button
-                                className="button button-secondary"
-                                onClick={() => {
-                                  setFeedbackData(parsed);
-                                  setShowFeedback(true);
-                                }}
-                              >
-                                View Feedback
-                              </button>
-                            </div>
-                          );
-                        } catch (e) {
-                          return null;
-                        }
-                      })()}
-                    </div>
-                  )}
-
-                  {!content.isCompleted && (
-                    <div className="cv-actions">
+                {completeMsg && !isLoadingNext && (
+                  <div className="cv-banner cv-banner-success">
+                    <strong className="cv-banner__title">{completeMsg}</strong>
+                    <div style={{ marginTop: '12px' }}>
                       <button
                         className="button button-primary"
-                        disabled={isCompleting}
-                        onClick={handleComplete}
+                        onClick={proceedToNext}
+                        disabled={isLoadingNext}
                       >
-                        {isCompleting ? 'Submitting...' : 'Submit & Complete'}
+                        Continue to Next Lesson →
                       </button>
                     </div>
+                  </div>
+                )}
+
+                <div className="cv-section">
+                  <h3>Lesson Content</h3>
+
+                  {/* Structured rendering if body is JSON */}
+                  {structured ? (
+                    <>
+                      {structured.rationale && !rationaleFromNav && (
+                        <p className="cv-prose cv-prose-muted" style={{ marginTop: '0' }}>
+                          <strong>Why this content:</strong> {structured.rationale}
+                        </p>
+                      )}
+
+                      {structured.blocks.map((b) => {
+                        if (b.type === 'text') {
+                          return (
+                            <div key={b.id} style={{ marginTop: '20px', marginBottom: '20px' }}>
+                              <div className="cv-prose cv-prose-block" style={{ margin: 0 }}>
+                                {b.text}
+                              </div>
+                            </div>
+                          );
+                        }
+                        if (b.type === 'audio') return <div key={b.id}>{renderAudio(b)}</div>;
+                        if (b.type === 'speaking') return <div key={b.id}>{renderSpeaking(b)}</div>;
+                        if (b.type === 'multiple_choice') return <div key={b.id}>{renderMultipleChoice(b)}</div>;
+                        if (b.type === 'matching') return <div key={b.id}>{renderMatching(b)}</div>;
+                        if (b.type === 'fill_blanks') return <div key={b.id}>{renderFillBlanks(b)}</div>;
+                        return null;
+                      })}
+                    </>
+                  ) : (
+                    <div className="cv-prose cv-prose-block">
+                      {content.body}
+                    </div>
                   )}
-                </>
-              )}
-            </div>
+                </div>
+
+                {content.isCompleted && (
+                  <div className="cv-banner cv-banner-complete">
+                    <strong className="cv-banner__title">✓ Completed on {new Date(content.completedAt || '').toLocaleDateString()}</strong>
+                    {content.feedback && (() => {
+                      try {
+                        const parsed = JSON.parse(content.feedback);
+                        // Check if this is speaking feedback (displayed inline above) or other feedback
+                        if (parsed.speakingFeedback) {
+                          return (
+                            <div style={{ marginTop: '8px', color: '#666', fontSize: '0.9em' }}>
+                              Speaking feedback is displayed above with your recordings.
+                            </div>
+                          );
+                        }
+                        // For other feedback types, show the View Feedback button
+                        return (
+                          <div style={{ marginTop: '10px' }}>
+                            <button
+                              className="button button-secondary"
+                              onClick={() => {
+                                setFeedbackData(parsed);
+                                setShowFeedback(true);
+                              }}
+                            >
+                              View Feedback
+                            </button>
+                          </div>
+                        );
+                      } catch (e) {
+                        return null;
+                      }
+                    })()}
+                  </div>
+                )}
+
+                {!content.isCompleted && (
+                  <div className="cv-actions">
+                    <button
+                      className="button button-primary"
+                      disabled={isCompleting}
+                      onClick={handleComplete}
+                    >
+                      {isCompleting ? 'Submitting...' : 'Submit & Complete'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };

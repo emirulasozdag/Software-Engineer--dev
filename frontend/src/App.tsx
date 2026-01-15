@@ -5,6 +5,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 
 import TeacherLayout from '@/layouts/TeacherLayout';
 import AdminLayout from '@/layouts/AdminLayout';
+import StudentLayout from '@/layouts/StudentLayout';
 
 // Auth pages
 import LoginPage from '@/pages/auth/LoginPage';
@@ -59,17 +60,20 @@ const App: React.FC = () => {
 
           {/* Student routes */}
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-            <Route path="/student/dashboard" element={<StudentDashboard />} />
-            <Route path="/student/placement-test" element={<PlacementTest />} />
-            <Route path="/student/learning-plan" element={<LearningPlan />} />
-            <Route path="/student/ai-content-delivery" element={<AIContentDelivery />} />
-            <Route path="/student/content/history" element={<ContentHistory />} />
-            <Route path="/student/content/:contentId" element={<ContentViewer />} />
-            <Route path="/student/progress" element={<Progress />} />
-            <Route path="/student/assignments" element={<Assignments />} />
-            <Route path="/student/chatbot" element={<Chatbot />} />
-            <Route path="/student/messages" element={<Messages />} />
-			<Route path="/student/feedback" element={<StudentSystemFeedback />} />
+            <Route path="/student" element={<StudentLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<StudentDashboard />} />
+              <Route path="placement-test" element={<PlacementTest />} />
+              <Route path="learning-plan" element={<LearningPlan />} />
+              <Route path="ai-content-delivery" element={<AIContentDelivery />} />
+              <Route path="content/history" element={<ContentHistory />} />
+              <Route path="content/:contentId" element={<ContentViewer />} />
+              <Route path="progress" element={<Progress />} />
+              <Route path="assignments" element={<Assignments />} />
+              <Route path="chatbot" element={<Chatbot />} />
+              <Route path="messages" element={<Messages />} />
+              <Route path="feedback" element={<StudentSystemFeedback />} />
+            </Route>
           </Route>
 
           {/* Teacher routes */}

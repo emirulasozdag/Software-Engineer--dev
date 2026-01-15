@@ -5,10 +5,8 @@ import { ChatMessage, ChatbotCapabilities } from '@/types/communication.types';
 import { communicationService } from '@/services/api/communication.service';
 import { AchievementNotificationContainer } from '@/components/AchievementNotification';
 import { useAchievementNotifications } from '@/hooks/useAchievementNotifications';
-import { useAuth } from '@/contexts/AuthContext';
 
 const Chatbot: React.FC = () => {
-  const { logout } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -128,216 +126,173 @@ const Chatbot: React.FC = () => {
   };
 
   return (
-    <div className="sd-layout">
-      <aside className="sd-sidebar">
-        <div className="sd-brand">
-          <div className="sd-brand-mark" aria-hidden="true">AI</div>
-          <div className="sd-brand-text">
-            <div className="sd-brand-name">AI Learning</div>
-            <div className="sd-brand-sub">Student</div>
+    <div className="chatbot-page">
+      <div className="container">
+        {newAchievements && newAchievements.length > 0 && (
+          <AchievementNotificationContainer
+            achievements={newAchievements}
+            onClose={clearAchievements}
+          />
+        )}
+
+        <Link to="/student/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>
+          ← Back to Dashboard
+        </Link>
+
+        <div className="toolbar">
+          <div>
+            <h1 className="page-title chatbot-title" style={{ marginBottom: 0 }}>AI Chatbot Tutor</h1>
+            <div className="subtitle">
+              {capabilities?.uses_llm
+                ? `🤖 Context-aware AI assistant ${capabilities.can_modify_learning_plan ? '(can update your learning plan)' : ''}`
+                : 'AI-powered English learning assistant'}
+            </div>
+          </div>
+          <div className="actions">
+            <button
+              className="button button-secondary"
+              onClick={handleNewSession}
+              disabled={sending || loading}
+            >
+              New chat
+            </button>
           </div>
         </div>
 
-        <nav className="sd-nav">
-          <Link to="/student/dashboard" className="sd-nav-link">
-            <span className="sd-nav-ico" aria-hidden="true">▦</span>
-            <span>Dashboard</span>
-          </Link>
-          <Link to="/student/learning-plan" className="sd-nav-link">
-            <span className="sd-nav-ico" aria-hidden="true">📘</span>
-            <span>Learning Plan</span>
-          </Link>
-          <Link to="/student/messages" className="sd-nav-link">
-            <span className="sd-nav-ico" aria-hidden="true">✉</span>
-            <span>Messages</span>
-          </Link>
-          <Link to="/student/progress" className="sd-nav-link">
-            <span className="sd-nav-ico" aria-hidden="true">📈</span>
-            <span>My Progress</span>
-          </Link>
-          <Link to="/student/ai-content-delivery" className="sd-nav-link">
-            <span className="sd-nav-ico" aria-hidden="true">✦</span>
-            <span>AI Delivery</span>
-          </Link>
-          <Link to="/student/chatbot" className="sd-nav-link is-active">
-            <span className="sd-nav-ico" aria-hidden="true">🤖</span>
-            <span>Chatbot</span>
-          </Link>
-        </nav>
-
-        <div className="sd-sidebar-footer">
-          <button className="sd-logout" onClick={logout}>Logout</button>
-        </div>
-      </aside>
-
-      <main className="sd-main">
-        <div className="chatbot-page">
-          <div className="container">
-            {newAchievements && newAchievements.length > 0 && (
-              <AchievementNotificationContainer
-                achievements={newAchievements}
-                onClose={clearAchievements}
-              />
+        <div className="chat-sections">
+          <div className="card chat-shell">
+            <div className="chat-topbar">
+              <div className="pill">
+                {capabilities?.uses_llm ? '✓ LLM Active' : 'Mock Mode'}
+              </div>
+              <div className="pill">{messages.length} msgs</div>
+              {capabilities?.context_aware && <div className="pill">📊 Context-Aware</div>}
+            </div>
+            {error && (
+              <div className="card" style={{ borderColor: 'rgba(220,38,38,0.25)', background: 'rgba(220,38,38,0.06)', marginBottom: '1rem' }}>
+                {error}
+              </div>
             )}
 
-            <Link to="/student/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>
-              ← Back to Dashboard
-            </Link>
-
-            <div className="toolbar">
-              <div>
-                <h1 className="page-title chatbot-title" style={{ marginBottom: 0 }}>AI Chatbot Tutor</h1>
-                <div className="subtitle">
-                  {capabilities?.uses_llm
-                    ? `🤖 Context-aware AI assistant ${capabilities.can_modify_learning_plan ? '(can update your learning plan)' : ''}`
-                    : 'AI-powered English learning assistant'}
+            {loading && messages.length === 0 ? (
+              <div className="chat-body">
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
+                  Loading chat history...
                 </div>
               </div>
-              <div className="actions">
+            ) : (
+              <div className="chat-body">
+                <>
+                  {messages.map((msg) => (
+                    <div key={msg.id} className={`chat-row ${msg.role === 'user' ? 'right' : 'left'}`}>
+                      {msg.role !== 'user' ? (
+                        <div className="chat-avatar" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2a6 6 0 0 0-6 6v3a4 4 0 0 0 4 4h.5l1.8 2.6c.3.5 1.1.5 1.4 0L15.5 15H16a4 4 0 0 0 4-4V8a6 6 0 0 0-6-6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                            <path d="M9 9.5h.01M15 9.5h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                          </svg>
+                        </div>
+                      ) : null}
+
+                      <div className={`chat-bubble ${msg.role === 'user' ? 'user' : 'assistant'}`}>
+                        <div className="chat-text" style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                        <div className="chat-time">{new Date(msg.timestamp).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  ))}
+                  {sending && (
+                    <div className="chat-row left">
+                      <div className="chat-avatar" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2a6 6 0 0 0-6 6v3a4 4 0 0 0 4 4h.5l1.8 2.6c.3.5 1.1.5 1.4 0L15.5 15H16a4 4 0 0 0 4-4V8a6 6 0 0 0-6-6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                          <path d="M9 9.5h.01M15 9.5h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                        </svg>
+                      </div>
+                      <div className="chat-bubble assistant">
+                        <div className="text-muted">Thinking...</div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={bottomRef} />
+                </>
+              </div>
+            )}
+
+            <div className="chat-compose-wrap">
+              <div className="chat-compose">
+                <input
+                  className="chat-compose__input"
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  placeholder="Ask me anything about English..."
+                  style={{ marginBottom: 0 }}
+                />
                 <button
-                  className="button button-secondary"
-                  onClick={handleNewSession}
+                  className="chat-compose__send"
+                  type="button"
+                  aria-label="Send message"
+                  onClick={handleSend}
                   disabled={sending || loading}
+                  title={sending ? 'Sending…' : 'Send'}
                 >
-                  New chat
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M22 2 11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M22 2 15 22l-4-9-9-4 20-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </button>
               </div>
             </div>
+          </div>
 
-            <div className="chat-sections">
-              <div className="card chat-shell">
-                <div className="chat-topbar">
-                  <div className="pill">
-                    {capabilities?.uses_llm ? '✓ LLM Active' : 'Mock Mode'}
-                  </div>
-                  <div className="pill">{messages.length} msgs</div>
-                  {capabilities?.context_aware && <div className="pill">📊 Context-Aware</div>}
-                </div>
-                {error && (
-                  <div className="card" style={{ borderColor: 'rgba(220,38,38,0.25)', background: 'rgba(220,38,38,0.06)', marginBottom: '1rem' }}>
-                    {error}
-                  </div>
-                )}
-
-                {loading && messages.length === 0 ? (
-                  <div className="chat-body">
-                    <div style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
-                      Loading chat history...
-                    </div>
-                  </div>
-                ) : (
-                  <div className="chat-body">
-                    <>
-                      {messages.map((msg) => (
-                        <div key={msg.id} className={`chat-row ${msg.role === 'user' ? 'right' : 'left'}`}>
-                          {msg.role !== 'user' ? (
-                            <div className="chat-avatar" aria-hidden="true">
-                              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 2a6 6 0 0 0-6 6v3a4 4 0 0 0 4 4h.5l1.8 2.6c.3.5 1.1.5 1.4 0L15.5 15H16a4 4 0 0 0 4-4V8a6 6 0 0 0-6-6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                                <path d="M9 9.5h.01M15 9.5h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                              </svg>
-                            </div>
-                          ) : null}
-
-                          <div className={`chat-bubble ${msg.role === 'user' ? 'user' : 'assistant'}`}>
-                            <div className="chat-text" style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
-                            <div className="chat-time">{new Date(msg.timestamp).toLocaleString()}</div>
-                          </div>
-                        </div>
-                      ))}
-                      {sending && (
-                        <div className="chat-row left">
-                          <div className="chat-avatar" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M12 2a6 6 0 0 0-6 6v3a4 4 0 0 0 4 4h.5l1.8 2.6c.3.5 1.1.5 1.4 0L15.5 15H16a4 4 0 0 0 4-4V8a6 6 0 0 0-6-6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                              <path d="M9 9.5h.01M15 9.5h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                            </svg>
-                          </div>
-                          <div className="chat-bubble assistant">
-                            <div className="text-muted">Thinking...</div>
-                          </div>
-                        </div>
-                      )}
-                      <div ref={bottomRef} />
-                    </>
-                  </div>
-                )}
-
-                <div className="chat-compose-wrap">
-                  <div className="chat-compose">
-                    <input
-                      className="chat-compose__input"
-                      type="text"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                      placeholder="Ask me anything about English..."
-                      style={{ marginBottom: 0 }}
-                    />
-                    <button
-                      className="chat-compose__send"
-                      type="button"
-                      aria-label="Send message"
-                      onClick={handleSend}
-                      disabled={sending || loading}
-                      title={sending ? 'Sending…' : 'Send'}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M22 2 11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M22 2 15 22l-4-9-9-4 20-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
+          <div className="card">
+            <div className="chat-suggestions">
+              <div className="toolbar">
+                <h3 className="chat-suggestions__title" style={{ marginBottom: 0 }}>✨ Suggested prompts</h3>
+                <span className="pill">Click to fill</span>
               </div>
-
-              <div className="card">
-                <div className="chat-suggestions">
-                  <div className="toolbar">
-                    <h3 className="chat-suggestions__title" style={{ marginBottom: 0 }}>✨ Suggested prompts</h3>
-                    <span className="pill">Click to fill</span>
-                  </div>
-                  <div className="chip-row" style={{ marginTop: '15px' }}>
-                    {[
-                      'How am I doing in my English learning?',
-                      'Explain present perfect tense',
-                      'I want to focus more on speaking skills',
-                      'What are my strengths and weaknesses?',
-                      'Give me practice exercises for my level',
-                      'How can I improve my pronunciation?'
-                    ].map((question, index) => (
-                      <button
-                        key={index}
-                        className="chat-chip"
-                        onClick={() => setInput(question)}
-                        disabled={sending || loading}
-                      >
-                        {question}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {capabilities && capabilities.capabilities.length > 0 && (
-                  <div className="chat-helpbox">
-                    <h4 className="chat-helpbox__title">What I can help with</h4>
-                    <div className="chat-helpbox__grid" role="list">
-                      {capabilities.capabilities.slice(0, 4).map((cap, idx) => {
-                        const emoji = idx === 0 ? '💬' : idx === 1 ? '📚' : idx === 2 ? '🎯' : '📈';
-                        return (
-                          <div key={idx} className="chat-helpbox__item" role="listitem">
-                            <div className="chat-helpbox__icon" aria-hidden="true">{emoji}</div>
-                            <div className="chat-helpbox__text">{cap}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+              <div className="chip-row" style={{ marginTop: '15px' }}>
+                {[
+                  'How am I doing in my English learning?',
+                  'Explain present perfect tense',
+                  'I want to focus more on speaking skills',
+                  'What are my strengths and weaknesses?',
+                  'Give me practice exercises for my level',
+                  'How can I improve my pronunciation?'
+                ].map((question, index) => (
+                  <button
+                    key={index}
+                    className="chat-chip"
+                    onClick={() => setInput(question)}
+                    disabled={sending || loading}
+                  >
+                    {question}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <style>{`
+            {capabilities && capabilities.capabilities.length > 0 && (
+              <div className="chat-helpbox">
+                <h4 className="chat-helpbox__title">What I can help with</h4>
+                <div className="chat-helpbox__grid" role="list">
+                  {capabilities.capabilities.slice(0, 4).map((cap, idx) => {
+                    const emoji = idx === 0 ? '💬' : idx === 1 ? '📚' : idx === 2 ? '🎯' : '📈';
+                    return (
+                      <div key={idx} className="chat-helpbox__item" role="listitem">
+                        <div className="chat-helpbox__icon" aria-hidden="true">{emoji}</div>
+                        <div className="chat-helpbox__text">{cap}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <style>{`
         .chatbot-page {
           min-height: auto;
           padding: 0;
@@ -585,9 +540,7 @@ const Chatbot: React.FC = () => {
           letter-spacing: -0.01em;
         }
       `}</style>
-          </div>
-        </div>
-      </main>
+      </div>
     </div>
   );
 };
