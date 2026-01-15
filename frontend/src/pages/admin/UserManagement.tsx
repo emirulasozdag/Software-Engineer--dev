@@ -58,7 +58,7 @@ const UserManagement: React.FC = () => {
         ← Back to Dashboard
       </Link>
 
-      <div className="card">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100" style={{ padding: 20, marginBottom: 20 }}>
         <div className="toolbar">
           <div>
             <h1 className="page-title" style={{ marginBottom: 0 }}>User Management</h1>
@@ -92,14 +92,14 @@ const UserManagement: React.FC = () => {
         </div>
 
         <table className="table">
-          <thead>
+          <thead className="bg-slate-50">
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th>Actions</th>
+              <th className="text-slate-500 font-medium">Name</th>
+              <th className="text-slate-500 font-medium">Email</th>
+              <th className="text-slate-500 font-medium">Role</th>
+              <th className="text-slate-500 font-medium">Status</th>
+              <th className="text-slate-500 font-medium">Created</th>
+              <th className="text-slate-500 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -111,24 +111,42 @@ const UserManagement: React.FC = () => {
               </tr>
             )}
             {filteredUsers.map((user) => (
-              <tr key={user.userId}>
+              <tr key={user.userId} className="hover:bg-slate-50 transition-colors">
                 <td>{user.name}</td>
                 <td>{user.email}</td>
                 <td>
-                  <span className={user.role === 'student' ? 'badge-success' : user.role === 'teacher' ? 'badge' : 'badge-muted'}>
+                  <span
+                    className={
+                      user.role === 'student'
+                        ? 'rounded-full bg-green-100 text-green-700 px-3 py-1 text-sm font-medium'
+                        : user.role === 'teacher'
+                          ? 'rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-sm font-medium'
+                          : 'rounded-full bg-slate-100 text-slate-700 px-3 py-1 text-sm font-medium'
+                    }
+                  >
                     {user.role}
                   </span>
                 </td>
                 <td>
-                  <span className={user.isVerified ? 'badge-success' : 'badge-muted'}>
+                  <span
+                    className={
+                      user.isVerified
+                        ? 'rounded-full bg-green-100 text-green-700 px-3 py-1 text-sm font-medium'
+                        : 'rounded-full bg-yellow-100 text-yellow-700 px-3 py-1 text-sm font-medium'
+                    }
+                  >
                     {user.isVerified ? 'Verified' : 'Unverified'}
                   </span>
                 </td>
                 <td>{user.createdAt}</td>
                 <td>
                   <div className="actions">
-
-                    <button className="button button-danger button-sm" type="button">Delete</button>
+                    <button
+                      className="px-3 py-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
+                      type="button"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </td>
               </tr>

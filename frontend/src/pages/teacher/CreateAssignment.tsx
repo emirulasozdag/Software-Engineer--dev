@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { assignmentsService, type AssignmentContentType, type QuestionCreate, type QuestionType } from '@/services/api/assignments.service';
 import { teacherService } from '@/services/api';
 import type { StudentOverview } from '@/types/teacher.types';
@@ -222,10 +222,6 @@ const CreateAssignment: React.FC = () => {
 
   return (
     <div className="container">
-      <Link to="/teacher/dashboard" style={{ marginBottom: '20px', display: 'inline-block' }}>
-        ← Back to Dashboard
-      </Link>
-
       <h1 className="page-title">Create Assignment</h1>
 
       <div className="card">
@@ -350,23 +346,24 @@ const CreateAssignment: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setContentType('TEXT')}
-                  className={contentType === 'TEXT' ? 'button button-primary' : 'button button-secondary'}
-                  style={{ flex: 1 }}
+                  className="flex-1 py-6 px-4 rounded-xl bg-white border-2 border-violet-100 text-violet-700 font-semibold hover:border-violet-500 hover:shadow-md transition-all duration-300 cursor-pointer"
                 >
                   📄 TEXT (Reading Material)
                 </button>
                 <button
                   type="button"
                   onClick={() => setContentType('TEST')}
-                  className={contentType === 'TEST' ? 'button button-primary' : 'button button-secondary'}
-                  style={{ flex: 1 }}
+                  className="flex-1 py-6 px-4 rounded-xl bg-white border-2 border-violet-100 text-violet-700 font-semibold hover:border-violet-500 hover:shadow-md transition-all duration-300 cursor-pointer"
                 >
                   📝 TEST (Quiz)
                 </button>
               </div>
             </div>
 
-            <button className="button button-primary" onClick={() => setStep(2)}>
+            <button
+              className="w-full py-4 px-6 mt-6 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-lg shadow-lg hover:shadow-violet-200 hover:-translate-y-1 transition-all duration-300"
+              onClick={() => setStep(2)}
+            >
               Next →
             </button>
           </>
@@ -538,8 +535,8 @@ const CreateAssignment: React.FC = () => {
               <p><strong>Description:</strong> {formData.description || 'None'}</p>
               <p><strong>Due Date:</strong> {formData.dueDate}</p>
               <p><strong>Type:</strong> {contentType}</p>
-              <p><strong>Students:</strong> {selectedStudentIds.length > 0 
-                ? students.filter(s => selectedStudentIds.includes(Number(s.id))).map(s => s.name).join(', ') 
+              <p><strong>Students:</strong> {selectedStudentIds.length > 0
+                ? students.filter(s => selectedStudentIds.includes(Number(s.id))).map(s => s.name).join(', ')
                 : 'None'}</p>
 
               {contentType === 'TEXT' && (
