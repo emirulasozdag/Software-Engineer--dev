@@ -1,17 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime
+import json
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domain.enums import AssignmentContentType, AssignmentStatus, QuestionType
-from app.infrastructure.db.models.assignments import AssignmentDB, StudentAssignmentDB
-from app.infrastructure.db.models.assignment_questions import (
-	AssignmentQuestionDB,
-	QuestionOptionDB,
-	StudentAnswerDB,
-)
+from app.domain.enums import AssignmentStatus
+from app.infrastructure.db.models.assignments import AssignmentDB, AssignmentQuestionDB, StudentAssignmentAnswerDB, StudentAssignmentDB
 from app.infrastructure.db.models.user import StudentDB, TeacherDB
 
 class AssignmentService:
@@ -30,70 +26,6 @@ class AssignmentService:
 			raise ValueError("Student profile not found")
 		return int(student_pk)
 
-	def _calculate_auto_points(self, questions: list[dict]) -> list[dict]:
-		"""
-		Automatic point allocation algorithm:
-		- True/False: 2 points each (default)
-		- Multiple Choice: 5 points each (default)
-		- Algorithm: 2k*m + 5k*n = remaining_points
-		"""
-		total_manual_points = 0
-		tf_count = 0
-		mc_count = 0
-		
-		for q in questions:
-			if q.get("points") is not None:
-				total_manual_points += q["points"]
-			else:
-				if q["questionType"] == QuestionType.TRUE_FALSE:
-					tf_count += 1
-				elif q["questionType"] == QuestionType.MULTIPLE_CHOICE:
-					mc_count += 1
-		
-		remaining_points = 100 - total_manual_points
-		
-		if remaining_points < 0:
-			raise ValueError(f"Total manual points ({total_manual_points}) exceeds 100")
-		
-		# Calculate auto points
-		if tf_count == 0 and mc_count == 0:
-			# All points are manual
-			if total_manual_points != 100:
-				raise ValueError(f"Total points must equal 100. Current: {total_manual_points}")
-		else:
-			# Auto-calculate: 2k*m + 5k*n = remaining_points
-			# Solve for k
-			if tf_count > 0 and mc_count == 0:
-				# Only T/F questions
-				k = remaining_points / (2 * tf_count)
-			elif tf_count == 0 and mc_count > 0:
-				# Only MC questions
-				k = remaining_points / (5 * mc_count)
-			else:
-				# Mixed: try to find k that works
-				# 2k*m + 5k*n = remaining
-				# k(2m + 5n) = remaining
-				k = remaining_points / (2 * tf_count + 5 * mc_count)
-			
-			# Apply k to auto questions
-			for q in questions:
-				if q.get("points") is None:
-					if q["questionType"] == QuestionType.TRUE_FALSE:
-						q["points"] = int(2 * k)
-					elif q["questionType"] == QuestionType.MULTIPLE_CHOICE:
-						q["points"] = int(5 * k)
-		
-		# Validate total is 100
-		total = sum(q["points"] for q in questions)
-		if total != 100:
-			# Adjust last auto question to make it exactly 100
-			for q in reversed(questions):
-				if q.get("points") is not None:
-					q["points"] += (100 - total)
-					break
-		
-		return questions
-
 	def createAssignment(
 		self,
 		*,
@@ -102,61 +34,203 @@ class AssignmentService:
 		description: str | None,
 		dueDate: datetime,
 		assignmentType: str,
-		contentType: AssignmentContentType,
-		contentText: str | None = None,
+		textContent: str | None = None,
 		questions: list[dict] | None = None,
 	) -> AssignmentDB:
 		teacher_pk = self._teacher_pk_from_user(teacherUserId)
-		
-		# Validate content
-		if contentType == AssignmentContentType.TEXT and not contentText:
-			raise ValueError("TEXT assignments must have contentText")
-		if contentType == AssignmentContentType.TEST and not questions:
-			raise ValueError("TEST assignments must have questions")
-		
-		# Create assignment
+		atype = str(assignmentType or "").strip().upper()
+		# Backwards-compat mapping (older UI values)
+		if atype in {"HOMEWORK", "ACTIVITY"}:
+			atype = "TEXT"
+		if atype not in {"TEXT", "TEST"}:
+			raise ValueError("assignmentType must be TEXT or TEST")
+		if atype == "TEXT":
+			if not (textContent or (description or "").strip()):
+				raise ValueError("textContent is required for TEXT assignments")
+		if atype == "TEST":
+			if not questions or len(questions) == 0:
+				raise ValueError("questions are required for TEST assignments")
+
 		model = AssignmentDB(
 			teacher_id=teacher_pk,
 			title=title,
 			description=description,
 			due_date=dueDate,
-			assignment_type=assignmentType,
-			content_type=contentType,
-			content_text=contentText,
+			assignment_type=atype,
 		)
 		self.db.add(model)
-		self.db.flush()
-		
-		# Create questions if TEST
-		if contentType == AssignmentContentType.TEST and questions:
-			# Calculate auto points
-			questions = self._calculate_auto_points(questions)
-			
-			for q_data in questions:
-				question = AssignmentQuestionDB(
-					assignment_id=model.id,
-					question_type=q_data["questionType"],
-					question_text=q_data["questionText"],
-					question_order=q_data["questionOrder"],
-					points=q_data["points"],
-					correct_answer=q_data["correctAnswer"],
-				)
-				self.db.add(question)
-				self.db.flush()
-				
-				# Add options for multiple choice
-				if q_data["questionType"] == QuestionType.MULTIPLE_CHOICE:
-					for opt in q_data.get("options", []):
-						option = QuestionOptionDB(
-							question_id=question.id,
-							option_letter=opt["optionLetter"],
-							option_text=opt["optionText"],
-						)
-						self.db.add(option)
-		
 		self.db.commit()
 		self.db.refresh(model)
+
+		# Persist test questions
+		if atype == "TEST" and questions:
+			idx = 1
+			for q in questions:
+				qtype = str(q.get("questionType") or "").strip().upper()
+				if qtype not in {"MULTIPLE_CHOICE", "TRUE_FALSE"}:
+					raise ValueError("questionType must be MULTIPLE_CHOICE or TRUE_FALSE")
+				prompt = str(q.get("prompt") or "").strip()
+				if not prompt:
+					raise ValueError("question prompt is required")
+				options = q.get("options") or []
+				if qtype == "MULTIPLE_CHOICE":
+					if not isinstance(options, list) or len(options) != 4:
+						raise ValueError("MULTIPLE_CHOICE questions must have exactly 4 options")
+					options = [str(x).strip() for x in options]
+					if any(not x for x in options):
+						raise ValueError("All options must be non-empty")
+				correct = str(q.get("correctAnswer") or "").strip().upper()
+				if qtype == "MULTIPLE_CHOICE" and correct not in {"A", "B", "C", "D"}:
+					raise ValueError("MULTIPLE_CHOICE correctAnswer must be one of A,B,C,D")
+				if qtype == "TRUE_FALSE" and correct not in {"TRUE", "FALSE"}:
+					raise ValueError("TRUE_FALSE correctAnswer must be TRUE or FALSE")
+				points = q.get("points")
+				if points is not None:
+					points = int(points)
+					if points < 0:
+						raise ValueError("points must be >= 0")
+				row = AssignmentQuestionDB(
+					assignment_id=int(model.id),
+					question_index=int(idx),
+					question_type=qtype,
+					prompt=prompt,
+					options_json=json.dumps(options) if options else None,
+					correct_answer=correct,
+					points=points,
+				)
+				self.db.add(row)
+				idx += 1
+			self.db.commit()
 		return model
+
+	def getAssignment(self, *, teacherUserId: int, assignmentId: int) -> AssignmentDB:
+		teacher_pk = self._teacher_pk_from_user(teacherUserId)
+		model = self.db.get(AssignmentDB, int(assignmentId))
+		if not model:
+			raise KeyError("Assignment not found")
+		if int(model.teacher_id) != int(teacher_pk):
+			raise PermissionError("Forbidden")
+		return model
+
+	def listQuestions(self, *, assignmentId: int) -> list[AssignmentQuestionDB]:
+		return list(
+			self.db.scalars(
+				select(AssignmentQuestionDB)
+				.where(AssignmentQuestionDB.assignment_id == int(assignmentId))
+				.order_by(AssignmentQuestionDB.question_index.asc())
+			).all()
+		)
+
+	def getStudentAssignmentDetail(self, *, studentUserId: int, studentAssignmentId: int) -> tuple[StudentAssignmentDB, AssignmentDB, list[AssignmentQuestionDB], list[StudentAssignmentAnswerDB]]:
+		student_pk = self._student_pk_from_user(studentUserId)
+		row = self.db.get(StudentAssignmentDB, int(studentAssignmentId))
+		if not row:
+			raise KeyError("Student assignment not found")
+		if int(row.student_id) != int(student_pk):
+			raise PermissionError("Forbidden")
+		assignment = self.db.get(AssignmentDB, int(row.assignment_id))
+		if not assignment:
+			raise KeyError("Assignment not found")
+		questions = self.listQuestions(assignmentId=int(assignment.id)) if str(assignment.assignment_type).upper() == "TEST" else []
+		answers = list(
+			self.db.scalars(
+				select(StudentAssignmentAnswerDB)
+				.where(StudentAssignmentAnswerDB.student_assignment_id == int(row.id))
+				.order_by(StudentAssignmentAnswerDB.created_at.asc())
+			).all()
+		)
+		return row, assignment, questions, answers
+
+	@staticmethod
+	def _default_points(question_type: str) -> int:
+		qt = str(question_type or "").upper()
+		if qt == "TRUE_FALSE":
+			return 2
+		return 5
+
+	def submitTestAnswers(
+		self,
+		*,
+		studentUserId: int,
+		studentAssignmentId: int,
+		answers: list[dict],
+	) -> tuple[StudentAssignmentDB, int, int, list[dict]]:
+		row, assignment, questions, existing_answers = self.getStudentAssignmentDetail(
+			studentUserId=studentUserId,
+			studentAssignmentId=studentAssignmentId,
+		)
+		atype = str(assignment.assignment_type or "").upper()
+		if atype != "TEST":
+			raise ValueError("This assignment is not a TEST")
+		if row.status != AssignmentStatus.PENDING:
+			raise ValueError("Assignment already submitted")
+		if existing_answers:
+			raise ValueError("Answers already exist")
+
+		answer_map: dict[int, str] = {}
+		for a in answers or []:
+			qid = int(a.get("questionId"))
+			val = str(a.get("answer") or "").strip().upper()
+			if qid <= 0 or not val:
+				continue
+			answer_map[qid] = val
+
+		max_raw = 0
+		earned_raw = 0
+		breakdown: list[dict] = []
+		question_points_raw: dict[int, int] = {}
+		for q in questions:
+			p_raw = int(q.points) if q.points is not None else self._default_points(q.question_type)
+			question_points_raw[int(q.id)] = int(p_raw)
+			max_raw += int(p_raw)
+		if max_raw <= 0:
+			raise ValueError("Invalid test: max score must be > 0")
+		scale = 100.0 / float(max_raw)
+
+		for q in questions:
+			points_raw = question_points_raw[int(q.id)]
+			points_norm = points_raw * scale
+			max_points_norm = points_norm
+			student_answer = answer_map.get(int(q.id), "")
+			correct = str(q.correct_answer or "").strip().upper()
+			is_correct = bool(student_answer) and student_answer == correct
+			awarded_norm = max_points_norm if is_correct else 0.0
+			awarded_raw = points_raw if is_correct else 0
+			earned_raw += int(awarded_raw)
+			awarded_int = int(round(awarded_norm))
+			max_int = int(round(max_points_norm))
+			self.db.add(
+				StudentAssignmentAnswerDB(
+					student_assignment_id=int(row.id),
+					question_id=int(q.id),
+					answer=student_answer or "",
+					is_correct=bool(is_correct),
+					awarded_points=int(awarded_int),
+				)
+			)
+			breakdown.append(
+				{
+					"questionId": int(q.id),
+					"questionIndex": int(q.question_index),
+					"isCorrect": bool(is_correct),
+					"awardedPoints": int(awarded_int),
+					"maxPoints": int(max_int),
+				}
+			)
+
+		score_float = float(earned_raw) * 100.0 / float(max_raw)
+		score_100 = int(round(score_float))
+		if score_100 < 0:
+			score_100 = 0
+		if score_100 > 100:
+			score_100 = 100
+
+		row.status = AssignmentStatus.GRADED
+		row.submitted_at = datetime.utcnow()
+		row.score = int(score_100)
+		self.db.commit()
+		self.db.refresh(row)
+		return row, int(score_100), 100, breakdown
 
 	def assignToStudents(self, *, assignmentId: int, studentUserIds: list[int]) -> list[StudentAssignmentDB]:
 		created: list[StudentAssignmentDB] = []
@@ -201,7 +275,6 @@ class AssignmentService:
 		return [(sa, a) for (sa, a) in rows]
 
 	def submitAssignment(self, *, studentUserId: int, studentAssignmentId: int) -> StudentAssignmentDB:
-		"""Submit a TEXT assignment (no grading)"""
 		student_pk = self._student_pk_from_user(studentUserId)
 		row = self.db.get(StudentAssignmentDB, int(studentAssignmentId))
 		if not row:
@@ -213,94 +286,6 @@ class AssignmentService:
 		self.db.commit()
 		self.db.refresh(row)
 		return row
-
-	def submitTestAnswers(
-		self,
-		*,
-		studentUserId: int,
-		studentAssignmentId: int,
-		answers: list[dict],
-	) -> tuple[StudentAssignmentDB, int]:
-		"""Submit TEST answers and auto-grade"""
-		student_pk = self._student_pk_from_user(studentUserId)
-		sa = self.db.get(StudentAssignmentDB, int(studentAssignmentId))
-		if not sa:
-			raise KeyError("Student assignment not found")
-		if int(sa.student_id) != int(student_pk):
-			raise PermissionError("Forbidden")
-		
-		# Get all questions
-		questions = list(
-			self.db.scalars(
-				select(AssignmentQuestionDB)
-				.where(AssignmentQuestionDB.assignment_id == sa.assignment_id)
-				.order_by(AssignmentQuestionDB.question_order)
-			).all()
-		)
-		
-		question_map = {q.id: q for q in questions}
-		
-		# Save answers and calculate score
-		total_score = 0
-		for ans_data in answers:
-			question = question_map.get(ans_data["questionId"])
-			if not question:
-				continue
-			
-			is_correct = ans_data["answer"].lower() == question.correct_answer.lower()
-			points_earned = question.points if is_correct else 0
-			total_score += points_earned
-			
-			# Save answer
-			answer = StudentAnswerDB(
-				student_assignment_id=sa.id,
-				question_id=question.id,
-				answer=ans_data["answer"],
-				is_correct=is_correct,
-				points_earned=points_earned,
-			)
-			self.db.add(answer)
-		
-		# Update student assignment
-		sa.status = AssignmentStatus.GRADED
-		sa.submitted_at = datetime.utcnow()
-		sa.score = total_score
-		
-		self.db.commit()
-		self.db.refresh(sa)
-		return sa, total_score
-
-	def getAssignmentQuestions(self, *, assignmentId: int) -> list[tuple[AssignmentQuestionDB, list[QuestionOptionDB]]]:
-		"""Get questions with options"""
-		questions = list(
-			self.db.scalars(
-				select(AssignmentQuestionDB)
-				.where(AssignmentQuestionDB.assignment_id == assignmentId)
-				.order_by(AssignmentQuestionDB.question_order)
-			).all()
-		)
-		
-		result = []
-		for q in questions:
-			options = list(
-				self.db.scalars(
-					select(QuestionOptionDB)
-					.where(QuestionOptionDB.question_id == q.id)
-					.order_by(QuestionOptionDB.option_letter)
-				).all()
-			)
-			result.append((q, options))
-		
-		return result
-
-	def getStudentAnswers(self, *, studentAssignmentId: int) -> list[StudentAnswerDB]:
-		"""Get student's answers for an assignment"""
-		return list(
-			self.db.scalars(
-				select(StudentAnswerDB)
-				.where(StudentAnswerDB.student_assignment_id == studentAssignmentId)
-			).all()
-		)
 
 	def gradeAssignment(self, *, teacherUserId: int, studentAssignmentId: int, score: int) -> StudentAssignmentDB:
 		teacher_pk = self._teacher_pk_from_user(teacherUserId)
@@ -315,4 +300,3 @@ class AssignmentService:
 		self.db.commit()
 		self.db.refresh(row)
 		return row
-

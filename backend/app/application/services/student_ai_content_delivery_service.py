@@ -4,7 +4,7 @@ import json
 import logging
 import random
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
@@ -259,7 +259,7 @@ class StudentAIContentDeliveryService:
 		if last_date == now_date:
 			# Already active today, streak doesn't change
 			pass
-		elif last_date == (now_date - datetime.timedelta(days=1)):
+		elif last_date == (now_date - timedelta(days=1)):
 			# Active yesterday, increment streak
 			student.daily_streak = (student.daily_streak or 0) + 1
 		else:
@@ -817,12 +817,12 @@ class StudentAIContentDeliveryService:
 					progress = json.loads(plan.progress_tracking_json)
 
 				current_p = progress.get(topic_name, 0)
-				# Increment logic: e.g. +10% if score > 80, +5% if score > 50.
-				increment = 5
+				# Increment logic: 50% per lesson for demo purposes
+				increment = 50
 				if score_percent >= 80:
-					increment = 10
+					increment = 60
 				elif score_percent < 50:
-					increment = 2
+					increment = 40
 
 				new_p = min(100, current_p + increment)
 				progress[topic_name] = new_p

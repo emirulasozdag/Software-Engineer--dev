@@ -81,33 +81,6 @@ const StudentDashboard: React.FC = () => {
         <div className="sd-row sd-row-3">
           <div className="sd-card sd-card-sm bg-white rounded-2xl shadow-sm border border-slate-100">
             <div className="sd-card-head">
-              <div className="sd-card-title">Points</div>
-              <span className="sd-card-action" aria-hidden="true">🏆</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div
-                aria-hidden="true"
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 14,
-                  display: 'grid',
-                  placeItems: 'center',
-                  background: 'rgba(139, 92, 246, 0.12)',
-                  border: '1px solid rgba(139, 92, 246, 0.18)',
-                  color: 'rgba(88, 28, 135, 1)',
-                  fontSize: 18,
-                }}
-              >
-                🏆
-              </div>
-              <div className="sd-metric">{loading ? '…' : (progress?.totalPoints ?? 0)}</div>
-            </div>
-            <div className="sd-card-desc">Total points earned</div>
-          </div>
-
-          <div className="sd-card sd-card-sm bg-white rounded-2xl shadow-sm border border-slate-100">
-            <div className="sd-card-head">
               <div className="sd-card-title">Streak</div>
               <span className="sd-card-action" aria-hidden="true">🔥</span>
             </div>
@@ -131,33 +104,6 @@ const StudentDashboard: React.FC = () => {
               <div className="sd-metric">{loading ? '…' : (progress?.dailyStreak ?? 0)}</div>
             </div>
             <div className="sd-card-desc">Days in a row</div>
-          </div>
-
-          <div className="sd-card sd-card-sm bg-white rounded-2xl shadow-sm border border-slate-100">
-            <div className="sd-card-head">
-              <div className="sd-card-title">Lessons</div>
-              <span className="sd-card-action" aria-hidden="true">📚</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div
-                aria-hidden="true"
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 14,
-                  display: 'grid',
-                  placeItems: 'center',
-                  background: 'rgba(59, 130, 246, 0.10)',
-                  border: '1px solid rgba(59, 130, 246, 0.16)',
-                  color: 'rgba(30, 58, 138, 1)',
-                  fontSize: 18,
-                }}
-              >
-                📚
-              </div>
-              <div className="sd-metric">{loading ? '…' : (progress?.completedLessons?.length ?? 0)}</div>
-            </div>
-            <div className="sd-card-desc">Completed lessons</div>
           </div>
 
           <div className="sd-card sd-card-sm">

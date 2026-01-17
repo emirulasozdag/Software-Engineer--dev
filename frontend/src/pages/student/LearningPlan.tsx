@@ -176,9 +176,6 @@ const LearningPlan: React.FC = () => {
                       <div className="lp5-progress-bar" aria-hidden="true">
                         <div className="lp5-progress-fill" style={{ width: `${Math.round(t.progress)}%` }} />
                       </div>
-                      <Link to="/student/ai-content-delivery" className="lp5-start">
-                        Start Lesson
-                      </Link>
                     </div>
                   </div>
                 );

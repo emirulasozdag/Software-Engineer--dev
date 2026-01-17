@@ -157,13 +157,6 @@ const TeacherDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="sd-card sd-card-sm">
-            <div className="sd-card-head">
-              <div className="sd-card-title">AI Drafts</div>
-              <Link to="/teacher/ai-drafts" className="sd-card-action" aria-label="Open AI drafts">✦</Link>
-            </div>
-            <div className="sd-card-desc">Generate and refine learning content drafts.</div>
-          </div>
         </div>
 
         <div className="sd-row sd-row-2">

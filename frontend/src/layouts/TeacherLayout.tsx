@@ -49,12 +49,6 @@ const TeacherLayout: React.FC = () => {
             icon: '🗓',
             isActive: (p) => p.startsWith('/teacher/assignments/create'),
         },
-        {
-            to: '/teacher/ai-drafts',
-            label: 'AI Drafts',
-            icon: '✦',
-            isActive: (p) => p.startsWith('/teacher/ai-drafts'),
-        },
     ];
 
     const pathname = location.pathname;
